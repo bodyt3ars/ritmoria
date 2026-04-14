@@ -1354,6 +1354,92 @@ async function ensurePostSocialSchema() {
   `);
 }
 
+async function ensureTrackCommentsSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS track_comments (
+      id SERIAL PRIMARY KEY,
+      track_id integer NOT NULL REFERENCES user_tracks(id) ON DELETE CASCADE,
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      parent_id integer REFERENCES track_comments(id) ON DELETE CASCADE,
+      text text NOT NULL,
+      created_at timestamp without time zone DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS track_comment_reactions (
+      id SERIAL PRIMARY KEY,
+      comment_id integer NOT NULL REFERENCES track_comments(id) ON DELETE CASCADE,
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      reaction varchar(10) NOT NULL CHECK (reaction IN ('like', 'dislike')),
+      created_at timestamp without time zone DEFAULT now(),
+      UNIQUE (comment_id, user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_track_comments_track_id
+      ON track_comments(track_id);
+
+    CREATE INDEX IF NOT EXISTS idx_track_comments_parent_id
+      ON track_comments(parent_id);
+
+    CREATE INDEX IF NOT EXISTS idx_track_comment_reactions_comment_id
+      ON track_comment_reactions(comment_id);
+
+    ALTER TABLE track_comments
+      ADD COLUMN IF NOT EXISTS parent_id integer REFERENCES track_comments(id) ON DELETE CASCADE;
+
+    ALTER TABLE track_comments
+      ADD COLUMN IF NOT EXISTS created_at timestamp without time zone DEFAULT now();
+
+    ALTER TABLE track_comments
+      ADD COLUMN IF NOT EXISTS text text;
+
+    ALTER TABLE track_comment_reactions
+      ADD COLUMN IF NOT EXISTS reaction varchar(10);
+
+    ALTER TABLE track_comment_reactions
+      ADD COLUMN IF NOT EXISTS created_at timestamp without time zone DEFAULT now();
+
+    UPDATE track_comment_reactions
+    SET reaction = 'like'
+    WHERE reaction IS NULL;
+
+    ALTER TABLE track_comment_reactions
+      ALTER COLUMN reaction SET DEFAULT 'like';
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_track_comment_reactions_unique
+      ON track_comment_reactions(comment_id, user_id);
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_name = 'comment_likes'
+      ) THEN
+        INSERT INTO track_comment_reactions (comment_id, user_id, reaction, created_at)
+        SELECT cl.comment_id, cl.user_id, 'like', now()
+        FROM comment_likes cl
+        ON CONFLICT (comment_id, user_id) DO NOTHING;
+      END IF;
+
+      IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'track_comment_reactions' AND column_name = 'reaction'
+      ) THEN
+        BEGIN
+          ALTER TABLE track_comment_reactions
+            ALTER COLUMN reaction SET NOT NULL;
+        EXCEPTION WHEN others THEN
+          NULL;
+        END;
+      END IF;
+    END
+    $$;
+  `);
+}
+
 async function ensureTrackRepostSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS track_reposts (
@@ -7344,62 +7430,139 @@ function slugify(text) {
 
 
 app.get("/track-comments/:trackId", async (req, res) => {
-  const { trackId } = req.params;
+  const trackId = Number(req.params.trackId);
+  const userId = Number(getOptionalUserIdFromReq(req) || 0);
 
-  const result = await pool.query(`
-    SELECT c.*, u.username, u.username_tag, u.avatar,
-      (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) AS likes
-    FROM track_comments c
-    JOIN users u ON u.id = c.user_id
-    WHERE c.track_id = $1
-    ORDER BY c.created_at DESC
-  `, [trackId]);
+  if (!trackId) {
+    return res.status(400).json({ error: "invalid_track_id" });
+  }
 
-  res.json(result.rows);
+  try {
+    const result = await pool.query(`
+      SELECT
+        c.id,
+        c.track_id,
+        c.user_id,
+        c.parent_id,
+        c.text,
+        c.created_at,
+        u.username,
+        u.username_tag,
+        u.avatar,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM track_comment_reactions r
+          WHERE r.comment_id = c.id AND r.reaction = 'like'
+        ), 0) AS likes_count,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM track_comment_reactions r
+          WHERE r.comment_id = c.id AND r.reaction = 'dislike'
+        ), 0) AS dislikes_count,
+        (
+          SELECT reaction
+          FROM track_comment_reactions r
+          WHERE r.comment_id = c.id AND r.user_id = $2
+          LIMIT 1
+        ) AS my_reaction,
+        CASE
+          WHEN $2 > 0 AND (c.user_id = $2 OR t.user_id = $2) THEN true
+          ELSE false
+        END AS can_delete
+      FROM track_comments c
+      JOIN users u ON u.id = c.user_id
+      JOIN user_tracks t ON t.id = c.track_id
+      WHERE c.track_id = $1
+      ORDER BY c.created_at ASC, c.id ASC
+    `, [trackId, userId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("TRACK COMMENTS LOAD ERROR:", err);
+    res.status(500).json({ error: "track_comments_load_failed" });
+  }
 });
 
 
 app.post("/add-track-comment", auth, async (req, res) => {
-  const { trackId, text } = req.body;
+  const trackId = Number(req.body?.trackId);
+  const text = String(req.body?.text || "").trim();
+  const parentId = Number(req.body?.parentId || 0) || null;
+
+  if (!trackId) {
+    return res.status(400).json({ error: "invalid_track_id" });
+  }
+
+  if (!text) {
+    return res.status(400).json({ error: "comment_text_required" });
+  }
+
+  if (text.length > 2000) {
+    return res.status(400).json({ error: "comment_too_long" });
+  }
 
   // 🚫 анти-спам (3 секунды)
-const last = await pool.query(
-  `SELECT created_at FROM track_comments 
-   WHERE user_id=$1 
-   ORDER BY created_at DESC 
-   LIMIT 1`,
-  [req.user.id]
-);
+  const last = await pool.query(
+    `SELECT created_at FROM track_comments
+     WHERE user_id=$1
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [req.user.id]
+  );
 
-if (last.rows.length > 0) {
-  const lastTime = new Date(last.rows[0].created_at).getTime();
-  const now = Date.now();
+  if (last.rows.length > 0) {
+    const lastTime = new Date(last.rows[0].created_at).getTime();
+    const now = Date.now();
 
-  if (now - lastTime < 3000) {
-    return res.status(429).json({ error: "Слишком быстро" });
+    if (now - lastTime < 3000) {
+      return res.status(429).json({ error: "comment_rate_limited" });
+    }
   }
-}
 
-  await pool.query(`
-    INSERT INTO track_comments (track_id, user_id, text)
-    VALUES ($1,$2,$3)
-  `, [trackId, req.user.id, text]);
+  try {
+    if (parentId) {
+      const parentRes = await pool.query(
+        "SELECT id, track_id FROM track_comments WHERE id = $1",
+        [parentId]
+      );
 
-  let xpState = null;
-  if (text && text.trim().length > 2) {
-    xpState = await awardXP(req.user.id, "track_comment", {
-      amount: 10,
-      cooldownSeconds: 30,
-      dailyLimit: 15,
-      eventKey: `track-comment:${trackId}:${getDayKey()}`,
-      meta: { trackId: Number(trackId) }
+      if (!parentRes.rows.length || Number(parentRes.rows[0].track_id) !== trackId) {
+        return res.status(400).json({ error: "invalid_parent_comment" });
+      }
+    }
+
+    await pool.query(`
+      INSERT INTO track_comments (track_id, user_id, parent_id, text)
+      VALUES ($1, $2, $3, $4)
+    `, [trackId, req.user.id, parentId, text]);
+
+    let xpState = null;
+    if (text.length > 2) {
+      xpState = await awardXP(req.user.id, parentId ? "track_reply" : "track_comment", {
+        amount: 10,
+        cooldownSeconds: 30,
+        dailyLimit: 15,
+        eventKey: parentId
+          ? `track-reply:${parentId}:${getDayKey()}`
+          : `track-comment:${trackId}:${getDayKey()}`,
+        meta: { trackId: Number(trackId), parentId: parentId || null }
+      });
+    }
+
+    const countRes = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM track_comments WHERE track_id = $1",
+      [trackId]
+    );
+
+    res.json({
+      ok: true,
+      comments_count: Number(countRes.rows[0]?.count || 0),
+      ...(xpState ? getXpPayload(xpState) : {})
     });
+  } catch (err) {
+    console.error("TRACK COMMENT CREATE ERROR:", err);
+    res.status(500).json({ error: "track_comment_create_failed" });
   }
-
-  res.json({
-    ok: true,
-    ...(xpState ? getXpPayload(xpState) : {})
-  });
 });
 
 app.post("/comment-like", auth, async (req, res) => {
@@ -7425,6 +7588,116 @@ app.post("/comment-like", auth, async (req, res) => {
   );
 
   res.json({ liked: true });
+});
+
+app.delete("/api/track-comments/:id", auth, async (req, res) => {
+  try {
+    const commentId = Number(req.params.id);
+    const userId = Number(req.user?.id || 0);
+
+    if (!commentId) {
+      return res.status(400).json({ error: "invalid_comment_id" });
+    }
+
+    const commentRes = await pool.query(`
+      SELECT c.id, c.track_id, c.user_id, t.user_id AS track_owner_id
+      FROM track_comments c
+      JOIN user_tracks t ON t.id = c.track_id
+      WHERE c.id = $1
+    `, [commentId]);
+
+    if (!commentRes.rows.length) {
+      return res.status(404).json({ error: "comment_not_found" });
+    }
+
+    const comment = commentRes.rows[0];
+    const canDelete = Number(comment.user_id) === userId || Number(comment.track_owner_id) === userId;
+
+    if (!canDelete) {
+      return res.status(403).json({ error: "comment_delete_forbidden" });
+    }
+
+    await pool.query("DELETE FROM track_comments WHERE id = $1", [commentId]);
+
+    const countRes = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM track_comments WHERE track_id = $1",
+      [comment.track_id]
+    );
+
+    res.json({
+      ok: true,
+      track_id: Number(comment.track_id),
+      comments_count: Number(countRes.rows[0]?.count || 0)
+    });
+  } catch (err) {
+    console.error("TRACK COMMENT DELETE ERROR:", err);
+    res.status(500).json({ error: "track_comment_delete_failed" });
+  }
+});
+
+app.post("/api/track-comments/:id/reaction", auth, async (req, res) => {
+  try {
+    const commentId = Number(req.params.id);
+    const userId = Number(req.user?.id || 0);
+    const reaction = req.body?.reaction;
+
+    if (!commentId || !["like", "dislike", null].includes(reaction ?? null)) {
+      return res.status(400).json({ error: "invalid_reaction" });
+    }
+
+    const commentRes = await pool.query(
+      "SELECT id FROM track_comments WHERE id = $1",
+      [commentId]
+    );
+
+    if (!commentRes.rows.length) {
+      return res.status(404).json({ error: "comment_not_found" });
+    }
+
+    const existingRes = await pool.query(
+      "SELECT reaction FROM track_comment_reactions WHERE comment_id = $1 AND user_id = $2",
+      [commentId, userId]
+    );
+
+    const existing = existingRes.rows[0]?.reaction || null;
+    let nextReaction = reaction ?? null;
+
+    if (!reaction || existing === reaction) {
+      await pool.query(
+        "DELETE FROM track_comment_reactions WHERE comment_id = $1 AND user_id = $2",
+        [commentId, userId]
+      );
+      nextReaction = null;
+    } else if (existing) {
+      await pool.query(
+        "UPDATE track_comment_reactions SET reaction = $1 WHERE comment_id = $2 AND user_id = $3",
+        [reaction, commentId, userId]
+      );
+    } else {
+      await pool.query(
+        "INSERT INTO track_comment_reactions (comment_id, user_id, reaction) VALUES ($1, $2, $3)",
+        [commentId, userId, reaction]
+      );
+    }
+
+    const countRes = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE reaction = 'like')::int AS likes_count,
+        COUNT(*) FILTER (WHERE reaction = 'dislike')::int AS dislikes_count
+      FROM track_comment_reactions
+      WHERE comment_id = $1
+    `, [commentId]);
+
+    res.json({
+      ok: true,
+      reaction: nextReaction,
+      likes_count: Number(countRes.rows[0]?.likes_count || 0),
+      dislikes_count: Number(countRes.rows[0]?.dislikes_count || 0)
+    });
+  } catch (err) {
+    console.error("TRACK COMMENT REACTION ERROR:", err);
+    res.status(500).json({ error: "track_comment_reaction_failed" });
+  }
 });
 
 app.get("/discover-tracks", auth, async (req, res) => {
@@ -8217,6 +8490,7 @@ app.post("/api/user-tracks/:id/listen", auth, async (req, res) => {
 await ensureEmailVerificationSchema();
 await ensureXPSystemSchema();
 await ensurePostSocialSchema();
+await ensureTrackCommentsSchema();
 await ensureTrackRepostSchema();
 await ensureMentionsSchema();
 await ensureHomeNewsSchema();

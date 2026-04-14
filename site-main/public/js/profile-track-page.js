@@ -166,6 +166,10 @@ window.loadProfileTrackPage = async function (tag, slug) {
   const commentInput = document.getElementById("profileTrackCommentInput");
   const commentButton = document.getElementById("profileTrackCommentButton");
   const commentAvatarEl = document.getElementById("profileTrackCommentAvatar");
+  const commentReplyBadgeEl = document.getElementById("profileTrackCommentReplyBadge");
+  const commentReplyLabelEl = document.getElementById("profileTrackCommentReplyLabel");
+  const commentReplyCancelEl = document.getElementById("profileTrackCommentReplyCancel");
+  let commentsController = null;
 
   if (
     !titleEl ||
@@ -543,148 +547,14 @@ window.loadProfileTrackPage = async function (tag, slug) {
 
   window.syncCurrentProfileTrackPage = syncProfileTrackPageWithGlobalPlayer;
 
-  async function loadComments() {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/track-comments/${trackId}`, {
-        headers: token ? { Authorization: "Bearer " + token } : {}
-      });
-
-      if (!res.ok) {
-        throw new Error(`Comments request failed: ${res.status}`);
-      }
-
-      const comments = await res.json();
-      setCommentsCount(Array.isArray(comments) ? comments.length : 0);
-
-      if (!Array.isArray(comments) || !comments.length) {
-        commentsList.innerHTML = `<div class="profile-track-empty">Комментариев пока нет.</div>`;
-        return;
-      }
-
-      commentsList.innerHTML = comments
-        .map((c) => {
-          const username = escapeProfileTrackHtml(c.username || "user");
-          const userTag = c.username_tag ? `@${escapeProfileTrackHtml(c.username_tag)}` : "";
-          const text = escapeProfileTrackHtml(c.text || "");
-          const likes = Number(c.likes || 0);
-          const avatar = c.avatar
-            ? "/" + String(c.avatar).replace(/^\/+/, "")
-            : "/images/default-avatar.jpg";
-          const createdAt = formatProfileTrackDate(c.created_at);
-
-          return `
-            <div class="profile-track-comment">
-              <div class="profile-track-comment-top">
-                <img class="profile-track-comment-avatar" src="${avatar}" alt="${username}">
-                <div class="profile-track-comment-meta">
-                  <b>${username}</b>
-                  <span>${userTag || "слушатель"}</span>
-                </div>
-                ${createdAt ? `<time class="profile-track-comment-date">${createdAt}</time>` : ""}
-              </div>
-
-              <div class="profile-track-comment-text">${text}</div>
-
-              <div class="profile-track-comment-actions">
-                <button type="button" onclick="toggleProfileTrackCommentLike(${Number(c.id)}, this)">
-                  <i class="fa-regular fa-heart"></i>
-                  <span>${likes}</span>
-                </button>
-              </div>
-            </div>
-          `;
-        })
-        .join("");
-    } catch (err) {
-      console.log("❌ COMMENTS LOAD FAILED:", err);
-      commentsList.innerHTML = `<div class="profile-track-error">Не удалось загрузить комментарии.</div>`;
+  function applyProfileTrackCommentXp(data) {
+    if (!data?.xp) return;
+    if (typeof window.applyXPAndCheckRank === "function") {
+      window.applyXPAndCheckRank(data.xp, data.newXP, data.xpState);
+    } else if (typeof window.showXP === "function") {
+      window.showXP(data.xp);
     }
   }
-
-  window.toggleProfileTrackCommentLike = async function (commentId, btn) {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Нужно войти в аккаунт.");
-        return;
-      }
-
-      const res = await fetch("/comment-like", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token
-        },
-        body: JSON.stringify({ commentId })
-      });
-
-      if (!res.ok) {
-        throw new Error(`Like request failed: ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      const icon = btn.querySelector("i");
-      const countEl = btn.querySelector("span");
-
-      let count = Number(countEl.textContent || 0);
-
-      if (data.liked) {
-        count++;
-        icon.classList.remove("fa-regular");
-        icon.classList.add("fa-solid");
-      } else {
-        count = Math.max(0, count - 1);
-        icon.classList.remove("fa-solid");
-        icon.classList.add("fa-regular");
-      }
-
-      countEl.textContent = String(count);
-    } catch (err) {
-      console.log("❌ COMMENT LIKE FAILED:", err);
-    }
-  };
-
-  window.sendProfileTrackComment = async function () {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Нужно войти в аккаунт.");
-        return;
-      }
-
-      if (!commentInput) return;
-
-      const text = commentInput.value.trim();
-      if (!text || !trackId) return;
-
-      const res = await fetch("/add-track-comment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token
-        },
-        body: JSON.stringify({ trackId, text })
-      });
-
-      if (!res.ok) {
-        throw new Error(`Add comment failed: ${res.status}`);
-      }
-
-      const data = await res.json().catch(() => ({}));
-      if (data?.xp && typeof window.applyXPAndCheckRank === "function") {
-        window.applyXPAndCheckRank(data.xp, data.newXP, data.xpState);
-      } else if (data?.xp && typeof window.showXP === "function") {
-        window.showXP(data.xp);
-      }
-
-      commentInput.value = "";
-      await loadComments();
-    } catch (err) {
-      console.log("❌ ADD COMMENT FAILED:", err);
-    }
-  };
 
   likeBtn.onclick = async () => {
     const token = localStorage.getItem("token");
@@ -772,8 +642,21 @@ window.loadProfileTrackPage = async function (tag, slug) {
     };
   }
 
-  if (commentButton) {
-    commentButton.onclick = window.sendProfileTrackComment;
+  if (!commentsController && typeof window.createTrackCommentsController === "function") {
+    commentsController = window.createTrackCommentsController({
+      trackId: Number(trackId),
+      listEl: commentsList,
+      inputEl: commentInput,
+      submitEl: commentButton,
+      replyBadgeEl: commentReplyBadgeEl,
+      replyLabelEl: commentReplyLabelEl,
+      replyCancelEl: commentReplyCancelEl,
+      countEls: [commentsCountEl, commentsCountMirrorEl],
+      emptyText: "Комментариев пока нет.",
+      errorText: "Не удалось загрузить комментарии.",
+      formatDate: formatProfileTrackDate,
+      onXp: applyProfileTrackCommentXp
+    });
   }
 
   if (!pageState.eventsBound) {
@@ -877,8 +760,8 @@ window.loadProfileTrackPage = async function (tag, slug) {
 
   syncProfileTrackPageWithGlobalPlayer();
   await refreshTrackLikeState();
-  await loadComments();
-};
+  await commentsController?.loadComments?.();
+  };
 
 window.initProfileTrackPage = function () {
   const container = document.getElementById("profileTracksPage");
@@ -1018,7 +901,12 @@ window.initProfileTrackPage = function () {
             </div>
           </div>
 
-          <div id="profileTrackCommentsList"></div>
+          <div id="profileTrackCommentReplyBadge" class="track-thread-reply-badge track-thread-hidden">
+            <span id="profileTrackCommentReplyLabel"></span>
+            <button id="profileTrackCommentReplyCancel" type="button" class="track-thread-reply-cancel">Отмена</button>
+          </div>
+
+          <div id="profileTrackCommentsList" class="track-thread-list"></div>
         </div>
       </div>
     </div>

@@ -350,7 +350,10 @@ export async function renderPage(path) {
 
     finishRender(app);
 
-    loadScriptOnce("/js/track.js")
+    Promise.all([
+      loadScriptOnce("/js/track-comments.js"),
+      loadScriptOnce("/js/track.js")
+    ])
       .then(() => {
         runAfterPaint(() => {
           safeCall("initTrackPage");
@@ -493,7 +496,10 @@ export async function renderPage(path) {
 
       finishRender(app);
 
-      loadScriptOnce("/js/profile-track-page.js")
+      Promise.all([
+        loadScriptOnce("/js/track-comments.js"),
+        loadScriptOnce("/js/profile-track-page.js")
+      ])
         .then(() => {
           runAfterPaint(() => {
             safeCall("initProfileTrackPage");

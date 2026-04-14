@@ -15,6 +15,13 @@ function initTrackPage() {
   const currentTimeEl = document.getElementById("current");
   const durationEl = document.getElementById("duration");
   const volume = document.getElementById("volume");
+  const commentsList = document.getElementById("comments");
+  const commentInput = document.getElementById("commentInput");
+  const sendCommentBtn = document.getElementById("sendComment");
+  const commentsCountEl = document.getElementById("trackCommentsCount");
+  const replyBadgeEl = document.getElementById("trackCommentReplyBadge");
+  const replyLabelEl = document.getElementById("trackCommentReplyLabel");
+  const replyCancelEl = document.getElementById("trackCommentReplyCancel");
 
   const mp3Player = document.getElementById("mp3Player");
   const scWrapper = document.getElementById("scWrapper");
@@ -37,6 +44,7 @@ function initTrackPage() {
   let trackScWidget = null;
   let scIsPlaying = false;
   let scReady = false;
+  let commentsController = null;
 
   const criteria = [
     { key: "rhymes_avg", label: "Рифмы и образы" },
@@ -61,6 +69,15 @@ function initTrackPage() {
     durationEl.textContent = "0:00";
     customPlayer?.classList.remove("playing");
     playerCover?.classList.remove("playing");
+  }
+
+  function applyCommentXp(data) {
+    if (!data?.xp) return;
+    if (typeof window.applyXPAndCheckRank === "function") {
+      window.applyXPAndCheckRank(data.xp, data.newXP, data.xpState);
+    } else if (typeof window.showXP === "function") {
+      window.showXP(data.xp);
+    }
   }
 
   function showMP3Player() {
@@ -220,6 +237,24 @@ function initTrackPage() {
 
       renderCriteria(track);
       resetPlayerUI();
+
+      if (!commentsController && typeof window.createTrackCommentsController === "function") {
+        commentsController = window.createTrackCommentsController({
+          trackId: Number(track.id),
+          listEl: commentsList,
+          inputEl: commentInput,
+          submitEl: sendCommentBtn,
+          replyBadgeEl,
+          replyLabelEl,
+          replyCancelEl,
+          countEls: [commentsCountEl],
+          emptyText: "Комментариев пока нет.",
+          errorText: "Не удалось загрузить комментарии.",
+          onXp: applyCommentXp
+        });
+      }
+
+      await commentsController?.loadComments?.();
 
       if (track.audio && track.audio.endsWith(".mp3")) {
         showMP3Player();
