@@ -4858,44 +4858,78 @@ app.get("/api/tracks/:id/judges", async (req, res) => {
 });
 
 app.get("/api/search", async (req, res) => {
-  const q = req.query.q?.toLowerCase();
+  const q = String(req.query.q || "").trim().toLowerCase();
 
   if (!q) {
-    return res.json({ users: [] });
+    return res.json({ users: [], tracks: [] });
   }
 
   try {
     const users = await pool.query(`
-  SELECT 
-    u.id,
-    u.username,
-    u.username_tag,
-    u.avatar
-  FROM users u
-  WHERE 
-    LOWER(u.username_tag) LIKE $1
+      SELECT
+        u.id,
+        u.username,
+        u.username_tag,
+        u.avatar
+      FROM users u
+      WHERE LOWER(u.username_tag) LIKE $1
+         OR LOWER(u.username) LIKE $1
+      ORDER BY
+        CASE
+          WHEN LOWER(u.username_tag) = $2 THEN 0
+          WHEN LOWER(u.username) = $2 THEN 1
+          WHEN LOWER(u.username_tag) LIKE $3 THEN 2
+          WHEN LOWER(u.username) LIKE $3 THEN 3
+          ELSE 4
+        END,
+        u.created_at DESC
+      LIMIT 6
+    `, [`%${q}%`, q, `${q}%`]);
 
-  UNION
+    const tracksRes = await pool.query(`
+      SELECT
+        t.id,
+        t.title,
+        t.artist,
+        t.cover,
+        t.audio,
+        t.soundcloud,
+        t.slug,
+        u.username,
+        u.username_tag,
+        u.avatar AS user_avatar
+      FROM user_tracks t
+      JOIN users u ON u.id = t.user_id
+      WHERE COALESCE(t.is_archived, false) = false
+        AND (
+          LOWER(t.title) LIKE $1
+          OR LOWER(t.artist) LIKE $1
+          OR LOWER(u.username) LIKE $1
+          OR LOWER(u.username_tag) LIKE $1
+        )
+      ORDER BY
+        CASE
+          WHEN LOWER(t.title) = $2 THEN 0
+          WHEN LOWER(t.artist) = $2 THEN 1
+          WHEN LOWER(t.title) LIKE $3 THEN 2
+          WHEN LOWER(t.artist) LIKE $3 THEN 3
+          WHEN LOWER(u.username_tag) LIKE $3 THEN 4
+          ELSE 5
+        END,
+        t.created_at DESC
+      LIMIT 8
+    `, [`%${q}%`, q, `${q}%`]);
 
-  SELECT 
-    u.id,
-    u.username,
-    u.username_tag,
-    u.avatar
-  FROM users u
-  WHERE 
-    LOWER(u.username) LIKE $1
-
-  LIMIT 10
-`, [`%${q}%`]);
+    const tracks = await attachArtistMentionsToTracks(tracksRes.rows);
 
     res.json({
-      users: users.rows
+      users: users.rows,
+      tracks
     });
 
   } catch (err) {
     console.error("Search error:", err);
-    res.status(500).json({ users: [] });
+    res.status(500).json({ users: [], tracks: [] });
   }
 });
 

@@ -562,14 +562,113 @@ function initSearch() {
 
   let timeout;
 
+  const escapeSearchHtml = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  const closeSearchResults = () => {
+    results.classList.remove("active");
+    results.innerHTML = "";
+  };
+
+  const getTrackHref = (track) => {
+    const tag = String(track?.username_tag || "").trim();
+    const slug = String(track?.slug || "").trim();
+    if (tag && slug) return `/${encodeURIComponent(tag)}/${encodeURIComponent(slug)}`;
+    return null;
+  };
+
+  const normalizeSearchMedia = (value, fallback) => {
+    const clean = String(value || "").trim();
+    if (!clean) return fallback;
+    if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
+    return `/${clean.replace(/^\/+/, "")}`;
+  };
+
+  const renderTrackArtist = (track) => {
+    const artist = String(track?.artist || "").trim();
+    const author = String(track?.username || track?.username_tag || "").trim();
+    return artist || author || "Unknown artist";
+  };
+
+  const renderUserItem = (user) => `
+    <button type="button" class="navbar-search-item navbar-search-item-user" data-search-user-tag="${escapeSearchHtml(user.username_tag || "")}">
+      <img
+        class="navbar-search-avatar"
+        src="${escapeSearchHtml(normalizeSearchMedia(user.avatar, "/images/default-avatar.jpg"))}"
+        alt="${escapeSearchHtml(user.username || "User")}"
+      >
+      <div class="navbar-search-info">
+        <div class="navbar-search-name">${escapeSearchHtml(user.username || "No name")}</div>
+        <div class="navbar-search-meta">Исполнитель</div>
+      </div>
+    </button>
+  `;
+
+  const renderTrackItem = (track) => `
+    <div class="navbar-search-item navbar-search-item-track" data-search-track-href="${escapeSearchHtml(getTrackHref(track) || "")}">
+      <div class="navbar-track-cover-wrap">
+        <img
+          class="navbar-track-cover-img"
+          src="${escapeSearchHtml(normalizeSearchMedia(track.cover, "/images/default-cover.jpg"))}"
+          alt="${escapeSearchHtml(track.title || "Track")}"
+        >
+        <button
+          type="button"
+          class="navbar-track-play"
+          data-search-play-track='${escapeSearchHtml(JSON.stringify(track))}'
+          aria-label="Включить трек"
+        >
+          <span class="navbar-track-play-circle">
+            <span class="navbar-play-icon"></span>
+            <span class="navbar-pause-icon"><span></span><span></span></span>
+          </span>
+        </button>
+      </div>
+      <div class="navbar-search-info">
+        <div class="navbar-search-name">${escapeSearchHtml(track.title || "Unknown track")}</div>
+        <div class="navbar-search-meta">Трек • ${escapeSearchHtml(renderTrackArtist(track))}</div>
+      </div>
+    </div>
+  `;
+
+  const renderSearchSection = (title, itemsMarkup) => `
+    <div class="navbar-search-section">
+      <div class="navbar-search-section-title">${escapeSearchHtml(title)}</div>
+      ${itemsMarkup}
+    </div>
+  `;
+
+  const renderSearchResults = (data) => {
+    const users = Array.isArray(data?.users) ? data.users : [];
+    const tracks = Array.isArray(data?.tracks) ? data.tracks : [];
+    const sections = [];
+
+    if (users.length) {
+      sections.push(renderSearchSection("Профили", users.map(renderUserItem).join("")));
+    }
+
+    if (tracks.length) {
+      sections.push(renderSearchSection("Треки", tracks.map(renderTrackItem).join("")));
+    }
+
+    results.innerHTML = sections.length
+      ? sections.join("")
+      : `<div class="navbar-search-empty">Ничего не найдено</div>`;
+    results.classList.add("active");
+  };
+
   input.addEventListener("input", () => {
     clearTimeout(timeout);
 
     const q = input.value.trim();
 
     if (!q) {
-      results.classList.remove("active");
-      results.innerHTML = "";
+      closeSearchResults();
       return;
     }
 
@@ -583,42 +682,58 @@ function initSearch() {
         }
 
         const data = await res.json();
-        results.innerHTML = "";
-
-        const items = [];
-
-        (data.users || []).forEach((u) => {
-          items.push(`
-            <div class="navbar-search-item" onclick="goToUserProfile('${u.username_tag}')">
-              <img
-                class="navbar-search-avatar"
-                src="${u.avatar || "/images/default-avatar.jpg"}"
-                alt="${u.username || "User"}"
-              >
-              <div class="navbar-search-info">
-                <div class="navbar-search-name">${u.username || "No name"}</div>
-                <div class="navbar-search-tag">@${u.username_tag || ""}</div>
-              </div>
-            </div>
-          `);
-        });
-
-        if (items.length === 0) {
-          results.innerHTML = `<div class="navbar-search-item">Ничего не найдено</div>`;
-        } else {
-          results.innerHTML = items.join("");
-        }
-
-        results.classList.add("active");
+        renderSearchResults(data);
       } catch (err) {
         console.error("Search fetch error:", err);
       }
     }, 300);
   });
 
+  results.addEventListener("click", (e) => {
+    const playBtn = e.target.closest("[data-search-play-track]");
+    if (playBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      try {
+        const track = JSON.parse(playBtn.dataset.searchPlayTrack || "{}");
+        if (!track) return;
+        if (typeof window.playTrackGlobal === "function") {
+          window.playTrackGlobal({
+            ...track,
+            play_context: "search",
+            profile_source_tag: track.username_tag || ""
+          });
+        }
+      } catch (err) {
+        console.error("Search track play error:", err);
+      }
+      return;
+    }
+
+    const userItem = e.target.closest("[data-search-user-tag]");
+    if (userItem) {
+      const tag = userItem.dataset.searchUserTag;
+      if (tag) {
+        closeSearchResults();
+        navigate(`/${tag}`);
+      }
+      return;
+    }
+
+    const trackItem = e.target.closest("[data-search-track-href]");
+    if (trackItem) {
+      const href = trackItem.dataset.searchTrackHref;
+      if (href) {
+        closeSearchResults();
+        navigate(href);
+      }
+    }
+  });
+
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".navbar-search")) {
-      results.classList.remove("active");
+      closeSearchResults();
     }
   });
 }
