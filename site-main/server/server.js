@@ -68,6 +68,13 @@ const upload = multer({
   }
 });
 
+const openUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 80 * 1024 * 1024
+  }
+});
+
 const postUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -226,9 +233,9 @@ const postMediaUploadSingle = createHandledUpload(
   "Не удалось загрузить медиафайл. Проверь файл и попробуй ещё раз."
 );
 const openUploadFields = createHandledUpload(
-  upload.fields([{ name: "cover", maxCount: 1 }, { name: "audio", maxCount: 1 }]),
+  openUpload.fields([{ name: "cover", maxCount: 1 }, { name: "audio", maxCount: 1 }]),
   "open_upload_failed",
-  "Не удалось загрузить файлы для опена."
+  "Не удалось загрузить файлы для опена. Проверь размер и формат."
 );
 const messageAttachmentUpload = createHandledUpload(
   upload.single("attachment"),

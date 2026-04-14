@@ -29,6 +29,7 @@
     message_start_failed: "Не удалось открыть диалог.",
     open_title_required: "Добавь название опена.",
     open_create_failed: "Не удалось опубликовать опен.",
+    open_upload_failed: "Не удалось загрузить файлы для опена. Проверь размер и формат.",
     open_apply_failed: "Не удалось отправить заявку.",
     open_select_failed: "Не удалось выбрать участника.",
     open_delete_failed: "Не удалось удалить опен.",
