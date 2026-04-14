@@ -1374,15 +1374,6 @@ async function ensureTrackCommentsSchema() {
       UNIQUE (comment_id, user_id)
     );
 
-    CREATE INDEX IF NOT EXISTS idx_track_comments_track_id
-      ON track_comments(track_id);
-
-    CREATE INDEX IF NOT EXISTS idx_track_comments_parent_id
-      ON track_comments(parent_id);
-
-    CREATE INDEX IF NOT EXISTS idx_track_comment_reactions_comment_id
-      ON track_comment_reactions(comment_id);
-
     ALTER TABLE track_comments
       ADD COLUMN IF NOT EXISTS parent_id integer REFERENCES track_comments(id) ON DELETE CASCADE;
 
@@ -1404,6 +1395,15 @@ async function ensureTrackCommentsSchema() {
 
     ALTER TABLE track_comment_reactions
       ALTER COLUMN reaction SET DEFAULT 'like';
+
+    CREATE INDEX IF NOT EXISTS idx_track_comments_track_id
+      ON track_comments(track_id);
+
+    CREATE INDEX IF NOT EXISTS idx_track_comments_parent_id
+      ON track_comments(parent_id);
+
+    CREATE INDEX IF NOT EXISTS idx_track_comment_reactions_comment_id
+      ON track_comment_reactions(comment_id);
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_track_comment_reactions_unique
       ON track_comment_reactions(comment_id, user_id);
