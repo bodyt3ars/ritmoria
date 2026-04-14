@@ -12,6 +12,13 @@ function opensEscapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function formatOpenPlayerTime(seconds) {
+  const safe = Math.max(0, Number(seconds || 0));
+  const minutes = Math.floor(safe / 60);
+  const secs = Math.floor(safe % 60);
+  return `${minutes}:${String(secs).padStart(2, "0")}`;
+}
+
 async function loadCurrentUserForOpens() {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -62,7 +69,27 @@ function renderOpenCard(openItem) {
     ? `<div class="opens-card-media"><img src="${opensEscapeHtml(openItem.cover_url)}" alt="${opensEscapeHtml(openItem.title || "cover")}"></div>`
     : "";
   const audio = openItem.audio_url
-    ? `<div class="opens-card-media"><audio controls src="${opensEscapeHtml(openItem.audio_url)}"></audio></div>`
+    ? `
+      <div class="opens-card-media">
+        <div class="opens-audio-player" data-open-audio-player>
+          <audio class="opens-audio-element" preload="metadata" src="${opensEscapeHtml(openItem.audio_url)}"></audio>
+          <button type="button" class="opens-audio-play" data-open-audio-play aria-label="Воспроизвести">
+            <i class="fa-solid fa-play"></i>
+          </button>
+          <div class="opens-audio-main">
+            <div class="opens-audio-time">
+              <span data-open-audio-current>0:00</span>
+              <span>/</span>
+              <span data-open-audio-duration>0:00</span>
+            </div>
+            <input type="range" class="opens-audio-progress" data-open-audio-progress min="0" max="100" value="0">
+            <div class="opens-audio-volume-row">
+              <i class="fa-solid fa-volume-low"></i>
+              <input type="range" class="opens-audio-volume" data-open-audio-volume min="0" max="1" step="0.01" value="0.3">
+            </div>
+          </div>
+        </div>
+      </div>`
     : "";
 
   return `
@@ -275,6 +302,77 @@ function bindOpensInteractions() {
     if (button.dataset.bound === "1") return;
     button.dataset.bound = "1";
     button.addEventListener("click", () => deleteOpen(button.dataset.openDelete));
+  });
+
+  document.querySelectorAll("[data-open-audio-player]").forEach((player) => {
+    if (player.dataset.bound === "1") return;
+    player.dataset.bound = "1";
+
+    const audio = player.querySelector(".opens-audio-element");
+    const playBtn = player.querySelector("[data-open-audio-play]");
+    const progress = player.querySelector("[data-open-audio-progress]");
+    const volume = player.querySelector("[data-open-audio-volume]");
+    const current = player.querySelector("[data-open-audio-current]");
+    const duration = player.querySelector("[data-open-audio-duration]");
+
+    if (!audio || !playBtn || !progress || !volume || !current || !duration) return;
+
+    const syncPlayState = () => {
+      const icon = playBtn.querySelector("i");
+      if (icon) {
+        icon.className = audio.paused
+          ? "fa-solid fa-play"
+          : "fa-solid fa-pause";
+      }
+      player.classList.toggle("is-playing", !audio.paused);
+    };
+
+    audio.volume = 0.3;
+    volume.value = "0.3";
+    duration.textContent = formatOpenPlayerTime(audio.duration || 0);
+
+    audio.addEventListener("loadedmetadata", () => {
+      duration.textContent = formatOpenPlayerTime(audio.duration || 0);
+    });
+
+    audio.addEventListener("timeupdate", () => {
+      current.textContent = formatOpenPlayerTime(audio.currentTime || 0);
+      const ratio = audio.duration > 0 ? ((audio.currentTime || 0) / audio.duration) * 100 : 0;
+      progress.value = String(ratio);
+    });
+
+    audio.addEventListener("play", syncPlayState);
+    audio.addEventListener("pause", syncPlayState);
+    audio.addEventListener("ended", () => {
+      audio.currentTime = 0;
+      progress.value = "0";
+      current.textContent = "0:00";
+      syncPlayState();
+    });
+
+    playBtn.addEventListener("click", () => {
+      if (audio.paused) {
+        document.querySelectorAll(".opens-audio-element").forEach((otherAudio) => {
+          if (otherAudio !== audio) otherAudio.pause();
+        });
+        audio.play().catch(() => {});
+      } else {
+        audio.pause();
+      }
+    });
+
+    progress.addEventListener("input", () => {
+      const ratio = Number(progress.value || 0) / 100;
+      if (audio.duration > 0) {
+        audio.currentTime = audio.duration * ratio;
+      }
+    });
+
+    volume.addEventListener("input", () => {
+      audio.volume = Math.max(0, Math.min(1, Number(volume.value || 0.3)));
+    });
+
+    syncPlayState();
   });
 }
 
