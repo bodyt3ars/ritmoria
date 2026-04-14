@@ -15,6 +15,8 @@ const APP_BASE_URL = String(process.env.APP_BASE_URL || "https://ritmoria.com").
 const APP_PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = String(process.env.JWT_SECRET || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
+const TELEGRAM_AUTH_BOT_USERNAME = String(process.env.TELEGRAM_AUTH_BOT_USERNAME || "ritmoriaauthBot").trim();
+const SUPPORT_BOT_USERNAME = String(process.env.SUPPORT_BOT_USERNAME || "ritmoriasupportBOT").trim();
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
@@ -325,6 +327,47 @@ async function sendSupportTelegramMessage(chatId, text, options = {}) {
   return data.result;
 }
 
+async function configureTelegramWebhook({ token, webhookPath, label }) {
+  if (!token) {
+    console.warn(`${label} token is not configured. Webhook sync skipped.`);
+    return;
+  }
+
+  const webhookUrl = `${APP_BASE_URL}${webhookPath}`;
+  const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      url: webhookUrl,
+      allowed_updates: ["message", "callback_query"]
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data?.description || `${label.toLowerCase()}_webhook_failed`);
+  }
+
+  console.log(`${label} webhook synced -> ${webhookUrl}`);
+}
+
+async function syncTelegramWebhooks() {
+  await configureTelegramWebhook({
+    token: process.env.TELEGRAM_BOT_TOKEN,
+    webhookPath: "/api/telegram-auth/webhook",
+    label: "Telegram auth"
+  });
+
+  await configureTelegramWebhook({
+    token: process.env.SUPPORT_BOT_TOKEN,
+    webhookPath: "/api/support/telegram-webhook",
+    label: "Telegram support"
+  });
+}
+
 async function sendAuthTelegramRequest(method, payload = {}) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -381,7 +424,11 @@ async function sendEmailOrLog({ to, subject, html, logLabel = "EMAIL" }) {
 }
 
 function getTelegramAuthBotUsername() {
-  return process.env.TELEGRAM_AUTH_BOT_USERNAME || "ritmoriaauthBot";
+  return TELEGRAM_AUTH_BOT_USERNAME;
+}
+
+function getSupportBotUsername() {
+  return SUPPORT_BOT_USERNAME;
 }
 
 function isSupportAdminChat(chatId) {
@@ -2412,7 +2459,7 @@ app.post("/api/support/telegram-webhook", async (req, res) => {
 });
 
 app.get("/support", (req, res) => {
-  res.redirect("https://t.me/ritmoriasupportBOT?start=support");
+  res.redirect(`https://t.me/${getSupportBotUsername()}?start=support`);
 });
 
 app.post("/telegram-auth/start", async (req, res) => {
@@ -8110,6 +8157,9 @@ await ensureHomeNewsSchema();
 await ensureCommunitySchema();
     app.listen(APP_PORT, () => {
       console.log(`Server running on ${APP_BASE_URL} (port ${APP_PORT})`);
+      syncTelegramWebhooks().catch((error) => {
+        console.error("TELEGRAM WEBHOOK SYNC ERROR:", error);
+      });
     });
   } catch (err) {
     console.error("BOOT ERROR:", err);
