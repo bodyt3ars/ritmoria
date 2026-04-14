@@ -471,7 +471,7 @@
     if (Number.isFinite(raw)) {
       return Math.max(0, Math.min(1, raw));
     }
-    return 0.78;
+    return 0.4;
   }
 
   function getLastAudibleVolume() {
@@ -479,7 +479,7 @@
     if (Number.isFinite(raw) && raw > 0) {
       return Math.max(0.05, Math.min(1, raw));
     }
-    return 0.78;
+    return 0.4;
   }
 
   function isRepeatEnabled() {

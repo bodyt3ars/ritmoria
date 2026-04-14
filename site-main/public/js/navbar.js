@@ -636,28 +636,16 @@ function initSearch() {
     </div>
   `;
 
-  const renderSearchSection = (title, itemsMarkup) => `
-    <div class="navbar-search-section">
-      <div class="navbar-search-section-title">${escapeSearchHtml(title)}</div>
-      ${itemsMarkup}
-    </div>
-  `;
-
   const renderSearchResults = (data) => {
     const users = Array.isArray(data?.users) ? data.users : [];
     const tracks = Array.isArray(data?.tracks) ? data.tracks : [];
-    const sections = [];
+    const items = [
+      ...users.map(renderUserItem),
+      ...tracks.map(renderTrackItem)
+    ];
 
-    if (users.length) {
-      sections.push(renderSearchSection("Профили", users.map(renderUserItem).join("")));
-    }
-
-    if (tracks.length) {
-      sections.push(renderSearchSection("Треки", tracks.map(renderTrackItem).join("")));
-    }
-
-    results.innerHTML = sections.length
-      ? sections.join("")
+    results.innerHTML = items.length
+      ? items.join("")
       : `<div class="navbar-search-empty">Ничего не найдено</div>`;
     results.classList.add("active");
   };

@@ -276,23 +276,6 @@
   font-size: 13px;
 }
 
-.navbar .navbar-search-section {
-  padding: 10px 0;
-}
-
-.navbar .navbar-search-section + .navbar-search-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.navbar .navbar-search-section-title {
-  padding: 0 16px 8px;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
-  font-weight: 700;
-}
-
 .navbar .navbar-search-item-user .navbar-search-avatar {
   width: 46px;
   height: 46px;
@@ -309,6 +292,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.navbar .navbar-search-item + .navbar-search-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* ===== TRACK PREVIEW IN SEARCH ===== */
