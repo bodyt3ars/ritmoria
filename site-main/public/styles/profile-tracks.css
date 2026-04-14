@@ -311,6 +311,16 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.35);
 }
 
+@media (max-width: 768px), (pointer: coarse) {
+  .volume-slider {
+    display: none;
+  }
+
+  .volume-row {
+    margin-left: 0;
+  }
+}
+
 .profile-hidden {
   display: none !important;
 }

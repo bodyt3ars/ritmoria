@@ -343,6 +343,12 @@
   background: #888;
 }
 
+@media (max-width: 768px), (pointer: coarse) {
+  .judge-page #volume {
+    display: none;
+  }
+}
+
 .judge-page #scWrapper {
   position: fixed;
   left: -9999px;

@@ -300,6 +300,16 @@
   box-shadow: 0 8px 20px rgba(255, 116, 188, 0.35);
 }
 
+@media (max-width: 768px), (pointer: coarse) {
+  .home-page .home-posts-shell .volume {
+    display: none;
+  }
+
+  .home-page .home-posts-shell .video-controls {
+    gap: 8px;
+  }
+}
+
 .home-page .home-loading-card {
   padding: 24px 20px;
   border-radius: 22px;

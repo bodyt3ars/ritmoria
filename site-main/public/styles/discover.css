@@ -624,6 +624,18 @@ background-repeat: no-repeat;
   box-shadow: 0 0 14px rgba(255,255,255,0.28);
 }
 
+@media (max-width: 768px), (pointer: coarse) {
+  .discover-volume {
+    min-width: auto;
+    padding: 8px;
+    gap: 0;
+  }
+
+  .discover-volume input[type="range"] {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .discover-page {
     padding: 116px 16px 166px;

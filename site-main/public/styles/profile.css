@@ -1601,6 +1601,16 @@
   box-shadow: 0 8px 20px rgba(255, 116, 188, 0.35);
 }
 
+@media (max-width: 768px), (pointer: coarse) {
+  .profile-page .volume {
+    display: none;
+  }
+
+  .profile-page .video-controls {
+    gap: 8px;
+  }
+}
+
 /* ===== TRACKS ===== */
 
 #tracksContainer {

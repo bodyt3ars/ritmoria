@@ -280,6 +280,16 @@
   font-size: 13px;
 }
 
+@media (max-width: 768px), (pointer: coarse) {
+  .opens-audio-volume {
+    display: none;
+  }
+
+  .opens-audio-volume-row {
+    gap: 0;
+  }
+}
+
 .opens-card-tags {
   display: flex;
   flex-wrap: wrap;
