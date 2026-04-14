@@ -83,11 +83,11 @@
 .navbar .navbar-logo-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .navbar .navbar-logo-img {
-  height: 34px;
+  height: 44px;
   width: auto;
   display: block;
   filter: drop-shadow(0 0 10px rgba(176, 116, 151, 0.5));
@@ -980,7 +980,7 @@
   }
 
   .navbar .navbar-logo-img {
-    height: 28px;
+    height: 32px;
   }
 
   .navbar .navbar-logo-text {
