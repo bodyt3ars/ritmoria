@@ -626,12 +626,6 @@ background-repeat: no-repeat;
 
 @media (max-width: 768px), (pointer: coarse) {
   .discover-volume {
-    min-width: auto;
-    padding: 8px;
-    gap: 0;
-  }
-
-  .discover-volume input[type="range"] {
     display: none;
   }
 }

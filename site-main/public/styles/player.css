@@ -1633,6 +1633,10 @@ body {
     display: none;
   }
 
+  .gp-volume-toggle {
+    display: none;
+  }
+
   .gp-volume-wrap {
     min-width: auto;
     gap: 0;

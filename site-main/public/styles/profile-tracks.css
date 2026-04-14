@@ -316,6 +316,10 @@
     display: none;
   }
 
+  .volume-btn {
+    display: none;
+  }
+
   .volume-row {
     margin-left: 0;
   }

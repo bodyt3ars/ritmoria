@@ -347,6 +347,14 @@
   .judge-page #volume {
     display: none;
   }
+
+  .judge-page .player-right .fa-volume-high,
+  .judge-page .player-right .fa-volume-low,
+  .judge-page .player-right .fa-volume-xmark,
+  .judge-page .player-right .volume-btn,
+  .judge-page .player-right .mute-btn {
+    display: none;
+  }
 }
 
 .judge-page #scWrapper {

@@ -1606,6 +1606,10 @@
     display: none;
   }
 
+  .profile-page .mute-btn {
+    display: none;
+  }
+
   .profile-page .video-controls {
     gap: 8px;
   }

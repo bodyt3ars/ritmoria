@@ -485,6 +485,14 @@
   .track-page #volume {
     display: none;
   }
+
+  .track-page .player-right .fa-volume-high,
+  .track-page .player-right .fa-volume-low,
+  .track-page .player-right .fa-volume-xmark,
+  .track-page .player-right .volume-btn,
+  .track-page .player-right .mute-btn {
+    display: none;
+  }
 }
 
 .track-page #playerCover.playing {

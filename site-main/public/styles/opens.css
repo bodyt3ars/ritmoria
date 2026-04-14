@@ -285,6 +285,10 @@
     display: none;
   }
 
+  .opens-audio-mute {
+    display: none;
+  }
+
   .opens-audio-volume-row {
     gap: 0;
   }
