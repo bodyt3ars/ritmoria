@@ -4943,7 +4943,23 @@ app.get("/api/tracks/:id", async (req, res) => {
           SELECT ROUND(AVG(memory)::numeric, 3)
           FROM track_rating_details
           WHERE track_id = t.id AND rating_type = 'judge'
-        ) as memory_avg
+        ) as memory_avg,
+
+        (
+          SELECT ut.id
+          FROM user_tracks ut
+          WHERE ut.user_id = t.user_id
+            AND (
+              (t.audio IS NOT NULL AND ut.audio = t.audio)
+              OR (t.soundcloud IS NOT NULL AND ut.soundcloud = t.soundcloud)
+              OR (
+                LOWER(COALESCE(ut.title, '')) = LOWER(COALESCE(t.title, ''))
+                AND LOWER(COALESCE(ut.artist, '')) = LOWER(COALESCE(t.artist, ''))
+              )
+            )
+          ORDER BY ut.created_at DESC
+          LIMIT 1
+        ) as comment_track_id
 
       FROM tracks t
       WHERE t.id = $1

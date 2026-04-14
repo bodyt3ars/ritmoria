@@ -239,8 +239,9 @@ function initTrackPage() {
       resetPlayerUI();
 
       if (!commentsController && typeof window.createTrackCommentsController === "function") {
+        const commentTrackId = Number(track.comment_track_id || track.id || 0);
         commentsController = window.createTrackCommentsController({
-          trackId: Number(track.id),
+          trackId: commentTrackId,
           listEl: commentsList,
           inputEl: commentInput,
           submitEl: sendCommentBtn,
@@ -252,6 +253,10 @@ function initTrackPage() {
           errorText: "Не удалось загрузить комментарии.",
           onXp: applyCommentXp
         });
+      }
+
+      if (commentsList && !Number(track.comment_track_id || track.id || 0)) {
+        commentsList.innerHTML = `<div class="track-thread-empty">Комментарии для этого трека пока недоступны.</div>`;
       }
 
       await commentsController?.loadComments?.();
