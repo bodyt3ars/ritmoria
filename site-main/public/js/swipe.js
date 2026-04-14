@@ -32,7 +32,7 @@ let discoverDragging = false;
 let discoverStartX = 0;
 let discoverDeltaX = 0;
 let discoverPointerId = null;
-let discoverLastVolume = 70;
+let discoverLastVolume = 30;
 let discoverMuted = false;
 let discoverInited = false;
 let discoverSwipeLocked = false;
@@ -334,7 +334,7 @@ function persistDiscoverMuteState() {
 }
 
 function readDiscoverVolumeState() {
-  let savedVolume = 70;
+  let savedVolume = 30;
   let savedMuted = false;
 
   try {
@@ -346,8 +346,12 @@ function readDiscoverVolumeState() {
     savedMuted = localStorage.getItem(DISCOVER_MUTED_KEY) === "1";
   } catch {}
 
-  discoverLastVolume = savedVolume > 0 ? savedVolume : 70;
-  discoverMuted = savedMuted || savedVolume === 0;
+  if (savedVolume <= 0 && !savedMuted) {
+    savedVolume = 30;
+  }
+
+  discoverLastVolume = savedVolume > 0 ? savedVolume : 30;
+  discoverMuted = savedMuted;
 
   if (discoverVolumeRange) {
     discoverVolumeRange.value = discoverMuted ? 0 : savedVolume;
@@ -802,24 +806,38 @@ async function swipeCurrentTrack(direction, options = {}) {
       : "translate3d(-1400px, 0, 0) rotate(-28deg)";
   discoverCard.style.opacity = "0";
 
+  const pendingTasks = [];
+
   if (direction === "right") {
     if (!skipAction) {
-      await sendTrackAction(current.id, "like");
+      pendingTasks.push(
+        sendTrackAction(current.id, "like").catch((err) => {
+          console.error("discover like action error", err);
+        })
+      );
     }
 
     if (!skipPlaylistSave) {
-      await saveLikedDiscoverTrack(current.id);
+      pendingTasks.push(
+        saveLikedDiscoverTrack(current.id).catch((err) => {
+          console.error("discover playlist save error", err);
+        })
+      );
     }
-  } else {
-    if (!skipAction) {
-      await sendTrackAction(current.id, "dislike");
-    }
+  } else if (!skipAction) {
+    pendingTasks.push(
+      sendTrackAction(current.id, "dislike").catch((err) => {
+        console.error("discover dislike action error", err);
+      })
+    );
   }
 
   setTimeout(() => {
     goToNextDiscoverTrack();
     discoverSwipeLocked = false;
   }, 260);
+
+  Promise.allSettled(pendingTasks).catch(() => {});
 }
 
 function resetDraggedCard() {
@@ -963,11 +981,11 @@ function bindDiscoverVolumeEvents() {
 
   discoverVolumeIcon.onclick = () => {
     if (!discoverMuted) {
-      discoverLastVolume = Number(discoverVolumeRange.value || 70);
+      discoverLastVolume = Number(discoverVolumeRange.value || 30);
       discoverVolumeRange.value = 0;
       discoverMuted = true;
     } else {
-      discoverVolumeRange.value = discoverLastVolume || 70;
+      discoverVolumeRange.value = discoverLastVolume || 30;
       discoverMuted = false;
     }
 
