@@ -1451,6 +1451,45 @@ async function ensureCommunitySchema() {
       UNIQUE (open_track_id, user_id)
     );
 
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS description text;
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS genre varchar(120);
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS looking_for text;
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS cover_url text;
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS audio_url text;
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS soundcloud_url text;
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'open';
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS selected_candidate_id integer;
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS created_at timestamp without time zone DEFAULT now();
+
+    ALTER TABLE open_tracks
+      ADD COLUMN IF NOT EXISTS updated_at timestamp without time zone DEFAULT now();
+
+    ALTER TABLE open_track_candidates
+      ADD COLUMN IF NOT EXISTS message text;
+
+    ALTER TABLE open_track_candidates
+      ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'pending';
+
+    ALTER TABLE open_track_candidates
+      ADD COLUMN IF NOT EXISTS created_at timestamp without time zone DEFAULT now();
+
     CREATE TABLE IF NOT EXISTS notifications (
       id SERIAL PRIMARY KEY,
       user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
