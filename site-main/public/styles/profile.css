@@ -1497,7 +1497,7 @@
 .profile-page .video-progress-bar {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #8b5cf6, #6366f1);
+  background: linear-gradient(90deg, #ff8ec5, #d96cff);
   border-radius: 20px;
 }
 
@@ -1508,11 +1508,29 @@
 }
 
 .profile-page .video-btn {
-  border: none;
-  background: none;
-  color: white;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 206, 227, 0.16);
+  border-radius: 50%;
+  background: rgba(23, 15, 33, 0.78);
+  color: #fff2f7;
   font-size: 16px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.profile-page .video-btn:hover,
+.profile-page .video-btn:focus-visible {
+  background: rgba(255, 120, 190, 0.22);
+  border-color: rgba(255, 173, 214, 0.38);
+  transform: translateY(-1px);
+}
+
+.profile-page .mute-btn.muted {
+  color: rgba(255, 225, 236, 0.78);
 }
 
 .profile-page .video-time {
@@ -1525,35 +1543,62 @@
 }
 
 .profile-page .volume {
+  --video-volume: 30%;
   appearance: none;
-  width: 80px;
-  height: 4px;
+  width: 92px;
+  height: 6px;
   border-radius: 20px;
   outline: none;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.25);
+  background: linear-gradient(
+    90deg,
+    #ff8bc4 0 var(--video-volume),
+    rgba(255, 255, 255, 0.22) var(--video-volume) 100%
+  );
 }
 
 .profile-page .volume::-webkit-slider-runnable-track {
-  height: 4px;
+  height: 6px;
   border-radius: 20px;
   background: transparent;
 }
 
 .profile-page .volume::-webkit-slider-thumb {
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #8b5cf6;
-  border: 2px solid white;
+  background: #fff3f8;
+  border: 2px solid #ff82be;
+  box-shadow: 0 8px 20px rgba(255, 116, 188, 0.35);
   margin-top: -5px;
   transition: 0.2s;
 }
 
 .profile-page .volume:hover::-webkit-slider-thumb {
   transform: scale(1.15);
-  background: #a78bfa;
+  border-color: #ff9ed0;
+}
+
+.profile-page .volume::-moz-range-track {
+  height: 6px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.profile-page .volume::-moz-range-progress {
+  height: 6px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #ff8ec5, #d96cff);
+}
+
+.profile-page .volume::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff3f8;
+  border: 2px solid #ff82be;
+  box-shadow: 0 8px 20px rgba(255, 116, 188, 0.35);
 }
 
 /* ===== TRACKS ===== */

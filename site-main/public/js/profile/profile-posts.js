@@ -143,8 +143,8 @@ function renderPostMedia(post) {
             <button class="video-btn play-btn"><i class="fa-solid fa-play"></i></button>
             <div class="video-time"><span class="current">0:00</span>/<span class="duration">0:00</span></div>
             <div class="video-spacer"></div>
-            <button class="video-btn mute-btn"><i class="fa-solid fa-volume-high"></i></button>
-            <input class="volume" type="range" min="0" max="1" step="0.05" value="1">
+            <button class="video-btn mute-btn" type="button" aria-label="Выключить звук"><i class="fa-solid fa-volume-low"></i></button>
+            <input class="volume" type="range" min="0" max="1" step="0.01" value="0.3" aria-label="Громкость видео">
             <button class="video-btn fullscreen-btn"><i class="fa-solid fa-expand"></i></button>
           </div>
         </div>
@@ -376,7 +376,9 @@ function renderPostCollection(containerId, posts, isMyProfile, emptyText) {
   document.querySelectorAll(".video-player").forEach((player) => {
     const video = player.querySelector("video");
     const slider = player.querySelector(".volume");
-    if (video && slider) video.volume = slider.value;
+    if (video && slider) {
+      applyVideoVolume(player, Number(slider.value || 0.3), { remember: true });
+    }
   });
   document.querySelectorAll(".video-element").forEach((video) => videoObserver.observe(video));
   initPostViewsObserver();
@@ -1398,8 +1400,25 @@ document.addEventListener("input", (e) => {
   const video = player?.querySelector("video");
   if (!video) return;
 
-  video.volume = slider.value;
-  updateVolumeSlider(slider);
+  applyVideoVolume(player, Number(slider.value));
+});
+
+document.addEventListener("click", (e) => {
+  const muteBtn = e.target.closest(".mute-btn");
+  if (!muteBtn) return;
+
+  const player = muteBtn.closest(".video-player");
+  const slider = player?.querySelector(".volume");
+  if (!player || !slider) return;
+
+  const current = Number(slider.value || 0);
+  if (current > 0.001) {
+    applyVideoVolume(player, 0, { remember: true });
+    return;
+  }
+
+  const remembered = Number(player.dataset.lastVolume || 0.3);
+  applyVideoVolume(player, remembered > 0.001 ? remembered : 0.3, { remember: true });
 });
 
 document.addEventListener("click", (e) => {
@@ -1443,8 +1462,43 @@ document.addEventListener("pause", (e) => {
 }, true);
 
 function updateVolumeSlider(slider) {
-  const percent = Number(slider.value) * 100;
-  slider.style.background = `linear-gradient(90deg, #8b5cf6 0%, #8b5cf6 ${percent}%, rgba(255,255,255,.25) ${percent}%, rgba(255,255,255,.25) 100%)`;
+  if (!slider) return;
+  const percent = Math.max(0, Math.min(100, Number(slider.value || 0) * 100));
+  slider.style.setProperty("--video-volume", `${percent}%`);
+}
+
+function syncVideoMuteButton(player) {
+  const video = player?.querySelector("video");
+  const muteBtn = player?.querySelector(".mute-btn");
+  if (!video || !muteBtn) return;
+
+  const icon = muteBtn.querySelector("i");
+  const safeVolume = Number(video.volume || 0);
+  const isMuted = video.muted || safeVolume <= 0.001;
+
+  if (icon) {
+    icon.className = `fa-solid ${isMuted ? "fa-volume-xmark" : (safeVolume < 0.55 ? "fa-volume-low" : "fa-volume-high")}`;
+  }
+
+  muteBtn.classList.toggle("muted", isMuted);
+  muteBtn.setAttribute("aria-label", isMuted ? "Включить звук" : "Выключить звук");
+}
+
+function applyVideoVolume(player, nextValue, { remember = true } = {}) {
+  const video = player?.querySelector("video");
+  const slider = player?.querySelector(".volume");
+  if (!video || !slider) return;
+
+  const safe = Math.max(0, Math.min(1, Number(nextValue || 0)));
+  if (remember && safe > 0.001) {
+    player.dataset.lastVolume = String(safe);
+  }
+
+  video.muted = safe <= 0.001;
+  video.volume = safe;
+  slider.value = String(safe);
+  updateVolumeSlider(slider);
+  syncVideoMuteButton(player);
 }
 
 window.togglePostMenu = togglePostMenu;
