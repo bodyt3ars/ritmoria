@@ -154,9 +154,7 @@ async function createOpen() {
   formData.append("genre", document.getElementById("openGenre")?.value.trim() || "");
   formData.append("looking_for", document.getElementById("openLookingFor")?.value.trim() || "");
   formData.append("soundcloud_url", document.getElementById("openSoundcloud")?.value.trim() || "");
-  const coverFile = document.getElementById("openCover")?.files?.[0];
   const audioFile = document.getElementById("openAudio")?.files?.[0];
-  if (coverFile) formData.append("cover", coverFile);
   if (audioFile) formData.append("audio", audioFile);
 
   const res = await fetch("/api/opens", {
@@ -175,9 +173,7 @@ async function createOpen() {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
-  const cover = document.getElementById("openCover");
   const audio = document.getElementById("openAudio");
-  if (cover) cover.value = "";
   if (audio) audio.value = "";
   updateSelectedOpenFiles();
   await loadOpens();
@@ -283,14 +279,9 @@ function bindOpensInteractions() {
 }
 
 function updateSelectedOpenFiles() {
-  const coverInput = document.getElementById("openCover");
   const audioInput = document.getElementById("openAudio");
-  const coverName = document.getElementById("openCoverName");
   const audioName = document.getElementById("openAudioName");
 
-  if (coverName) {
-    coverName.textContent = coverInput?.files?.[0]?.name || "Файл не выбран";
-  }
   if (audioName) {
     audioName.textContent = audioInput?.files?.[0]?.name || "Файл не выбран";
   }
@@ -299,7 +290,6 @@ function updateSelectedOpenFiles() {
 window.initOpensPage = async function initOpensPage() {
   await loadCurrentUserForOpens();
   document.getElementById("publishOpenBtn")?.addEventListener("click", createOpen);
-  document.getElementById("openCover")?.addEventListener("change", updateSelectedOpenFiles);
   document.getElementById("openAudio")?.addEventListener("change", updateSelectedOpenFiles);
   updateSelectedOpenFiles();
   await loadOpens();

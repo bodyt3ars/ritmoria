@@ -10,23 +10,14 @@
         <textarea id="openLookingFor" class="opens-textarea opens-textarea-small" placeholder="Кого ты ищешь на фит"></textarea>
         <input id="openSoundcloud" class="opens-input" type="text" placeholder="SoundCloud ссылка (необязательно)">
 
-        <div class="opens-file-field">
-          <span>Обложка</span>
-          <label class="opens-file-picker" for="openCover">
-            <span class="opens-file-picker-btn">Выбрать обложку</span>
-            <span id="openCoverName" class="opens-file-picker-name">Файл не выбран</span>
-          </label>
-          <input id="openCover" type="file" accept="image/*" hidden>
-        </div>
-
-        <div class="opens-file-field">
-          <span>Аудио</span>
-          <label class="opens-file-picker" for="openAudio">
-            <span class="opens-file-picker-btn">Выбрать аудио</span>
+      <div class="opens-file-field">
+        <span>Аудио</span>
+        <label class="opens-file-picker" for="openAudio">
+          <span class="opens-file-picker-btn">Выбрать аудио</span>
             <span id="openAudioName" class="opens-file-picker-name">Файл не выбран</span>
           </label>
-          <input id="openAudio" type="file" accept="audio/*" hidden>
-        </div>
+        <input id="openAudio" type="file" accept="audio/*" hidden>
+      </div>
 
         <button id="publishOpenBtn" class="opens-primary-btn" type="button">Опубликовать опен</button>
         <p id="opensCreateStatus" class="opens-status"></p>

@@ -233,7 +233,7 @@ const postMediaUploadSingle = createHandledUpload(
   "Не удалось загрузить медиафайл. Проверь файл и попробуй ещё раз."
 );
 const openUploadFields = createHandledUpload(
-  openUpload.fields([{ name: "cover", maxCount: 1 }, { name: "audio", maxCount: 1 }]),
+  openUpload.fields([{ name: "audio", maxCount: 1 }]),
   "open_upload_failed",
   "Не удалось загрузить файлы для опена. Проверь размер и формат."
 );
@@ -5681,22 +5681,8 @@ app.post("/api/opens", auth, openUploadFields, async (req, res) => {
       return res.status(400).json({ error: "open_title_required" });
     }
 
-    let coverUrl = "";
     let audioUrl = "";
-    const coverFile = req.files?.cover?.[0];
     const audioFile = req.files?.audio?.[0];
-
-    if (coverFile?.mimetype?.startsWith("image")) {
-      const fileName = `open-cover-${Date.now()}.webp`;
-      const filePath = path.join(__dirname, "..", "public", "uploads", "opens", "covers", fileName);
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      await sharp(coverFile.buffer)
-        .rotate()
-        .resize({ width: 1600, withoutEnlargement: true })
-        .webp({ quality: 84 })
-        .toFile(filePath);
-      coverUrl = `/uploads/opens/covers/${fileName}`;
-    }
 
     if (audioFile) {
       const ext = path.extname(audioFile.originalname || "").toLowerCase() || ".mp3";
@@ -5713,7 +5699,7 @@ app.post("/api/opens", auth, openUploadFields, async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
       `,
-      [userId, title.slice(0, 160), description, genre, lookingFor, coverUrl, audioUrl, soundcloudUrl]
+      [userId, title.slice(0, 160), description, genre, lookingFor, "", audioUrl, soundcloudUrl]
     );
 
     res.status(201).json(created.rows[0]);
