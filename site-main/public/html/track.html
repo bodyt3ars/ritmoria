@@ -1,0 +1,121 @@
+<div class="track-page">
+  <div class="track-page-card">
+
+    <div class="track-page-top">
+      <div class="track-page-cover-wrap">
+        <img id="trackCover" class="track-page-cover" src="" alt="Обложка трека">
+      </div>
+
+      <div class="track-page-info">
+        <small class="track-page-kicker">СТРАНИЦА ТРЕКА</small>
+        <h1 id="trackName">Название трека</h1>
+        <h2 id="trackArtist">Артист</h2>
+
+        <div class="track-page-scores">
+          <div class="track-page-score-chip track-page-score-chip-judge" id="judgeHover">
+            <span>Судьи</span>
+            <span id="judgeScore">—</span>
+
+            <div id="judgePopup" class="track-page-judge-popup">
+              <div class="track-page-judge-popup-content">
+
+                <div class="track-page-judge-header">
+                  <div>Судья</div>
+                  <div>Рифмы</div>
+                  <div>Структура</div>
+                  <div>Стиль</div>
+                  <div>Харизма</div>
+                  <div>Вайб</div>
+                  <div>Память</div>
+                  <div>AVG</div>
+                </div>
+
+                <div id="judgeRows"></div>
+
+              </div>
+            </div>
+          </div>
+
+          <div class="track-page-score-chip track-page-score-chip-user">
+            <span>Пользовательские оценки:</span>
+            <b id="userScore">—</b>
+          </div>
+        </div>
+
+        <div class="track-page-reactions">
+          <button class="track-page-reaction-btn track-page-reaction-like" id="likeBtn">
+            <i class="fa-solid fa-heart"></i>
+            <span id="likes">0</span>
+          </button>
+
+          <button class="track-page-reaction-btn track-page-reaction-dislike" id="dislikeBtn">
+            <i class="fa-solid fa-heart-crack"></i>
+            <span id="dislikes">0</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="track-page-player-box">
+      <div class="custom-player">
+
+        <div id="mp3Player" class="player-ui">
+          <div class="player-track">
+            <div class="vinyl">
+              <img id="playerCover" src="" alt="Cover">
+            </div>
+
+            <div class="player-meta">
+              <div id="playerTitle">Track</div>
+              <div id="playerArtist">Artist</div>
+            </div>
+          </div>
+
+          <audio id="trackAudio"></audio>
+
+          <div class="player-left">
+            <button id="playBtn">
+              <span class="icon play"></span>
+              <span class="icon pause"></span>
+            </button>
+          </div>
+
+          <div class="player-center">
+            <div class="progress-wrap" id="progressWrap">
+              <div class="progress" id="progress"></div>
+            </div>
+
+            <div class="time">
+              <span id="current">0:00</span>
+              <span id="duration">0:00</span>
+            </div>
+          </div>
+
+          <div class="player-right">
+            <input type="range" id="volume" min="0" max="1" step="0.01">
+          </div>
+        </div>
+
+        <div id="scWrapper" class="track-page-sc-wrapper">
+          <iframe id="soundcloudPlayer" allow="autoplay"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <div class="track-page-panel">
+      <div id="criteriaList" class="track-page-criteria-list"></div>
+    </div>
+
+    <div class="track-page-panel">
+      <h3 class="track-page-comments-title">Комментарии</h3>
+
+      <div class="track-page-comment-form">
+        <textarea id="commentInput" placeholder="Написать комментарий..."></textarea>
+        <button id="sendComment">Отправить</button>
+      </div>
+
+      <div id="comments"></div>
+    </div>
+
+  </div>
+</div>

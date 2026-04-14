@@ -1,0 +1,74 @@
+<div class="discover-page">
+  <div class="discover-bg discover-bg-left"></div>
+  <div class="discover-bg discover-bg-right"></div>
+
+  <div class="discover-shell">
+    <div class="discover-swipe-container">
+      <div class="discover-card-stack">
+        <div class="discover-track-card discover-track-card-next"></div>
+        <div class="discover-track-card discover-track-card-active"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="discover-player">
+    <div class="discover-progress" id="discoverProgressTrack">
+      <div class="discover-progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="discover-player-controls">
+      <div class="discover-controls-cluster discover-controls-cluster-side discover-controls-cluster-left">
+        <div class="discover-playlist-wrap">
+          <button class="discover-playlist-trigger" id="discoverPlaylistTrigger" type="button" title="Выбрать плейлист">
+            <span class="discover-playlist-kicker">Свайп вправо</span>
+            <span class="discover-playlist-label" id="discoverPlaylistLabel">Любимые треки</span>
+          </button>
+
+          <div class="discover-playlist-panel discover-hidden" id="discoverPlaylistPanel">
+            <div class="discover-playlist-panel-head">
+              <div>
+                <div class="discover-playlist-panel-kicker">Куда сохранять</div>
+                <div class="discover-playlist-panel-title">Плейлист для лайка</div>
+              </div>
+              <button class="discover-playlist-close" id="discoverPlaylistClose" type="button" aria-label="Закрыть">✕</button>
+            </div>
+
+            <div class="discover-playlist-list" id="discoverPlaylistList"></div>
+
+            <button class="discover-playlist-create" id="discoverPlaylistCreate" type="button">+ Новый плейлист</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="discover-controls-cluster discover-controls-cluster-main">
+        <button class="discover-btn discover-btn-back" type="button" title="Назад">↩</button>
+        <button class="discover-btn discover-btn-dislike" type="button" title="Свайп влево">✕</button>
+        <button class="discover-btn discover-btn-play discover-btn-play-main" type="button" title="Play / Pause">▶</button>
+        <button class="discover-btn discover-btn-like" type="button" title="Свайп вправо">❤</button>
+        <button class="discover-btn discover-btn-save" type="button" title="Добавить в плейлист">＋</button>
+      </div>
+
+      <div class="discover-controls-cluster discover-controls-cluster-side discover-controls-cluster-right">
+        <div class="discover-volume">
+          <button class="discover-volume-icon" id="volumeIcon" type="button" title="Mute / Unmute">
+            <svg id="volumeOn" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M16 9c.6.8 1 1.8 1 3s-.4 2.2-1 3M18 5.3C19.8 7 21 9.3 21 12s-1.2 5-3 6.7M4.6 9H5.5c.5 0 .8 0 1-.07.2-.06.4-.16.6-.3.2-.15.4-.36.7-.78l2.6-3.1c.4-.5.6-.7.8-.7.1 0 .3 0 .4.1.2.1.2.4.2 1.1v13.6c0 .7 0 1-.2 1.1-.1.1-.3.1-.4.1-.2 0-.4-.2-.8-.7l-2.6-3.1c-.3-.4-.5-.6-.7-.8-.2-.1-.4-.2-.6-.3-.2-.07-.5-.07-1-.07H4.6c-.6 0-.8 0-1-.1a1 1 0 0 1-.4-.4c-.1-.2-.1-.4-.1-1v-2.8c0-.6 0-.8.1-1 .1-.2.2-.3.4-.4.2-.1.4-.1 1-.1Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+
+            <svg id="volumeOff" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:none">
+              <path d="M4 11c0-1.1.9-2 2-2h1.3c.4 0 .8-.1 1.2-.4L10.4 7.2c.7-.5 1.6 0 1.6.8v8c0 .8-.9 1.3-1.6.8l-1.9-1.4c-.4-.3-.8-.4-1.2-.4H6c-1.1 0-2-.9-2-2v-2Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="18.5" y1="9.5" x2="14.5" y2="13.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <line x1="14.5" y1="9.5" x2="18.5" y2="13.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          </button>
+
+          <input type="range" id="volumeRange" min="0" max="100" value="70" step="1" aria-label="Громкость">
+        </div>
+      </div>
+    </div>
+
+    <div class="discover-toast discover-hidden" id="discoverToast"></div>
+  </div>
+
+  <audio id="audioPlayer" preload="metadata"></audio>
+</div>

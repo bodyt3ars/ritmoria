@@ -1,0 +1,66 @@
+<div class="settings-page">
+  <div class="settings-page-container">
+    <h1 class="settings-page-title">Настройки</h1>
+
+    <div class="settings-page-grid">
+      <div onclick="openSettingsSection('archive')" class="settings-page-card">
+        <i class="fa-solid fa-box-archive"></i>
+        <span>Архив</span>
+      </div>
+
+      <div onclick="openSettingsSection('privacy')" class="settings-page-card">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Конфиденциальность</span>
+      </div>
+
+      <div onclick="openSettingsSection('saved')" class="settings-page-card">
+        <i class="fa-solid fa-bookmark"></i>
+        <span>Сохранённые</span>
+      </div>
+
+      <div onclick="openSettingsSection('likes')" class="settings-page-card">
+        <i class="fa-solid fa-heart"></i>
+        <span>Лайки</span>
+      </div>
+
+      <div onclick="openSettingsSection('communication')" class="settings-page-card">
+        <i class="fa-solid fa-comments"></i>
+        <span>Сообщения и уведомления</span>
+      </div>
+
+      <div onclick="confirmLogout()" class="settings-page-card settings-page-card-danger">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Выйти из аккаунта</span>
+      </div>
+
+      <div onclick="openSettingsSection('delete-account')" class="settings-page-card settings-page-card-danger">
+        <i class="fa-solid fa-user-xmark"></i>
+        <span>Удалить аккаунт</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="settingsModal" class="settings-page-modal">
+  <div class="settings-page-modal-content">
+    <div class="settings-page-modal-header">
+      <h2 id="modalTitle">Заголовок</h2>
+      <button type="button" class="settings-page-modal-close" onclick="closeSettingsSection()">&times;</button>
+    </div>
+
+    <div class="settings-page-modal-body" id="modalBody">
+      Контент
+    </div>
+  </div>
+</div>
+
+<div id="viewPostModal" class="settings-page-modal">
+  <div class="settings-page-modal-content">
+    <div class="settings-page-modal-header">
+      <h2>Пост</h2>
+      <button type="button" class="settings-page-modal-close" onclick="closeViewPost()">&times;</button>
+    </div>
+
+    <div id="viewPostBody" class="settings-page-view-post-body"></div>
+  </div>
+</div>

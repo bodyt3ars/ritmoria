@@ -1,0 +1,32 @@
+<div class="admin-page">
+  <div class="admin-container">
+
+    <h1 class="admin-title">Админ панель</h1>
+
+    <div class="admin-search">
+      <input id="adminSearch" placeholder="Поиск по @username_tag...">
+      <div id="adminSearchResults"></div>
+    </div>
+
+    <section class="admin-news-panel">
+      <h2 class="admin-section-title">Новости на главной</h2>
+
+      <div class="admin-news-form">
+        <input id="adminNewsTitle" class="admin-news-input" placeholder="Заголовок новости">
+        <textarea id="adminNewsContent" class="admin-news-textarea" placeholder="Текст новости"></textarea>
+        <label class="admin-news-upload" for="adminNewsMedia">
+          <i class="fa-solid fa-image"></i>
+          <span>Добавить изображение или видео</span>
+        </label>
+        <input id="adminNewsMedia" type="file" accept="image/*,video/*" hidden>
+        <div id="adminNewsMediaPreview" class="admin-news-media-preview admin-hidden"></div>
+        <button id="adminNewsPublish" type="button" class="admin-news-btn">Опубликовать</button>
+      </div>
+
+      <div id="adminNewsList" class="admin-news-list"></div>
+    </section>
+
+    <div id="usersList" class="users-list"></div>
+
+  </div>
+</div>

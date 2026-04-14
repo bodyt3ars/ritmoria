@@ -1,0 +1,402 @@
+<div class="profile-page">
+  <div class="profile-page-container">
+    <div class="profile-page-card">
+      <div id="socialLinks" class="profile-social-links profile-social-links-top-right"></div>
+
+      <div class="profile-page-header">
+        <div class="profile-avatar-wrapper">
+          <img
+            id="avatar"
+            class="profile-avatar"
+            src="https://i.pravatar.cc/150"
+            alt="Аватар профиля"
+          />
+
+          <label for="avatarInput" class="profile-avatar-upload" title="Изменить аватар">
+            <i class="fa-solid fa-camera"></i>
+          </label>
+          <input id="avatarInput" type="file" accept="image/*" hidden />
+        </div>
+
+          <div class="profile-page-info">
+          <div class="profile-username-row">
+            <h2 id="username"></h2>
+            <span id="verifiedBadge" class="profile-verified-badge profile-hidden" title="Подтвержденный профиль" aria-label="Подтвержденный профиль">
+              <i class="fa-solid fa-check"></i>
+            </span>
+
+<p id="usernameTag" class="profile-username-tag"></p>
+
+<button class="profile-icon-btn profile-edit-username-btn" onclick="editUsername()" title="Изменить ник">
+  <i class="fa-solid fa-pen"></i>
+</button>
+
+<div class="rank-hover-wrap">
+  <img id="rankIcon" class="profile-rank-icon" src="/images/ranks/1.png" />
+
+  <div class="rank-xp-popup" id="rankXpPopup">
+    <div class="rank-xp-top">
+      <span id="rankName">Новичок</span>
+      <span id="rankXpText">0 XP / 500</span>
+    </div>
+
+    <div class="rank-xp-bar">
+      <div class="rank-xp-fill" id="rankXpFill"></div>
+    </div>
+  </div>
+</div>
+          </div>
+
+          <div id="usernameEditBox" class="profile-username-edit profile-hidden">
+            <input id="usernameInput" type="text" placeholder="Введите новый ник" />
+            <button class="profile-save-inline-btn" onclick="saveUsername()" title="Сохранить">
+              <i class="fa-solid fa-check"></i>
+            </button>
+            <button class="profile-cancel-inline-btn" onclick="cancelUsernameEdit()" title="Отмена">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <p id="usernameError" class="profile-field-error"></p>
+          <p id="bio" class="profile-bio"></p>
+
+          <div class="profile-page-actions">
+            <button id="editProfileBtn" class="profile-main-btn" onclick="openEdit()">Редактировать профиль</button>
+
+            <a href="/settings" id="settingsBtn" class="profile-secondary-btn">
+              <i class="fa-solid fa-gear"></i>
+              Настройки
+            </a>
+
+            <button id="followBtn" class="profile-main-btn"></button>
+            <button id="messageBtn" class="profile-secondary-btn profile-hidden" type="button">
+              <i class="fa-regular fa-message"></i>
+              Написать сообщение
+            </button>
+          </div>
+
+          <div class="profile-follow-stats">
+            <div class="profile-stat" onclick="openFollowModal('followers')">
+              <div id="followersCount" class="profile-stat-number">0</div>
+              <div class="profile-stat-label">подписчики</div>
+            </div>
+
+            <div class="profile-stat" onclick="openFollowModal('following')">
+              <div id="followingCount" class="profile-stat-number">0</div>
+              <div class="profile-stat-label">подписки</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-page-messages">
+          <p id="profileError" class="profile-field-error"></p>
+          <p id="profileSuccess" class="profile-field-success"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-page-content">
+      <div class="profile-tabs">
+        <button class="profile-tab-btn" data-tab="posts" onclick="switchTab('posts')">
+          <i class="fa-solid fa-table-cells"></i> Посты
+        </button>
+
+        <button class="profile-tab-btn" data-tab="tracks" onclick="switchTab('tracks')">
+          <i class="fa-solid fa-music"></i> Треки
+        </button>
+
+        <button class="profile-tab-btn" data-tab="reposts" onclick="switchTab('reposts')">
+          <i class="fa-solid fa-retweet"></i> Репосты
+        </button>
+
+        <button class="profile-tab-btn" data-tab="mentions" onclick="switchTab('mentions')">
+          <i class="fa-solid fa-at"></i> Упоминания
+        </button>
+      </div>
+
+      <div id="postsTab" class="profile-tab-content active">
+        <div class="profile-posts-header">
+          <div class="profile-posts-title"></div>
+
+          <button class="profile-create-post-btn profile-section-cta-btn" onclick="openCreatePostModal()">
+            <i class="fa-solid fa-plus"></i>
+            <span>Пост</span>
+          </button>
+        </div>
+
+        <div id="postsContainer"></div>
+      </div>
+
+      <div id="tracksTab" class="profile-tab-content profile-tracks-scope">
+        <div class="profile-section-header">
+          <h3>Треки</h3>
+          <button class="profile-create-track-btn profile-section-cta-btn" onclick="openTrackModal()">
+            <i class="fa-solid fa-plus"></i>
+            <span>Трек</span>
+          </button>
+        </div>
+
+        <div id="tracksContainer"></div>
+      </div>
+
+      <div id="repostsTab" class="profile-tab-content">
+        <div id="repostsContainer"></div>
+      </div>
+
+      <div id="mentionsTab" class="profile-tab-content">
+        <div class="profile-section-header">
+          <h3>Упоминания</h3>
+        </div>
+
+        <div id="mentionsContainer"></div>
+      </div>
+    </div>
+
+    <div id="editModal" class="profile-modal">
+      <div class="profile-modal-content">
+        <h3>Редактировать профиль</h3>
+
+        <input id="editUsername" type="text" placeholder="Ник" />
+        <div class="profile-input-group">
+          <input id="editUsernameTag" type="text" placeholder="Username (например: username)">
+          <div id="usernameTagStatus" class="profile-input-status"></div>
+        </div>
+
+        <textarea id="editBio" rows="4" maxlength="200" placeholder="Расскажите о себе"></textarea>
+
+        <div class="profile-bio-counter">
+          <span id="bioCount">0</span>/200
+        </div>
+
+        <input id="editAvatar" type="hidden" />
+
+        <input id="editSoundcloud" type="text" placeholder="Ссылка на SoundCloud" />
+        <input id="editInstagram" type="text" placeholder="Ссылка на Instagram" />
+        <input id="editTwitter" type="hidden" />
+        <input id="editTelegram" type="text" placeholder="Telegram username или ссылка" />
+        <input id="editWebsite" type="text" placeholder="Ссылка на Website" />
+
+        <p id="editProfileError" class="profile-field-error"></p>
+        <p id="editProfileSuccess" class="profile-field-success"></p>
+
+        <div class="profile-modal-buttons">
+          <button class="profile-main-btn" onclick="saveProfile()">Сохранить</button>
+          <button class="profile-secondary-btn" onclick="closeEdit()">Отмена</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="cropModal" class="profile-modal">
+      <div class="profile-modal-content profile-crop-modal-content">
+        <h3>Настройте аватар</h3>
+
+        <div class="profile-crop-stage">
+          <div id="cropCircle" class="profile-crop-circle">
+            <img id="cropImage" alt="Предпросмотр аватара" draggable="false" />
+          </div>
+        </div>
+
+        <label class="profile-zoom-label" for="zoomRange">Масштаб</label>
+        <input id="zoomRange" type="range" min="0.1" max="4" step="0.01" value="1" />
+
+        <div class="profile-modal-buttons">
+          <button class="profile-main-btn" onclick="applyCrop()">Сохранить аватар</button>
+          <button class="profile-secondary-btn" onclick="removeAvatar()">Удалить аватар</button>
+          <button class="profile-secondary-btn" onclick="closeCropModal()">Отмена</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settingsModal" class="profile-modal">
+      <div class="profile-modal-content">
+        <h3>Настройки аккаунта</h3>
+
+        <input id="newEmail" type="email" placeholder="Новая почта">
+        <input id="currentPassword" type="password" placeholder="Текущий пароль">
+        <input id="newPassword" type="password" placeholder="Новый пароль">
+
+        <div class="profile-modal-buttons">
+          <button class="profile-main-btn" onclick="changeEmail()">Изменить почту</button>
+          <button class="profile-main-btn" onclick="changePassword()">Изменить пароль</button>
+          <button class="profile-secondary-btn" onclick="closeSettings()">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="postModal" class="profile-post-modal">
+      <div class="profile-post-modal-content">
+        <button class="profile-post-modal-close" onclick="closePostModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="profile-post-modal-left">
+          <h3 class="profile-post-modal-title">Создать публикацию</h3>
+
+          <textarea
+            id="postText"
+            class="profile-post-textarea"
+            placeholder="Что нового? Можно отметить @ник"
+            maxlength="500"
+          ></textarea>
+
+          <div id="editorDropzone" class="profile-editor-dropzone">
+            <div id="mediaHint" class="profile-media-hint">
+              <i class="fa-solid fa-photo-film"></i>
+              <p>Перетащи фото или видео сюда</p>
+              <span>или</span>
+              <button type="button" class="profile-media-select-btn" onclick="selectMedia()">
+                Выбрать файл
+              </button>
+            </div>
+
+            <input type="file" id="postMedia" accept="image/*,video/*" hidden />
+
+            <div id="editorPreview" class="profile-editor-preview profile-hidden">
+              <div id="editorViewport" class="profile-editor-viewport">
+                <img id="editorImage" class="profile-editor-image profile-hidden" alt="preview" />
+                <video id="editorVideo" class="profile-editor-video profile-hidden" controls playsinline></video>
+              </div>
+            </div>
+          </div>
+
+          <input
+            type="range"
+            id="zoomSlider"
+            class="profile-zoom-slider profile-hidden"
+            min="1"
+            max="3"
+            step="0.01"
+            value="1"
+          />
+
+          <div id="mediaActions" class="profile-media-actions profile-hidden">
+            <button type="button" class="profile-secondary-btn" onclick="selectMedia()">Изменить файл</button>
+            <button type="button" class="profile-danger-btn" onclick="removeMedia()">Удалить файл</button>
+          </div>
+
+          <div id="uploadProgress" class="profile-upload-progress profile-hidden">
+            <div id="uploadBar" class="profile-upload-bar"></div>
+          </div>
+
+          <div class="profile-post-modal-actions">
+            <button type="button" class="profile-secondary-btn" onclick="closePostModal()">Отмена</button>
+            <button type="button" id="publishPostBtn" class="profile-primary-btn" onclick="publishPost()">Опубликовать</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="trackModal" class="profile-post-modal">
+      <div class="profile-post-modal-content">
+        <button class="profile-post-modal-close" onclick="closeTrackModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="profile-post-modal-left">
+          <h3 class="profile-post-modal-title">Загрузить трек</h3>
+
+          <div class="profile-form-grid">
+            <div class="profile-cover-block">
+              <label class="profile-cover-label">
+                <div class="profile-cover-placeholder" id="trackCoverPlaceholder">
+                  <div class="profile-hash">#</div>
+                  <div>cover</div>
+                </div>
+                <img id="trackCoverPreview" class="profile-cover-preview">
+                <input type="file" id="trackCoverInput" hidden accept="image/*">
+              </label>
+
+              <div class="profile-cover-hint">
+                Нажми, чтобы загрузить обложку
+              </div>
+
+              <div class="profile-cover-bottom">
+                <div class="profile-cover-ps">
+                  p.s. благодаря тэгам и жанрам,<br>
+                  ваши треки попадают в рекомендации
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-right-side">
+              <div class="profile-top-row">
+                <div class="profile-field">
+                  <label>Артист(ы)</label>
+                  <input id="trackArtist" placeholder="@ник артиста или несколько через запятую">
+                </div>
+
+                <div class="profile-field">
+                  <label>Название трека</label>
+                  <input id="trackTitle" placeholder="Название трека">
+                </div>
+              </div>
+
+              <div class="profile-top-row">
+                <div class="profile-field">
+                  <label>Жанр</label>
+                  <input id="trackGenre" placeholder="archivecore, hyperpop...">
+                </div>
+
+                <div class="profile-field">
+                  <label>Продюсер</label>
+                  <input id="trackProducer" placeholder="Producer name">
+                </div>
+              </div>
+
+              <div class="profile-field">
+                <label>Тэги</label>
+                <div class="profile-tags-input" id="trackTagsContainer">
+                  <input id="trackTagsInput" placeholder="Add styles, moods...">
+                </div>
+              </div>
+
+              <div class="profile-field">
+                <label>Описание</label>
+                <textarea id="trackDescription" placeholder="Напиши что-то о треке..."></textarea>
+              </div>
+
+              <div class="profile-field">
+                <label>Аудиофайл</label>
+
+                <label class="profile-file-input">
+                  <span class="profile-file-btn">Выбрать файл</span>
+                  <span id="trackFileName">Файл не выбран</span>
+                  <input type="file" id="trackAudioInput" hidden accept="audio/*">
+                </label>
+              </div>
+
+              <div class="profile-preview" id="trackPreview">
+                <audio controls id="trackAudioPlayer"></audio>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-post-modal-actions">
+            <button type="button" class="profile-secondary-btn" onclick="closeTrackModal()">Отмена</button>
+
+            <button id="trackSubmitBtn" type="button" class="profile-primary-btn" onclick="submitUserTrack()">
+              Загрузить трек
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="followModal" class="profile-modal">
+      <div class="profile-modal-content profile-follow-modal">
+        <div class="profile-follow-header">
+          <h3 id="followTitle">Подписчики</h3>
+          <button onclick="closeFollowModal()" class="profile-close-btn">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div id="followList" class="profile-follow-list"></div>
+      </div>
+    </div>
+
+    <div id="copyToast" class="profile-copy-toast">
+  Ссылка скопирована
+</div>
+</div>
+</div>

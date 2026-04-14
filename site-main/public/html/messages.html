@@ -1,0 +1,212 @@
+<div class="messages-page">
+  <div class="messages-shell">
+    <aside class="messages-sidebar">
+      <div class="messages-sidebar-top">
+        <div class="messages-sidebar-head">
+          <h1 class="messages-title">Сообщения</h1>
+          <div class="messages-sidebar-create">
+            <button id="createGroupBtn" class="messages-create-btn" type="button">Создать группу</button>
+          </div>
+        </div>
+        <div class="messages-start-box messages-search-box">
+          <input id="messageUserSearch" class="messages-input" type="text" placeholder="Найти по нику или @username">
+          <div id="messageUserSearchResults" class="messages-search-results"></div>
+        </div>
+      </div>
+
+      <div id="messagesInviteList" class="messages-invite-list messages-hidden"></div>
+
+      <div id="messagesConversationList" class="messages-conversation-list">
+        <div class="messages-empty">Загрузка диалогов...</div>
+      </div>
+    </aside>
+
+    <main class="messages-chat">
+      <div id="messagesChatHead" class="messages-chat-head">
+        <div class="messages-empty">Выбери диалог слева</div>
+      </div>
+
+      <div id="messagesThread" class="messages-thread">
+        <div class="messages-empty">Здесь появится переписка</div>
+      </div>
+
+      <div id="messagesComposerMeta" class="messages-composer-meta messages-hidden"></div>
+
+      <div class="messages-composer">
+        <label class="messages-attach-picker" for="messageAttachmentInput" title="Прикрепить файл">
+          <span class="messages-attach-btn">
+            <i class="fa-solid fa-paperclip"></i>
+          </span>
+          <span class="messages-attach-copy">
+            <span class="messages-attach-label">Вложение</span>
+            <span id="messageAttachmentName" class="messages-attach-name">Файл не выбран</span>
+          </span>
+        </label>
+        <input id="messageAttachmentInput" type="file" class="messages-hidden">
+        <textarea id="messageComposer" class="messages-composer-input" placeholder="Напиши сообщение"></textarea>
+        <button id="sendMessageBtn" class="messages-send-btn" type="button">Отправить</button>
+      </div>
+    </main>
+  </div>
+
+  <div id="messageContextMenu" class="messages-context-menu">
+    <div class="messages-context-reactions">
+      <button type="button" class="messages-context-reaction" data-reaction="❤️">❤️</button>
+      <button type="button" class="messages-context-reaction" data-reaction="🔥">🔥</button>
+      <button type="button" class="messages-context-reaction" data-reaction="😂">😂</button>
+      <button type="button" class="messages-context-reaction" data-reaction="😮">😮</button>
+      <button type="button" class="messages-context-reaction" data-reaction="👏">👏</button>
+      <button type="button" class="messages-context-reaction" data-reaction="💔">💔</button>
+    </div>
+    <div class="messages-context-actions">
+      <button type="button" class="messages-context-action" data-message-action="reply">
+        <span class="messages-context-action-icon"><i class="fa-solid fa-reply"></i></span>
+        <span>Ответить</span>
+      </button>
+      <button type="button" class="messages-context-action" data-message-action="forward">
+        <span class="messages-context-action-icon"><i class="fa-solid fa-share"></i></span>
+        <span>Переслать</span>
+      </button>
+      <button type="button" class="messages-context-action messages-context-action-danger" data-message-action="delete">
+        <span class="messages-context-action-icon"><i class="fa-regular fa-trash-can"></i></span>
+        <span>Удалить</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="messagesForwardModal" class="messages-forward-modal">
+    <div class="messages-forward-card">
+      <div class="messages-forward-head">
+        <h3>Переслать сообщение</h3>
+        <button id="messagesForwardClose" type="button" class="messages-forward-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="messagesForwardList" class="messages-forward-list"></div>
+    </div>
+  </div>
+
+  <div id="messagesCreateModal" class="messages-forward-modal">
+    <div class="messages-forward-card messages-create-card">
+      <div class="messages-forward-head">
+        <h3 id="messagesCreateTitle">Новый чат</h3>
+        <button id="messagesCreateClose" type="button" class="messages-forward-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="messages-create-form">
+        <div class="messages-create-hero">
+          <div class="messages-create-avatar-stack">
+            <label class="messages-create-avatar is-clickable" for="messagesCreateAvatarInput">
+              <img id="messagesCreateAvatarPreview" class="messages-create-avatar-image messages-hidden" alt="Group avatar preview">
+              <i id="messagesCreateAvatarIcon" class="fa-solid fa-camera"></i>
+            </label>
+            <label class="messages-file-chip" for="messagesCreateAvatarInput">
+              <i class="fa-regular fa-image"></i>
+              <span>Выбрать фото</span>
+            </label>
+          </div>
+          <input id="messagesCreateAvatarInput" type="file" accept="image/*" class="messages-hidden">
+          <div class="messages-create-fields">
+            <label class="messages-create-label" id="messagesCreateNameLabel" for="messagesCreateName">Название группы</label>
+            <input id="messagesCreateName" class="messages-input messages-create-main-input" type="text" placeholder="Введите название">
+            <div id="messagesCreateAvatarName" class="messages-create-file-name">Фото группы не выбрано</div>
+          </div>
+        </div>
+        <div id="messagesCreateDescriptionWrap" class="messages-create-description-wrap">
+          <label class="messages-create-label" for="messagesCreateDescription">Описание</label>
+          <textarea id="messagesCreateDescription" class="messages-input messages-create-description" placeholder="Описание группы (необязательно)"></textarea>
+        </div>
+        <p id="messagesCreateError" class="privacy-error"></p>
+        <div class="messages-create-actions">
+          <button id="messagesCreateCancel" class="messages-chat-pref-btn" type="button">Отмена</button>
+          <button id="messagesCreateSubmit" class="messages-send-btn" type="button">Создать</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="messagesConversationModal" class="messages-forward-modal">
+    <div class="messages-forward-card messages-conversation-card">
+      <div class="messages-forward-head">
+        <h3>Информация</h3>
+        <button id="messagesConversationClose" type="button" class="messages-forward-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="messagesConversationContent" class="messages-conversation-modal-content"></div>
+    </div>
+  </div>
+
+  <div id="messagesConversationEditModal" class="messages-forward-modal">
+    <div class="messages-forward-card messages-create-card">
+      <div class="messages-forward-head">
+        <h3 id="messagesConversationEditTitle">Редактировать</h3>
+        <button id="messagesConversationEditClose" type="button" class="messages-forward-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="messages-create-form">
+        <div class="messages-create-hero">
+          <div class="messages-create-avatar-stack">
+            <label class="messages-create-avatar is-clickable" for="messagesConversationEditAvatarInput">
+              <img id="messagesConversationEditAvatarPreview" class="messages-create-avatar-image messages-hidden" alt="Group avatar preview">
+              <i id="messagesConversationEditAvatarIcon" class="fa-solid fa-pen"></i>
+            </label>
+            <label class="messages-file-chip" for="messagesConversationEditAvatarInput">
+              <i class="fa-regular fa-image"></i>
+              <span>Выбрать фото</span>
+            </label>
+          </div>
+          <input id="messagesConversationEditAvatarInput" type="file" accept="image/*" class="messages-hidden">
+          <div class="messages-create-fields">
+            <label class="messages-create-label" for="messagesConversationEditName">Название</label>
+            <input id="messagesConversationEditName" class="messages-input messages-create-main-input" type="text" placeholder="Введите название">
+            <div id="messagesConversationEditAvatarName" class="messages-create-file-name">Фото группы не выбрано</div>
+          </div>
+        </div>
+        <div class="messages-create-description-wrap">
+          <label class="messages-create-label" for="messagesConversationEditDescription">Описание</label>
+          <textarea id="messagesConversationEditDescription" class="messages-input messages-create-description" placeholder="Описание (необязательно)"></textarea>
+        </div>
+        <div class="messages-create-description-wrap">
+          <label class="messages-create-label" for="messagesConversationInviteTag">Пригласить по @username</label>
+          <div class="messages-group-invite-row">
+            <input id="messagesConversationInviteTag" class="messages-input" type="text" placeholder="@username">
+            <button id="messagesConversationInviteBtn" class="messages-chat-pref-btn" type="button">Пригласить</button>
+          </div>
+        </div>
+        <p id="messagesConversationEditError" class="privacy-error"></p>
+        <div class="messages-create-actions">
+          <button id="messagesConversationEditCancel" class="messages-chat-pref-btn" type="button">Отмена</button>
+          <button id="messagesConversationEditSave" class="messages-send-btn" type="button">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="messagesMediaViewer" class="messages-forward-modal">
+    <div class="messages-forward-card messages-media-viewer-card">
+      <div class="messages-forward-head">
+        <h3 id="messagesMediaViewerTitle">Вложение</h3>
+        <button id="messagesMediaViewerClose" type="button" class="messages-forward-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="messagesMediaViewerBody" class="messages-media-viewer-body"></div>
+    </div>
+  </div>
+
+  <div id="messagesMediaBrowser" class="messages-forward-modal">
+    <div class="messages-forward-card messages-media-browser-card">
+      <div class="messages-forward-head">
+        <h3 id="messagesMediaBrowserTitle">Media</h3>
+        <button id="messagesMediaBrowserClose" type="button" class="messages-forward-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="messagesMediaBrowserToolbar" class="messages-media-browser-toolbar"></div>
+      <div id="messagesMediaBrowserBody" class="messages-media-browser-body"></div>
+    </div>
+  </div>
+</div>

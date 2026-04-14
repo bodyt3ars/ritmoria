@@ -1,0 +1,54 @@
+<div class="opens-page">
+  <div class="opens-layout">
+    <aside class="opens-create-panel">
+      <h2 class="opens-section-title">Выложить опен</h2>
+
+      <div class="opens-form">
+        <input id="openTitle" class="opens-input" type="text" placeholder="Название опена">
+        <textarea id="openDescription" class="opens-textarea" placeholder="Что это за опен и какой вайб нужен"></textarea>
+        <input id="openGenre" class="opens-input" type="text" placeholder="Жанр">
+        <textarea id="openLookingFor" class="opens-textarea opens-textarea-small" placeholder="Кого ты ищешь на фит"></textarea>
+        <input id="openSoundcloud" class="opens-input" type="text" placeholder="SoundCloud ссылка (необязательно)">
+
+        <div class="opens-file-field">
+          <span>Обложка</span>
+          <label class="opens-file-picker" for="openCover">
+            <span class="opens-file-picker-btn">Выбрать обложку</span>
+            <span id="openCoverName" class="opens-file-picker-name">Файл не выбран</span>
+          </label>
+          <input id="openCover" type="file" accept="image/*" hidden>
+        </div>
+
+        <div class="opens-file-field">
+          <span>Аудио</span>
+          <label class="opens-file-picker" for="openAudio">
+            <span class="opens-file-picker-btn">Выбрать аудио</span>
+            <span id="openAudioName" class="opens-file-picker-name">Файл не выбран</span>
+          </label>
+          <input id="openAudio" type="file" accept="audio/*" hidden>
+        </div>
+
+        <button id="publishOpenBtn" class="opens-primary-btn" type="button">Опубликовать опен</button>
+        <p id="opensCreateStatus" class="opens-status"></p>
+      </div>
+    </aside>
+
+    <main class="opens-feed-panel">
+      <div class="opens-feed-head">
+        <h1 class="opens-page-title">Опены</h1>
+        <p class="opens-page-subtitle">Недописанные треки, на которые можно залететь с фитом</p>
+      </div>
+
+      <div id="opensFeed" class="opens-feed">
+        <div class="opens-empty">Загрузка опенов...</div>
+      </div>
+    </main>
+
+    <aside class="opens-side-panel">
+      <h2 class="opens-section-title">Мои заявки</h2>
+      <div id="opensMyActivity" class="opens-side-list">
+        <div class="opens-empty">Пока пусто</div>
+      </div>
+    </aside>
+  </div>
+</div>

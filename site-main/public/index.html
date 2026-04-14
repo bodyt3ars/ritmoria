@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>РИТМОРИЯ</title>
+
+  <script src="https://w.soundcloud.com/player/api.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+ 
+  <link rel="stylesheet" href="/styles/base.css">
+  <link rel="stylesheet" href="/styles/navbar.css">
+  
+  
+</head>
+<body>
+
+  <!-- ВИДЕОФОН -->
+  <div class="video-background">
+    <video muted loop playsinline id="background-video">
+      <source src="/images/bg.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- ОБЩИЕ ЭЛЕМЕНТЫ SPA -->
+  <div id="navbar"></div>
+  <div id="app"></div>
+  <div id="player"></div>
+  <div id="xpToast" class="xp-toast"></div>
+  <div id="rankUpOverlay" class="rank-up-overlay">
+    <div class="rank-up-backdrop"></div>
+
+    <div class="rank-up-box">
+      <div class="rank-up-burst"></div>
+      <div class="rank-up-glow"></div>
+
+      <img id="rankUpMedal" class="rank-up-medal" src="/images/ranks/1.png" alt="rank up">
+
+      <div class="rank-up-texts">
+        <div class="rank-up-label">RANK UP</div>
+        <div id="rankUpTitle" class="rank-up-title">Новичок</div>
+        <div id="rankUpTransition" class="rank-up-transition">Новичок -> Слушатель</div>
+        <div id="rankUpGain" class="rank-up-gain">+500 XP</div>
+        <div id="rankUpSubtitle" class="rank-up-subtitle">Ты поднял ранг в РИТМОРИИ</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/navbar.js"></script>
+  <script src="/js/api-errors.js"></script>
+  <script src="/js/profile/profile-user.js"></script>
+  <script src="https://unpkg.com/wavesurfer.js"></script>
+
+  <script type="module">
+    import { renderPage } from "/js/router.js";
+    renderPage(location.pathname + location.search);
+  </script>
+
+<div id="globalLoader" class="page-loader hidden">
+  <div class="spinner"></div>
+</div>
+
+<script src="/js/player.js"></script>
+
+<script>
+window.addEventListener("load", () => {
+  const video = document.getElementById("background-video");
+  if (video) {
+    video.play().catch(() => {});
+  }
+});
+</script>
+</body>
+</html>

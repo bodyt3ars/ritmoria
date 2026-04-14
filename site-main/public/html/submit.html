@@ -1,0 +1,105 @@
+<div class="submit-page">
+  <div class="submit-card">
+    <form id="trackForm">
+      <div class="submit-form-grid">
+        <div class="submit-cover-block">
+          <label class="submit-cover-label" for="coverInput">
+            <div class="submit-cover-placeholder" id="coverPlaceholder">
+              <div class="submit-hash">#</div>
+              <div class="submit-cover-text">cover</div>
+            </div>
+            <img id="coverPreview" class="submit-cover-preview" alt="Обложка трека" />
+          </label>
+
+          <input
+            id="coverInput"
+            class="submit-hidden-input"
+            type="file"
+            accept="image/*"
+          />
+
+          <div class="submit-cover-hint">
+            Нажми на обложку, чтобы загрузить изображение
+          </div>
+        </div>
+
+        <div class="submit-right-side">
+          <div class="submit-top-row">
+            <div class="submit-field-group">
+              <label for="artistInput">Автор:</label>
+              <input
+                id="artistInput"
+                name="artist"
+                class="submit-input"
+                type="text"
+                placeholder="Автор"
+              />
+            </div>
+
+            <div class="submit-field-group">
+              <label for="titleInput">Название трека:</label>
+              <input
+                id="titleInput"
+                name="title"
+                class="submit-input"
+                type="text"
+                placeholder="Название трека"
+              />
+            </div>
+          </div>
+
+          <div class="submit-soundcloud-row">
+            <div class="submit-field-group">
+              <label for="soundcloudInput">Ссылка SoundCloud:</label>
+              <input
+                id="soundcloudInput"
+                name="soundcloud"
+                class="submit-input"
+                type="text"
+              />
+            </div>
+
+            <button type="button" class="submit-fetch-btn" id="fetchBtn">
+              ПОДТЯНУТЬ
+            </button>
+          </div>
+
+          <div class="submit-audio-upload-block">
+            <div class="submit-field-group">
+              <label for="audioInput">Аудиофайл:</label>
+
+              <label class="submit-file-trigger" for="audioInput">
+                <div class="submit-file-left">
+                  <div class="submit-file-btn">Выбрать файл</div>
+                  <div class="submit-file-name" id="audioFileName">Файл не выбран</div>
+                </div>
+              </label>
+
+              <input
+                id="audioInput"
+                class="submit-hidden-input"
+                type="file"
+                accept="audio/*"
+              />
+            </div>
+
+            <div class="submit-audio-preview-wrap" id="audioPreviewWrap">
+              <div class="submit-audio-title">Предпрослушивание:</div>
+              <audio id="audioPreview" controls></audio>
+            </div>
+          </div>
+
+          <div class="submit-status" id="statusText"></div>
+        </div>
+      </div>
+
+      <button class="submit-submit-btn" type="submit">
+        ОТПРАВИТЬ ТРЕК
+      </button>
+    </form>
+
+    <div class="submit-queue-link-wrap">
+      <a class="submit-queue-link" href="/queue">посмотреть очередь</a>
+    </div>
+  </div>
+</div>

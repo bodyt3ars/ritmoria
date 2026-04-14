@@ -1,0 +1,93 @@
+<div class="upload-page">
+  <div class="upload-card">
+    <form id="uploadForm">
+      <div class="upload-form-grid">
+
+        <div class="upload-cover-block">
+          <label class="upload-cover-label">
+            <div class="upload-cover-placeholder" id="coverPlaceholder">
+              <div class="upload-hash">#</div>
+              <div class="upload-cover-word">cover</div>
+            </div>
+
+            <img id="coverPreview" class="upload-cover-preview" alt="Обложка трека">
+
+            <input
+              type="file"
+              id="coverInput"
+              class="upload-hidden-input"
+              accept="image/*"
+            >
+          </label>
+
+          <div class="upload-cover-hint">
+            Нажми, чтобы загрузить обложку
+          </div>
+
+          <div class="upload-cover-bottom">
+            <div class="upload-cover-ps">
+              p.s. благодаря тэгам и жанрам,<br>
+              ваши треки попадают в рекомендации
+            </div>
+          </div>
+        </div>
+
+        <div class="upload-right-side">
+          <div class="upload-top-row">
+            <div class="upload-field">
+              <label for="artist">Артист(ы)</label>
+              <input id="artist" placeholder="ник артиста или артистов">
+            </div>
+
+            <div class="upload-field">
+              <label for="title">Название трека</label>
+              <input id="title" placeholder="Название трека">
+            </div>
+          </div>
+
+          <div class="upload-top-row">
+            <div class="upload-field">
+              <label for="genre">Жанр</label>
+              <input id="genre" placeholder="archivecore, hyperpop, trendy...">
+            </div>
+
+            <div class="upload-field">
+              <label for="producer">Продюсер</label>
+              <input id="producer" placeholder="Producer name">
+            </div>
+          </div>
+
+          <div class="upload-field">
+            <label for="tagsInput">Тэги</label>
+            <div class="upload-tags-input" id="tagsContainer">
+              <input id="tagsInput" placeholder="Add styles, moods, tempo...">
+            </div>
+          </div>
+
+          <div class="upload-field">
+            <label for="description">Описание</label>
+            <textarea id="description" placeholder="Напиши что-то о треке..."></textarea>
+          </div>
+
+          <div class="upload-field">
+            <label for="audio">Аудиофайл</label>
+
+            <label class="upload-file-input">
+              <span class="upload-file-btn">Выбрать файл</span>
+              <span id="fileName" class="upload-file-name">Файл не выбран</span>
+              <input type="file" id="audio" class="upload-hidden-input" accept="audio/*">
+            </label>
+          </div>
+
+          <div class="upload-preview" id="preview">
+            <audio controls id="audioPlayer"></audio>
+          </div>
+        </div>
+      </div>
+
+      <button class="upload-submit-btn" type="submit">Загрузить трек</button>
+
+      <p id="status" class="upload-status"></p>
+    </form>
+  </div>
+</div>

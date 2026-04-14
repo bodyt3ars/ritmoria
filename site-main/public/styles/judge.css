@@ -1,0 +1,657 @@
+.judge-page {
+  max-width: 1100px;
+  margin: 120px auto 40px;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.judge-page *,
+.judge-page *::before,
+.judge-page *::after {
+  box-sizing: border-box;
+}
+
+/* карточка */
+.judge-page .judge-card {
+  background: rgba(52, 35, 48, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+/* верх */
+.judge-page .judge-top {
+  display: flex;
+  gap: 25px;
+  padding: 25px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(
+    135deg,
+    rgba(251, 200, 247, 0.08),
+    rgba(107, 74, 98, 0.05)
+  );
+}
+
+.judge-page .judge-cover {
+  width: 130px;
+  height: 130px;
+  border-radius: 18px;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.judge-page .judge-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffffff, #ffffff);
+  filter: blur(16px);
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.judge-page .judge-cover-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.judge-page .judge-cover img,
+.judge-page .judge-track-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 16px;
+}
+
+.judge-page .judge-track-info small {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.18em;
+}
+
+.judge-page .judge-track-info h1 {
+  margin: 0 0 4px;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.judge-page .judge-track-info h2 {
+  margin: 0;
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 18px;
+}
+
+/* плеер */
+.judge-page .judge-custom-player {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 18px;
+  margin: 24px 25px 8px;
+  border-radius: 18px;
+  background: rgba(61, 22, 39, 0.6);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.judge-page .judge-custom-player::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.judge-page .judge-player-ui {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.judge-page #mp3Player {
+  display: none;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 10px 6px;
+}
+
+.judge-page .judge-player-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.judge-page .judge-vinyl {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.judge-page .judge-vinyl img,
+.judge-page .judge-player-track img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+.judge-page .judge-vinyl::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #111;
+  border: 2px solid #333;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.judge-page .judge-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.judge-page #playerTitle {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.judge-page #playerArtist {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.judge-page .judge-player-left {
+  width: 60px;
+  display: flex;
+  justify-content: center;
+}
+
+.judge-page .judge-player-left button,
+.judge-page .judge-play-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #b07497;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.judge-page .judge-player-left button:active,
+.judge-page .judge-play-button:active {
+  transform: scale(0.95);
+}
+
+.judge-page .judge-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ▶ PLAY */
+.judge-page .judge-icon-play {
+  width: 0;
+  height: 0;
+  border-left: 12px solid white;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+}
+
+/* ❚❚ PAUSE */
+.judge-page .judge-icon-pause {
+  display: flex;
+  gap: 4px;
+}
+
+.judge-page .judge-icon-pause::before,
+.judge-page .judge-icon-pause::after {
+  content: "";
+  width: 4px;
+  height: 14px;
+  background: white;
+}
+
+/* логика play/pause */
+.judge-page #playBtn.playing .judge-icon-play {
+  display: none;
+}
+
+.judge-page #playBtn:not(.playing) .judge-icon-pause {
+  display: none;
+}
+
+.judge-page .judge-player-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.judge-page .judge-progress-wrap {
+  flex: 1;
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.judge-page .judge-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #b07497;
+  border-radius: inherit;
+  transition: width 0.08s linear;
+}
+
+.judge-page .judge-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.judge-page .judge-player-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 130px;
+  width: 120px;
+}
+
+.judge-page #volume {
+  -webkit-appearance: none;
+  width: 100px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #b07497 var(--vol, 50%),
+    rgba(255, 255, 255, 0.15) var(--vol, 50%)
+  );
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.judge-page #volume::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+}
+
+.judge-page #volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  margin-top: -4px;
+  transition: 0.2s;
+}
+
+.judge-page #volume:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
+}
+
+.judge-page #volume.muted {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.judge-page #volume.muted::-webkit-slider-thumb {
+  background: #888;
+}
+
+.judge-page #scWrapper {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 320px;
+  height: 140px;
+  opacity: 0.01;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* панели */
+.judge-page .judge-panel {
+  padding: 20px;
+}
+
+.judge-page .judge-panel-bonus,
+.judge-page .judge-panel-bonus-2 {
+  padding-top: 0;
+}
+
+.judge-page .judge-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.5fr 70px;
+  gap: 15px;
+  align-items: center;
+  transition: 0.2s;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.judge-page .judge-row:hover {
+  transform: translateX(4px);
+}
+
+.judge-page .judge-row.judge-row-active,
+.judge-page .judge-row.active {
+  background: rgba(124, 86, 109, 0.288);
+  border-radius: 10px;
+}
+
+.judge-page .judge-row-title {
+  font-weight: 700;
+}
+
+/* слайдер */
+.judge-page input[type="range"] {
+  -webkit-appearance: none;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #b07497 var(--fill, 0%),
+    rgba(255, 255, 255, 0.1) var(--fill, 0%)
+  );
+  transition: 0.2s;
+}
+
+.judge-page input[type="range"]:hover {
+  filter: brightness(1.2);
+}
+
+.judge-page input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  margin-top: -4px;
+  cursor: pointer;
+}
+
+/* значения */
+.judge-page .judge-value-box {
+  background: rgba(69, 34, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  text-align: center;
+  padding: 10px;
+  font-weight: 700;
+  transition: 0.2s;
+}
+
+.judge-page .judge-row:hover .judge-value-box {
+  background: rgba(237, 138, 177, 0.2);
+}
+
+.judge-page .judge-note {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* низ */
+.judge-page .judge-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.judge-page .judge-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.judge-page .judge-pill {
+  background: rgba(117, 81, 107, 0.6);
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.judge-page .judge-pill-red {
+  background: rgba(238, 226, 238, 0.2);
+  border: 1px solid rgba(137, 7, 63, 0.3);
+}
+
+.judge-page .judge-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 10px;
+}
+
+.judge-page .judge-result span {
+  font-size: 36px;
+  background: linear-gradient(135deg, #ffffff, #ffffff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.judge-page .judge-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.judge-page .judge-action-button {
+  border-radius: 10px;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.judge-page .judge-rate-button,
+.judge-page #rateBtn {
+  background: linear-gradient(135deg, #47262d, #502435);
+  color: white;
+  transition: 0.2s;
+}
+
+.judge-page .judge-rate-button:hover,
+.judge-page #rateBtn:hover {
+  transform: translateY(-2px);
+}
+
+.judge-page .judge-reset-button,
+.judge-page #resetBtn {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.judge-page .judge-reset-button:hover,
+.judge-page #resetBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.judge-page .video-background {
+  pointer-events: none;
+}
+
+.judge-page #playerCover.playing {
+  animation: judge-spin 8s linear infinite;
+}
+
+@keyframes judge-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* адаптив */
+@media (max-width: 900px) {
+  .judge-page .judge-top {
+    align-items: center;
+  }
+
+  .judge-page .judge-player-ui,
+  .judge-page #mp3Player {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .judge-page .judge-player-track {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .judge-page .judge-player-center {
+    width: 100%;
+  }
+
+  .judge-page .judge-player-right {
+    min-width: unset;
+    width: auto;
+  }
+
+  .judge-page .judge-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .judge-page {
+    margin: 100px auto 32px;
+    padding: 0 14px;
+  }
+
+  .judge-page .judge-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 20px;
+  }
+
+  .judge-page .judge-cover {
+    width: 110px;
+    height: 110px;
+  }
+
+  .judge-page .judge-track-info h1 {
+    font-size: 24px;
+  }
+
+  .judge-page .judge-track-info h2 {
+    font-size: 16px;
+  }
+
+  .judge-page .judge-custom-player {
+    margin: 18px 16px 8px;
+    padding: 14px;
+  }
+
+  .judge-page .judge-panel {
+    padding: 16px;
+  }
+
+  .judge-page .judge-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .judge-page .judge-value-box {
+    width: 72px;
+  }
+
+  .judge-page .judge-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .judge-page .judge-top {
+    padding: 16px;
+  }
+
+  .judge-page .judge-custom-player {
+    margin: 14px 12px 8px;
+  }
+
+  .judge-page .judge-track-info h1 {
+    font-size: 22px;
+  }
+
+  .judge-page .judge-result span {
+    font-size: 28px;
+  }
+
+  .judge-page .judge-pill {
+    font-size: 13px;
+  }
+
+  .judge-page .judge-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .judge-page .judge-action-button {
+    width: 100%;
+  }
+
+  .judge-page #volume {
+    width: 84px;
+  }
+}

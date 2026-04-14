@@ -1,0 +1,235 @@
+
+
+.auth-container{
+display:flex;
+justify-content:center;
+align-items:center;
+font-family: Arial, sans-serif;
+min-height:100vh;
+padding-top:100px; /* ← ВОТ ЭТО ГЛАВНОЕ */
+}
+
+.auth-card{
+background:rgba(20,20,38,0.88);
+backdrop-filter:blur(10px);
+-webkit-backdrop-filter:blur(10px);
+padding:40px;
+border-radius:14px;
+width:360px;
+box-shadow:0 0 40px rgba(0,0,0,0.6);
+
+color:white;
+}
+
+.auth-card h1{
+margin-bottom:5px;
+}
+
+.auth-card input{
+
+width:100%;
+padding:14px 16px;
+
+background:#0b0b18;
+
+border:1px solid #2a2a3d;
+border-radius:8px;
+
+color:white;
+font-size:14px;
+
+outline:none;
+}
+
+.auth-card input:focus{
+
+background:#0b0b18;
+border:1px solid #6c4df6;
+}
+
+.auth-card input::placeholder{
+
+color:#777;
+
+}
+
+.auth-card .subtitle{
+color:#aaa;
+margin-bottom:25px;
+}
+
+.auth-card label{
+display:block;
+margin-top:15px;
+font-size:14px;
+}
+
+
+.auth-card button{
+margin-top:20px;
+width:100%;
+padding:12px;
+border:none;
+border-radius:8px;
+background:#7c3aed;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+.auth-card button:hover{
+background:#6d28d9;
+}
+
+.auth-card .error{
+margin-top:10px;
+color:#ff6b6b;
+font-size:14px;
+}
+
+.auth-card .login-link{
+margin-top:15px;
+text-align:center;
+font-size:14px;
+}
+
+.auth-card .login-link a{
+color:#a78bfa;
+text-decoration:none;
+}
+
+.auth-card .auth-switch {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeUp 0.6s ease forwards;
+  animation-delay: 0.2s;
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-card .auth-switch a {
+  color: #8b5cf6;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.auth-card .auth-switch a:hover {
+  color: #c084fc;
+  text-decoration: underline;
+}
+
+.auth-card .tag-status {
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: 0.9;
+  transition: all 0.25s ease;
+}
+
+/* 🟢 успех */
+.auth-card input.valid {
+  border: 1px solid rgba(34,197,94,0.5);
+  box-shadow: 0 0 12px rgba(34,197,94,0.25);
+}
+
+/* 🔴 ошибка */
+.auth-card input.invalid {
+  border: 1px solid rgba(239,68,68,0.5);
+  box-shadow: 0 0 12px rgba(239,68,68,0.25);
+}
+
+/* 💜 focus (чтобы было красиво) */
+.auth-card input:focus {
+  border: 1px solid #8b5cf6;
+  box-shadow: 0 0 10px rgba(139,92,246,0.3);
+}
+
+.auth-card .tg-login {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.auth-card .tg-login p {
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 10px;
+}
+
+.code-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.code-modal.hidden {
+  display: none;
+}
+
+.code-modal-content {
+  background: rgba(20,20,35,0.7);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  padding: 30px;
+  border-radius: 16px;
+  width: 320px;
+  text-align: center;
+  color: white;
+}
+
+.code-modal-content h3 {
+  margin-bottom: 10px;
+}
+
+.code-modal-content p {
+  color: #9ca3af;
+  margin-bottom: 20px;
+}
+
+#codeInput {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.3);
+  color: white;
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 4px;
+}
+
+.code-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.code-actions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+#confirmCodeBtn {
+  background: linear-gradient(135deg,#8b5cf6,#6d28d9);
+  color: white;
+}
+
+.code-actions .cancel {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}

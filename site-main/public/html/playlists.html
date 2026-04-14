@@ -1,0 +1,70 @@
+<main class="playlists-page">
+
+  <section class="playlists-screen" id="playlistsScreen">
+    <div class="playlists-header">
+      <h1>Плейлисты</h1>
+      <button class="playlists-create-btn" type="button">+ Создать плейлист</button>
+    </div>
+
+    <div class="playlists-grid"></div>
+  </section>
+
+  <section class="playlists-view playlists-hidden" id="playlistView">
+    <button class="playlists-back-btn" type="button">← Назад</button>
+
+    <div class="playlists-view-header">
+      <div class="playlists-cover-edit-wrap" id="playlistCoverEditWrap">
+        <div class="playlists-cover playlists-cover-large" id="viewCover"></div>
+        <button class="playlists-cover-edit-btn playlists-hidden" id="playlistCoverBtn" type="button">
+          <i class="fa-regular fa-image"></i>
+          <span>Выбрать фото</span>
+        </button>
+      </div>
+
+      <div class="playlists-meta">
+        <p class="playlists-label">Плейлист</p>
+        <div class="playlists-title-row">
+          <h2 id="viewTitle">Плейлист</h2>
+          <button class="playlists-title-edit-btn playlists-hidden" id="playlistRenameBtn" type="button" aria-label="Переименовать плейлист">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+        </div>
+        <p id="viewCount">0 треков</p>
+      </div>
+    </div>
+
+    <div class="playlists-tracks-box">
+      <div class="playlists-empty-tracks">
+        <p>Здесь пока нет треков</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="playlists-modal" id="playlistModal">
+    <div class="playlists-modal-overlay"></div>
+
+    <div class="playlists-modal-content">
+      <h2>Новый плейлист</h2>
+
+      <input
+        type="text"
+        id="playlistName"
+        placeholder="Название плейлиста"
+        maxlength="40"
+      />
+
+      <div class="playlists-modal-actions">
+        <button class="playlists-cancel-btn" type="button">Отмена</button>
+        <button class="playlists-save-btn" type="button">Создать</button>
+      </div>
+    </div>
+  </div>
+
+  <input
+    type="file"
+    id="coverInput"
+    accept="image/*"
+    hidden
+  />
+
+</main>

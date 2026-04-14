@@ -1,0 +1,122 @@
+<header class="navbar">
+
+  <!-- ЛОГО -->
+  <a href="/" class="navbar-logo">
+    <div class="navbar-logo-wrap">
+      <img src="/images/logo.png" class="navbar-logo-img">
+      <span class="navbar-logo-text">РИТМОРИЯ</span>
+    </div>
+  </a>
+
+  <button
+    id="navbarMobileToggle"
+    class="navbar-mobile-toggle"
+    type="button"
+    aria-label="Открыть меню"
+    aria-expanded="false"
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <!-- ЦЕНТР -->
+  <div class="navbar-center">
+    <div class="navbar-search">
+      <i class="fa-solid fa-magnifying-glass navbar-search-icon"></i>
+
+      <input
+        type="text"
+        id="globalSearch"
+        class="navbar-search-input"
+        placeholder="Поиск треков, пользователей..."
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+      />
+
+      <div id="searchResults" class="navbar-search-results"></div>
+    </div>
+  </div>
+
+  <!-- ПРАВАЯ ЧАСТЬ -->
+  <nav class="navbar-nav">
+
+    <div class="navbar-links">
+      <a href="/" class="navbar-link" data-page="index">Главная</a>
+      <a href="/playlists" class="navbar-link" data-page="playlists">Плейлисты</a>
+      <a href="/submit" class="navbar-link" data-page="submit">+ Залить трек</a>
+
+      <a href="/queue" class="navbar-link navbar-queue-link" data-page="queue">
+        Очередь
+        <span id="queueStatus" class="navbar-queue-dot"></span>
+      </a>
+
+      <a href="/opens" class="navbar-link" data-page="opens">Опены</a>
+      <a href="/discover" class="navbar-link" data-page="discover">Дискавер</a>
+      <a href="https://t.me/ritmoriasupportBOT?start=support" class="navbar-link navbar-telegram-link" target="_blank" rel="noopener noreferrer" aria-label="Поддержка в Telegram">
+        <i class="fa-brands fa-telegram navbar-telegram-icon" aria-hidden="true"></i>
+        <span>Поддержка</span>
+      </a>
+      
+      <div class="navbar-indicator"></div>
+    </div>
+
+    <div class="navbar-right-extra">
+      <a id="navMessagesLink" href="/messages" class="navbar-icon-link navbar-hidden" aria-label="Личные сообщения">
+        <i class="fa-regular fa-message"></i>
+        <span id="navMessagesBadge" class="navbar-notification-badge navbar-hidden"></span>
+      </a>
+
+      <div id="navNotificationsWrap" class="navbar-notifications-wrap navbar-hidden">
+        <button id="navNotificationsBtn" class="navbar-icon-link navbar-notifications-btn" type="button" aria-label="Уведомления">
+          <i class="fa-regular fa-bell"></i>
+          <span id="navNotificationsBadge" class="navbar-notification-badge navbar-hidden"></span>
+        </button>
+
+        <div id="navNotificationsDropdown" class="navbar-notifications-dropdown">
+          <div class="navbar-notifications-head">
+            <span>Уведомления</span>
+            <button type="button" id="navNotificationsReadAll" class="navbar-notifications-read">Прочитать все</button>
+          </div>
+          <div id="navNotificationsList" class="navbar-notifications-list">
+            <div class="navbar-notification-empty">Пока пусто</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="navGuest" class="navbar-guest">
+  <a href="/login" class="navbar-link">Вход</a>
+  <a href="/register" class="navbar-link">Регистрация</a>
+</div>
+
+      <div id="navUser" class="navbar-user-wrap navbar-hidden">
+        <div class="navbar-user" id="navUserBtn">
+          <img id="navAvatar" class="navbar-avatar" src="/images/default-avatar.jpg">
+        </div>
+
+        <div class="navbar-dropdown" id="navDropdown">
+          <div class="navbar-dropdown-item" onclick="goToProfile()">Профиль</div>
+          <div class="navbar-dropdown-item" onclick="goToSettings()">Настройки</div>
+
+          <div class="navbar-dropdown-divider"></div>
+
+          <div
+            id="adminPanelBtn"
+            class="navbar-dropdown-item navbar-hidden"
+            onclick="goToAdmin()"
+          >
+            Админ панель
+          </div>
+
+          <div class="navbar-dropdown-item navbar-dropdown-item-logout" onclick="confirmLogout()">
+            Выйти
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </nav>
+</header>
