@@ -251,7 +251,32 @@
   color: rgba(255, 236, 243, 0.68);
 }
 
-.opens-audio-volume-row i {
+.opens-audio-volume {
+  max-width: 118px;
+  flex: 0 0 118px;
+}
+
+.opens-audio-mute {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 236, 243, 0.82);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.opens-audio-mute:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.04);
+}
+
+.opens-audio-mute i {
   font-size: 13px;
 }
 

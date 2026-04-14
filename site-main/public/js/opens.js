@@ -83,8 +83,10 @@ function renderOpenCard(openItem) {
               <span data-open-audio-duration>0:00</span>
             </div>
             <input type="range" class="opens-audio-progress" data-open-audio-progress min="0" max="100" value="0">
-            <div class="opens-audio-volume-row">
-              <i class="fa-solid fa-volume-low"></i>
+          <div class="opens-audio-volume-row">
+              <button type="button" class="opens-audio-mute" data-open-audio-mute aria-label="Выключить звук">
+                <i class="fa-solid fa-volume-low"></i>
+              </button>
               <input type="range" class="opens-audio-volume" data-open-audio-volume min="0" max="1" step="0.01" value="0.3">
             </div>
           </div>
@@ -312,10 +314,13 @@ function bindOpensInteractions() {
     const playBtn = player.querySelector("[data-open-audio-play]");
     const progress = player.querySelector("[data-open-audio-progress]");
     const volume = player.querySelector("[data-open-audio-volume]");
+    const muteBtn = player.querySelector("[data-open-audio-mute]");
     const current = player.querySelector("[data-open-audio-current]");
     const duration = player.querySelector("[data-open-audio-duration]");
 
-    if (!audio || !playBtn || !progress || !volume || !current || !duration) return;
+    if (!audio || !playBtn || !progress || !volume || !muteBtn || !current || !duration) return;
+
+    let lastVolume = 0.3;
 
     const syncPlayState = () => {
       const icon = playBtn.querySelector("i");
@@ -325,6 +330,17 @@ function bindOpensInteractions() {
           : "fa-solid fa-pause";
       }
       player.classList.toggle("is-playing", !audio.paused);
+    };
+
+    const syncVolumeState = () => {
+      const icon = muteBtn.querySelector("i");
+      const muted = Number(audio.volume || 0) <= 0.001;
+      if (icon) {
+        icon.className = muted
+          ? "fa-solid fa-volume-xmark"
+          : (audio.volume < 0.5 ? "fa-solid fa-volume-low" : "fa-solid fa-volume-high");
+      }
+      muteBtn.setAttribute("aria-label", muted ? "Включить звук" : "Выключить звук");
     };
 
     audio.volume = 0.3;
@@ -370,9 +386,27 @@ function bindOpensInteractions() {
 
     volume.addEventListener("input", () => {
       audio.volume = Math.max(0, Math.min(1, Number(volume.value || 0.3)));
+      if (audio.volume > 0.001) {
+        lastVolume = audio.volume;
+      }
+      syncVolumeState();
+    });
+
+    muteBtn.addEventListener("click", () => {
+      if (audio.volume > 0.001) {
+        lastVolume = audio.volume;
+        audio.volume = 0;
+        volume.value = "0";
+      } else {
+        const nextVolume = Math.max(0.05, Math.min(1, Number(lastVolume || 0.3)));
+        audio.volume = nextVolume;
+        volume.value = String(nextVolume);
+      }
+      syncVolumeState();
     });
 
     syncPlayState();
+    syncVolumeState();
   });
 }
 
