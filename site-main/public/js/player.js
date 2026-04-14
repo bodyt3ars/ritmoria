@@ -469,6 +469,12 @@
   function getStoredVolume() {
     const raw = Number(localStorage.getItem(VOLUME_KEY));
     if (Number.isFinite(raw)) {
+      if (raw <= 0) {
+        const lastAudible = Number(localStorage.getItem(LAST_VOLUME_KEY));
+        if (!Number.isFinite(lastAudible) || lastAudible <= 0) {
+          return 0.4;
+        }
+      }
       return Math.max(0, Math.min(1, raw));
     }
     return 0.4;
@@ -557,7 +563,7 @@
                 <i class="fa-solid fa-volume-high"></i>
               </button>
 
-              <input id="gp-volume" class="gp-volume" type="range" min="0" max="1" step="0.01" value="0.78">
+              <input id="gp-volume" class="gp-volume" type="range" min="0" max="1" step="0.01" value="0.4">
             </div>
 
             <button id="gp-hide" class="gp-hide" type="button" title="Скрыть плеер">✕</button>
