@@ -40,13 +40,16 @@ function toggleCollectiveMembers(collectiveId) {
   const numericId = Number(collectiveId || 0);
   if (!numericId) return;
 
+  const body = document.getElementById("modalBody");
+  const previousScrollTop = body ? body.scrollTop : 0;
+
   if (settingsCollectiveExpandedIds.has(numericId)) {
     settingsCollectiveExpandedIds.delete(numericId);
   } else {
     settingsCollectiveExpandedIds.add(numericId);
   }
 
-  loadCollectiveSection();
+  loadCollectiveSection({ preserveScrollTop: previousScrollTop });
 }
 
 function renderCollectiveDirectory(directory = [], currentCollectiveId = 0) {
@@ -100,11 +103,14 @@ function renderCollectiveDirectory(directory = [], currentCollectiveId = 0) {
   `;
 }
 
-async function loadCollectiveSection() {
+async function loadCollectiveSection(options = {}) {
   const body = document.getElementById("modalBody");
   if (!body) return;
+  const preserveScrollTop = Number(options?.preserveScrollTop || 0);
 
-  body.innerHTML = `<div class="settings-loading-state">Загружаем объединение...</div>`;
+  if (!options?.silent) {
+    body.innerHTML = `<div class="settings-loading-state">Загружаем объединение...</div>`;
+  }
 
   try {
     const res = await fetch("/api/settings/collective", {
@@ -126,73 +132,71 @@ async function loadCollectiveSection() {
     const outgoingInvites = Array.isArray(data?.outgoingInvites) ? data.outgoingInvites : [];
     const directory = Array.isArray(data?.directory) ? data.directory : [];
     const canCreate = Boolean(data?.canCreate);
+    const memberCount = members.length;
 
     body.innerHTML = `
       <div class="settings-badge-panel">
-        <div class="settings-badge-head">
-          <div class="settings-badge-copy">
-            <div class="settings-badge-kicker">Музыкальные объединения</div>
-            <h3 class="settings-badge-title">${collective ? "Твоё объединение" : "Создай своё объединение"}</h3>
-            <p class="settings-badge-text">
-              Название объединения будет показываться возле ника как аккуратная приписка. Приглашения приходят человеку в уведомления.
-            </p>
+        <div class="settings-collective-hero">
+          <div class="settings-badge-kicker">Музыкальные объединения</div>
+          <h3 class="settings-badge-title">${collective ? settingsEscapeHtml(collectiveName) : "Создай своё объединение"}</h3>
+          <p class="settings-badge-text">
+            ${collective
+              ? `Сейчас ты ${isOwner ? "управляешь" : "состоишь"} в объединении. Ниже можно посмотреть состав, приглашения и общий список всех объединений.`
+              : "Создай уникальное объединение, чтобы оно показывалось возле ника как аккуратная приписка."}
+          </p>
+        </div>
+
+        <div class="settings-collective-grid">
+          <div class="settings-badge-preview-wrap settings-collective-primary-card">
+            <div class="settings-badge-preview-label">Как это выглядит возле ника</div>
+            <div id="settingsBadgePreview" class="settings-badge-preview ${collectiveName ? "" : "settings-badge-preview-empty"}">
+              <span id="settingsBadgePreviewName">${settingsEscapeHtml(collectiveName || "Твоё объединение")}</span>
+            </div>
+            ${
+              collective
+                ? `<div class="settings-collective-inline-meta">${memberCount} участ. ${isOwner ? "• ты создатель" : "• ты участник"}</div>`
+                : `<div class="settings-collective-inline-meta">После создания приписка появится возле твоего ника.</div>`
+            }
+          </div>
+
+          <div class="settings-badge-preview-wrap settings-collective-actions-card">
+            ${
+              canCreate
+                ? `
+                  <div class="settings-badge-preview-label">Создать новое объединение</div>
+                  <label class="settings-badge-field">
+                    <span>Название объединения</span>
+                    <input
+                      id="settingsCollectiveName"
+                      class="settings-badge-input"
+                      type="text"
+                      maxlength="48"
+                      placeholder="Например, NIGHTDISTRICT"
+                      value="${settingsEscapeHtml(collectiveName)}"
+                    >
+                  </label>
+                  <div class="settings-badge-actions">
+                    <button type="button" class="settings-badge-save" onclick="createCollective()">Создать объединение</button>
+                  </div>
+                `
+                : `
+                  <div class="settings-badge-preview-label">Текущее объединение</div>
+                  <div class="settings-collective-summary-name">${settingsEscapeHtml(collectiveName)}</div>
+                  ${collective && isOwner ? `
+                    <div class="settings-communication-actions settings-collective-invite-row">
+                      <input id="settingsCollectiveInviteTag" class="settings-badge-input" type="text" placeholder="@username">
+                      <button type="button" class="settings-badge-save" onclick="inviteToCollective()">Пригласить</button>
+                    </div>
+                  ` : ""}
+                  ${collective && isOwner ? `
+                    <div class="settings-collective-owner-actions">
+                      <button type="button" class="settings-collective-delete-btn" onclick="deleteCollective()">Удалить объединение</button>
+                    </div>
+                  ` : ""}
+                `
+            }
           </div>
         </div>
-
-        <div class="settings-badge-preview-wrap">
-          <div class="settings-badge-preview-label">Как это будет выглядеть возле ника</div>
-          <div id="settingsBadgePreview" class="settings-badge-preview ${collectiveName ? "" : "settings-badge-preview-empty"}">
-            <span id="settingsBadgePreviewName">${settingsEscapeHtml(collectiveName || "Твоё объединение")}</span>
-          </div>
-        </div>
-
-        <label class="settings-badge-field">
-          <span>Название объединения</span>
-          <input
-            id="settingsCollectiveName"
-            class="settings-badge-input"
-            type="text"
-            maxlength="48"
-            placeholder="Например, NIGHTDISTRICT"
-            value="${settingsEscapeHtml(collectiveName)}"
-            ${collective ? "disabled" : ""}
-          >
-        </label>
-
-        <div class="settings-badge-actions">
-          ${
-            canCreate
-              ? `<button type="button" class="settings-badge-save" onclick="createCollective()">Создать объединение</button>`
-              : ``
-          }
-        </div>
-
-        ${
-          collective && isOwner
-            ? `
-              <div class="settings-badge-preview-wrap">
-                <div class="settings-badge-preview-label">Пригласить по @username</div>
-                <div class="settings-communication-actions" style="gap:12px; flex-wrap:wrap;">
-                  <input id="settingsCollectiveInviteTag" class="settings-badge-input" type="text" placeholder="@username" style="max-width:320px;">
-                  <button type="button" class="settings-badge-save" onclick="inviteToCollective()">Пригласить</button>
-                </div>
-              </div>
-            `
-            : ``
-        }
-
-        ${
-          collective && isOwner
-            ? `
-              <div class="settings-badge-preview-wrap">
-                <div class="settings-badge-preview-label">Управление объединением</div>
-                <div class="settings-collective-owner-actions">
-                  <button type="button" class="settings-collective-delete-btn" onclick="deleteCollective()">Удалить объединение</button>
-                </div>
-              </div>
-            `
-            : ``
-        }
 
         ${
           collective && members.length
@@ -216,7 +220,7 @@ async function loadCollectiveSection() {
           collective && isOwner && outgoingInvites.length
             ? `
               <div class="settings-badge-preview-wrap">
-                <div class="settings-badge-preview-label">Отправленные приглашения</div>
+                <div class="settings-badge-preview-label">Ожидают приглашение</div>
                 <div class="settings-collective-members-list">
                   ${outgoingInvites.map((invite) => `
                     <div class="settings-collective-member-item">
@@ -244,6 +248,12 @@ async function loadCollectiveSection() {
     nameInput?.addEventListener("input", () => {
       setCollectivePreviewState(nameInput.value);
     });
+
+    if (typeof preserveScrollTop === "number" && preserveScrollTop > 0) {
+      requestAnimationFrame(() => {
+        body.scrollTop = preserveScrollTop;
+      });
+    }
   } catch (err) {
     console.error("loadCollectiveSection error:", err);
     body.innerHTML = `<div class="settings-empty-state">Не удалось загрузить музыкальные объединения.</div>`;

@@ -692,6 +692,12 @@ body.settings-modal-open .persistent-player {
   gap: 20px;
 }
 
+.settings-collective-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .settings-badge-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
@@ -717,6 +723,20 @@ body.settings-modal-open .persistent-player {
   margin: 0;
   color: rgba(255, 231, 241, 0.82);
   line-height: 1.6;
+}
+
+.settings-collective-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.settings-collective-primary-card,
+.settings-collective-actions-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .settings-badge-preview-wrap {
@@ -746,6 +766,12 @@ body.settings-modal-open .persistent-player {
 
 .settings-badge-preview-empty {
   opacity: 0.72;
+}
+
+.settings-collective-inline-meta {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 205, 227, 0.7);
 }
 
 .settings-badge-field {
@@ -787,6 +813,24 @@ body.settings-modal-open .persistent-player {
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.settings-collective-summary-name {
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff3f9;
+  line-height: 1.1;
+}
+
+.settings-collective-invite-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-collective-invite-row .settings-badge-input {
+  flex: 1 1 260px;
 }
 
 .settings-collective-members-list {
@@ -927,6 +971,10 @@ body.settings-modal-open .persistent-player {
   gap: 12px;
   padding-top: 12px;
   border-top: 1px solid rgba(255, 154, 199, 0.1);
+}
+
+.settings-collective-directory-member:first-child {
+  margin-top: 2px;
 }
 
 
