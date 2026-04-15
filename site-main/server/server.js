@@ -4571,14 +4571,7 @@ app.get("/api/home", async (req, res) => {
         JOIN users ON users.id = posts.user_id
         WHERE COALESCE(posts.is_archived, false) = false
         ORDER BY
-          (
-            COALESCE((SELECT COUNT(*) FROM post_reactions WHERE post_reactions.post_id = posts.id AND post_reactions.reaction = 'like'), 0) * 5
-            - COALESCE((SELECT COUNT(*) FROM post_reactions WHERE post_reactions.post_id = posts.id AND post_reactions.reaction = 'dislike'), 0) * 3
-            + COALESCE((SELECT COUNT(*) FROM post_comments WHERE post_comments.post_id = posts.id), 0) * 4
-            + COALESCE((SELECT COUNT(*) FROM post_reposts WHERE post_reposts.post_id = posts.id), 0) * 6
-            + COALESCE((SELECT COUNT(*) FROM post_views WHERE post_views.post_id = posts.id), 0)
-          ) DESC,
-          posts.created_at DESC
+          RANDOM()
         LIMIT 6
         `,
         [viewerId]
