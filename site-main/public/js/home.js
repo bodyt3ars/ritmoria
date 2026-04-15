@@ -29,6 +29,7 @@ function formatHomeRelativeDate(value) {
 
 function formatHomeDuration(seconds) {
   const total = Math.max(0, Math.floor(Number(seconds || 0)));
+  if (!total) return "—";
   const minutes = Math.floor(total / 60);
   const secs = total % 60;
   return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
@@ -113,7 +114,6 @@ function renderHomeTopTracks(tracks = []) {
     <article class="home-track-card" data-track-id="${Number(track.id)}">
       <button type="button" class="home-track-cover-btn" data-home-track-open="/track/${Number(track.id)}" aria-label="Открыть ${homeEscapeHtml(track.title || "трек")}">
         <img src="${homeEscapeHtml(track.cover || "/images/default-cover.jpg")}" alt="${homeEscapeHtml(track.title || "Track cover")}">
-        <span class="home-track-play-badge"><i class="fa-solid fa-play"></i></span>
       </button>
 
       <div class="home-track-card-body">

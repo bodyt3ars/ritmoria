@@ -4368,19 +4368,11 @@ app.get("/api/home", async (req, res) => {
             FROM track_ratings
             WHERE track_id = t.id AND type = 'judge'
           ), 0) AS judge_score,
-          (
-            COALESCE((
-              SELECT AVG(score)
-              FROM track_ratings
-              WHERE track_id = t.id AND type = 'user'
-            ), 0)
-            +
-            COALESCE((
-              SELECT AVG(score)
-              FROM track_ratings
-              WHERE track_id = t.id AND type = 'judge'
-            ), 0)
-          ) AS total_score,
+          COALESCE((
+            SELECT ROUND(AVG(score)::numeric, 1)
+            FROM track_ratings
+            WHERE track_id = t.id
+          ), 0) AS total_score,
           COALESCE((
             SELECT COUNT(*)::int
             FROM track_ratings
