@@ -183,30 +183,19 @@ function renderVerifiedBadge(user) {
 
 function renderUserBadge(user) {
   const badge = document.getElementById("profileUserBadge");
-  const logo = document.getElementById("profileUserBadgeLogo");
   const name = document.getElementById("profileUserBadgeName");
-  if (!badge || !logo || !name) return;
+  if (!badge || !name) return;
 
-  const badgeName = String(user?.badge_name || "").trim();
-  const badgeLogo = String(user?.badge_logo || "").trim();
+  const badgeName = String(user?.collective_name || "").trim();
   const hasBadge = Boolean(badgeName);
 
   badge.classList.toggle("profile-hidden", !hasBadge);
   if (!hasBadge) {
     name.textContent = "";
-    logo.src = "";
-    logo.classList.add("profile-hidden");
     return;
   }
 
   name.textContent = badgeName;
-  if (badgeLogo) {
-    logo.src = badgeLogo;
-    logo.classList.remove("profile-hidden");
-  } else {
-    logo.src = "";
-    logo.classList.add("profile-hidden");
-  }
 }
 
 function initProfileBioCounter() {

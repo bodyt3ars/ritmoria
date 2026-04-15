@@ -1569,28 +1569,44 @@ async function ensureHomeNewsSchema() {
 
 async function ensureUserBadgeSchema() {
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS music_collectives (
+      id SERIAL PRIMARY KEY,
+      owner_user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name varchar(48) NOT NULL UNIQUE,
+      created_at timestamp without time zone NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS music_collective_members (
+      collective_id integer NOT NULL REFERENCES music_collectives(id) ON DELETE CASCADE,
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role varchar(20) NOT NULL DEFAULT 'member',
+      created_at timestamp without time zone NOT NULL DEFAULT now(),
+      PRIMARY KEY (collective_id, user_id)
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_collective_members_user_unique
+      ON music_collective_members(user_id);
+
+    CREATE TABLE IF NOT EXISTS music_collective_invites (
+      id SERIAL PRIMARY KEY,
+      collective_id integer NOT NULL REFERENCES music_collectives(id) ON DELETE CASCADE,
+      invited_user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      invited_by_user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status varchar(20) NOT NULL DEFAULT 'pending',
+      created_at timestamp without time zone NOT NULL DEFAULT now()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_collective_invites_pending_unique
+      ON music_collective_invites(collective_id, invited_user_id)
+      WHERE status = 'pending';
+
     ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS badge_name varchar(48),
-      ADD COLUMN IF NOT EXISTS badge_logo text;
+      ADD COLUMN IF NOT EXISTS collective_id integer;
+
+    CREATE INDEX IF NOT EXISTS idx_users_collective_id
+      ON users(collective_id)
+      WHERE collective_id IS NOT NULL;
   `);
-}
-
-async function saveUserBadgeLogo(file, userId) {
-  if (!file || !userId) return null;
-  if (!String(file.mimetype || "").startsWith("image/")) {
-    throw new Error("invalid_badge_logo");
-  }
-
-  const fileName = `user-badge-${userId}.webp`;
-  const filePath = path.join(__dirname, "..", "public", "uploads", "badges", fileName);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-
-  await sharp(file.buffer)
-    .resize(160, 160, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .webp({ quality: 94 })
-    .toFile(filePath);
-
-  return `/uploads/badges/${fileName}`;
 }
 
 
@@ -2328,8 +2344,7 @@ app.get("/me", auth, async (req, res) => {
     avatar,
     role,
     email,
-    badge_name,
-    badge_logo,
+    mc.name AS collective_name,
     COALESCE(notifications_enabled, true) AS notifications_enabled,
     COALESCE(dms_enabled, true) AS dms_enabled,
     COALESCE(is_verified, false) AS is_verified,
@@ -2337,7 +2352,8 @@ app.get("/me", auth, async (req, res) => {
       WHEN password IS NULL THEN false 
       ELSE true 
     END as has_password
-  FROM users 
+  FROM users
+  LEFT JOIN music_collectives mc ON mc.id = users.collective_id
   WHERE id = $1
   `,
   [userId]
@@ -3504,8 +3520,7 @@ app.get("/api/profile", async (req, res) => {
           avatar,
           bio,
           xp,
-          badge_name,
-          badge_logo,
+          mc.name AS collective_name,
           COALESCE(is_verified, false) AS is_verified,
           soundcloud,
           instagram,
@@ -3513,6 +3528,7 @@ app.get("/api/profile", async (req, res) => {
           telegram,
           website
           FROM users
+          LEFT JOIN music_collectives mc ON mc.id = users.collective_id
           WHERE LOWER(username_tag) = LOWER($1)
           `,
           [tag]
@@ -3550,8 +3566,7 @@ app.get("/api/profile", async (req, res) => {
           avatar,
           bio,
           xp,
-          badge_name,
-          badge_logo,
+          mc.name AS collective_name,
           COALESCE(is_verified, false) AS is_verified,
           soundcloud,
           instagram,
@@ -3559,6 +3574,7 @@ app.get("/api/profile", async (req, res) => {
           telegram,
           website
         FROM users
+        LEFT JOIN music_collectives mc ON mc.id = users.collective_id
         WHERE id = $1
         `,
         [payload.id]
@@ -3690,63 +3706,335 @@ app.put("/update-profile", authMiddleware, async (req, res) => {
   }
 });
 
-app.get("/api/settings/badge", auth, async (req, res) => {
+app.get("/api/settings/collective", auth, async (req, res) => {
   try {
     const userId = Number(req.user.id || 0);
-    const result = await pool.query(
+    const userRes = await pool.query(
       `
-      SELECT badge_name, badge_logo
-      FROM users
-      WHERE id = $1
+      SELECT u.collective_id, mc.name AS collective_name, mc.owner_user_id
+      FROM users u
+      LEFT JOIN music_collectives mc ON mc.id = u.collective_id
+      WHERE u.id = $1
       LIMIT 1
       `,
       [userId]
     );
 
-    if (!result.rows.length) {
+    if (!userRes.rows.length) {
       return res.status(404).json({ error: "user_not_found" });
     }
 
-    res.json(result.rows[0]);
+    const current = userRes.rows[0];
+    const collectiveId = Number(current?.collective_id || 0) || null;
+
+    const invitesRes = await pool.query(
+      `
+      SELECT
+        i.id,
+        mc.name AS collective_name,
+        inviter.username,
+        inviter.username_tag
+      FROM music_collective_invites i
+      JOIN music_collectives mc ON mc.id = i.collective_id
+      JOIN users inviter ON inviter.id = i.invited_by_user_id
+      WHERE i.invited_user_id = $1
+        AND i.status = 'pending'
+      ORDER BY i.created_at DESC
+      `,
+      [userId]
+    );
+
+    let members = [];
+    let outgoingInvites = [];
+
+    if (collectiveId) {
+      const membersRes = await pool.query(
+        `
+        SELECT
+          u.id,
+          u.username,
+          u.username_tag,
+          m.role
+        FROM music_collective_members m
+        JOIN users u ON u.id = m.user_id
+        WHERE m.collective_id = $1
+        ORDER BY CASE WHEN m.role = 'owner' THEN 0 ELSE 1 END, LOWER(COALESCE(u.username, '')) ASC
+        `,
+        [collectiveId]
+      );
+      members = membersRes.rows;
+
+      if (Number(current.owner_user_id || 0) === userId) {
+        const outgoingRes = await pool.query(
+          `
+          SELECT
+            i.id,
+            u.username,
+            u.username_tag
+          FROM music_collective_invites i
+          JOIN users u ON u.id = i.invited_user_id
+          WHERE i.collective_id = $1
+            AND i.status = 'pending'
+          ORDER BY i.created_at DESC
+          `,
+          [collectiveId]
+        );
+        outgoingInvites = outgoingRes.rows;
+      }
+    }
+
+    res.json({
+      collective: collectiveId
+        ? {
+            id: collectiveId,
+            name: current.collective_name,
+            owner_user_id: Number(current.owner_user_id || 0)
+          }
+        : null,
+      canCreate: !collectiveId,
+      members,
+      invites: invitesRes.rows,
+      outgoingInvites
+    });
   } catch (err) {
-    console.error("BADGE LOAD ERROR:", err);
-    res.status(500).json({ error: "badge_load_failed" });
+    console.error("COLLECTIVE LOAD ERROR:", err);
+    res.status(500).json({ error: "collective_load_failed" });
   }
 });
 
-app.post("/api/settings/badge", auth, upload.single("badgeLogo"), async (req, res) => {
+app.post("/api/settings/collective/create", auth, async (req, res) => {
   try {
     const userId = Number(req.user.id || 0);
-    const badgeName = String(req.body?.badge_name || "").trim();
+    const name = String(req.body?.name || "").trim();
 
-    if (badgeName.length > 48) {
-      return res.status(400).json({ error: "badge_name_too_long" });
+    if (name.length < 2) {
+      return res.status(400).json({ error: "collective_name_too_short" });
     }
 
-    let badgeLogo = null;
-    if (req.file) {
-      badgeLogo = await saveUserBadgeLogo(req.file, userId);
+    if (name.length > 48) {
+      return res.status(400).json({ error: "collective_name_too_long" });
     }
 
-    const result = await pool.query(
-      `
-      UPDATE users
-      SET
-        badge_name = $1,
-        badge_logo = COALESCE($2, badge_logo)
-      WHERE id = $3
-      RETURNING badge_name, badge_logo
-      `,
-      [badgeName || null, badgeLogo, userId]
+    const userCheck = await pool.query(
+      `SELECT collective_id FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
     );
 
-    res.json(result.rows[0] || { badge_name: null, badge_logo: null });
-  } catch (err) {
-    console.error("BADGE SAVE ERROR:", err);
-    if (String(err?.message || "") === "invalid_badge_logo") {
-      return res.status(400).json({ error: "invalid_badge_logo" });
+    if (!userCheck.rows.length) {
+      return res.status(404).json({ error: "user_not_found" });
     }
-    res.status(500).json({ error: "badge_save_failed" });
+
+    if (userCheck.rows[0].collective_id) {
+      return res.status(400).json({ error: "collective_already_exists" });
+    }
+
+    const takenRes = await pool.query(
+      `SELECT id FROM music_collectives WHERE LOWER(name) = LOWER($1) LIMIT 1`,
+      [name]
+    );
+
+    if (takenRes.rows.length) {
+      return res.status(400).json({ error: "collective_name_taken" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const collectiveRes = await client.query(
+        `
+        INSERT INTO music_collectives (owner_user_id, name)
+        VALUES ($1, $2)
+        RETURNING id, name, owner_user_id
+        `,
+        [userId, name]
+      );
+      const collective = collectiveRes.rows[0];
+
+      await client.query(
+        `
+        INSERT INTO music_collective_members (collective_id, user_id, role)
+        VALUES ($1, $2, 'owner')
+        ON CONFLICT (collective_id, user_id) DO NOTHING
+        `,
+        [collective.id, userId]
+      );
+
+      await client.query(
+        `UPDATE users SET collective_id = $1 WHERE id = $2`,
+        [collective.id, userId]
+      );
+
+      await client.query("COMMIT");
+      res.json({ collective });
+    } catch (innerErr) {
+      await client.query("ROLLBACK");
+      throw innerErr;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error("COLLECTIVE CREATE ERROR:", err);
+    res.status(500).json({ error: "collective_create_failed" });
+  }
+});
+
+app.post("/api/settings/collective/invite", auth, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const usernameTag = String(req.body?.username_tag || "").trim().replace(/^@+/, "");
+
+    if (!usernameTag) {
+      return res.status(400).json({ error: "collective_invite_username_required" });
+    }
+
+    const collectiveRes = await pool.query(
+      `
+      SELECT id, name, owner_user_id
+      FROM music_collectives
+      WHERE owner_user_id = $1
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (!collectiveRes.rows.length) {
+      return res.status(403).json({ error: "collective_invite_forbidden" });
+    }
+
+    const collective = collectiveRes.rows[0];
+
+    const targetRes = await pool.query(
+      `
+      SELECT id, username, username_tag, collective_id
+      FROM users
+      WHERE LOWER(username_tag) = LOWER($1)
+      LIMIT 1
+      `,
+      [usernameTag]
+    );
+
+    if (!targetRes.rows.length) {
+      return res.status(404).json({ error: "invite_user_not_found" });
+    }
+
+    const target = targetRes.rows[0];
+
+    if (Number(target.id) === userId) {
+      return res.status(400).json({ error: "collective_invite_self" });
+    }
+
+    if (target.collective_id) {
+      return res.status(400).json({ error: "collective_invite_user_already_in_collective" });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO music_collective_invites (collective_id, invited_user_id, invited_by_user_id, status)
+      VALUES ($1, $2, $3, 'pending')
+      ON CONFLICT DO NOTHING
+      `,
+      [collective.id, target.id, userId]
+    );
+
+    res.json({
+      success: true,
+      invite: {
+        username: target.username,
+        username_tag: target.username_tag,
+        collective_name: collective.name
+      }
+    });
+  } catch (err) {
+    console.error("COLLECTIVE INVITE ERROR:", err);
+    res.status(500).json({ error: "collective_invite_failed" });
+  }
+});
+
+app.post("/api/settings/collective/invite/:id/respond", auth, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const inviteId = Number(req.params.id || 0);
+    const action = String(req.body?.action || "").trim().toLowerCase();
+
+    if (!inviteId || !["accept", "reject"].includes(action)) {
+      return res.status(400).json({ error: "collective_invite_invalid_action" });
+    }
+
+    const inviteRes = await pool.query(
+      `
+      SELECT *
+      FROM music_collective_invites
+      WHERE id = $1
+        AND invited_user_id = $2
+        AND status = 'pending'
+      LIMIT 1
+      `,
+      [inviteId, userId]
+    );
+
+    if (!inviteRes.rows.length) {
+      return res.status(404).json({ error: "collective_invite_not_found" });
+    }
+
+    const invite = inviteRes.rows[0];
+
+    if (action === "reject") {
+      await pool.query(
+        `UPDATE music_collective_invites SET status = 'rejected' WHERE id = $1`,
+        [inviteId]
+      );
+      return res.json({ success: true });
+    }
+
+    const currentUserRes = await pool.query(
+      `SELECT collective_id FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
+    );
+
+    if (currentUserRes.rows[0]?.collective_id) {
+      return res.status(400).json({ error: "collective_invite_user_already_in_collective" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `
+        INSERT INTO music_collective_members (collective_id, user_id, role)
+        VALUES ($1, $2, 'member')
+        ON CONFLICT (collective_id, user_id) DO NOTHING
+        `,
+        [invite.collective_id, userId]
+      );
+      await client.query(
+        `UPDATE users SET collective_id = $1 WHERE id = $2`,
+        [invite.collective_id, userId]
+      );
+      await client.query(
+        `UPDATE music_collective_invites SET status = 'accepted' WHERE id = $1`,
+        [inviteId]
+      );
+      await client.query(
+        `
+        UPDATE music_collective_invites
+        SET status = 'rejected'
+        WHERE invited_user_id = $1
+          AND status = 'pending'
+          AND id != $2
+        `,
+        [userId, inviteId]
+      );
+      await client.query("COMMIT");
+      res.json({ success: true });
+    } catch (innerErr) {
+      await client.query("ROLLBACK");
+      throw innerErr;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error("COLLECTIVE INVITE RESPOND ERROR:", err);
+    res.status(500).json({ error: "collective_invite_respond_failed" });
   }
 });
 

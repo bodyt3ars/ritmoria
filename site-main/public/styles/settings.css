@@ -719,45 +719,6 @@ body.settings-modal-open .persistent-player {
   line-height: 1.6;
 }
 
-.settings-badge-logo-picker {
-  display: block;
-  cursor: pointer;
-}
-
-.settings-badge-logo-shell {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  border-radius: 26px;
-  overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(42, 18, 42, 0.96), rgba(24, 14, 30, 0.98)),
-    radial-gradient(circle at top left, rgba(255, 94, 168, 0.18), transparent 40%);
-  border: 1px solid rgba(255, 154, 199, 0.18);
-}
-
-.settings-badge-logo-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.settings-badge-logo-overlay {
-  position: absolute;
-  inset: auto 12px 12px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 50px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(17, 12, 24, 0.78);
-  color: #ffe9f3;
-  font-weight: 700;
-  border: 1px solid rgba(255, 154, 199, 0.16);
-}
-
 .settings-badge-preview-wrap {
   padding: 18px 20px;
   border-radius: 22px;
@@ -785,13 +746,6 @@ body.settings-modal-open .persistent-player {
 
 .settings-badge-preview-empty {
   opacity: 0.72;
-}
-
-.settings-badge-preview-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
 }
 
 .settings-badge-field {
@@ -833,6 +787,46 @@ body.settings-modal-open .persistent-player {
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.settings-collective-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-collective-member-item,
+.settings-collective-invite-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255, 154, 199, 0.1);
+}
+
+.settings-collective-member-tag {
+  color: rgba(255, 205, 227, 0.7);
+}
+
+.settings-collective-member-role {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffb6d6;
+}
+
+.settings-collective-invite-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-collective-invite-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff2f8;
 }
 
 
@@ -1212,10 +1206,6 @@ body.view-post-open .persistent-player {
 
   .settings-badge-head {
     grid-template-columns: 1fr;
-  }
-
-  .settings-badge-logo-shell {
-    max-width: 240px;
   }
 
 }
