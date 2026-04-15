@@ -428,6 +428,10 @@ async function loadNavbarNotifications() {
           return;
         }
         if ((entityType === "track" || type === "track_like") && entityId) {
+          if (metadata.route) {
+            navigate(metadata.route);
+            return;
+          }
           navigate(`/track/${entityId}`);
           return;
         }

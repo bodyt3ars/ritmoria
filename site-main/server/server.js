@@ -5326,7 +5326,17 @@ app.post("/api/track-like", auth, async (req, res) => {
   );
 
   const ownerRes = await pool.query(
-    "SELECT user_id, title FROM user_tracks WHERE id = $1 LIMIT 1",
+    `
+    SELECT
+      t.user_id,
+      t.title,
+      t.slug,
+      u.username_tag
+    FROM user_tracks t
+    LEFT JOIN users u ON u.id = t.user_id
+    WHERE t.id = $1
+    LIMIT 1
+    `,
     [trackId]
   );
   const actorRes = await pool.query(
@@ -5337,6 +5347,10 @@ app.post("/api/track-like", auth, async (req, res) => {
   const actor = actorRes.rows[0] || {};
 
   if (owner.user_id) {
+    const profileTrackRoute = owner.username_tag && owner.slug
+      ? `/${owner.username_tag}/${owner.slug}`
+      : "";
+
     await createNotification({
       userId: owner.user_id,
       actorId: userId,
@@ -5344,7 +5358,12 @@ app.post("/api/track-like", auth, async (req, res) => {
       entityType: "track",
       entityId: Number(trackId),
       text: `${actor.username || actor.username_tag || "Пользователь"} лайкнул твой трек "${owner.title || "без названия"}"`,
-      metadata: { trackId: Number(trackId) }
+      metadata: {
+        trackId: Number(trackId),
+        route: profileTrackRoute,
+        usernameTag: owner.username_tag || "",
+        slug: owner.slug || ""
+      }
     });
   }
 
