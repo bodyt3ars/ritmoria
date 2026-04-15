@@ -322,6 +322,9 @@ function initRegisterPage() {
           return;
         }
 
+        pendingRegistrationData.verificationId =
+          Number(data.verificationId || pendingRegistrationData.verificationId || 0) || null;
+
         await completeRegistration();
       } catch (error) {
         console.error("Verify code error:", error);

@@ -786,24 +786,40 @@ async function verifyEmailVerificationCode({
 }) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
   const normalizedCode = String(code || "").trim();
+  let record = null;
 
-  const recordRes = await pool.query(
-    `
-    SELECT id, code, verified, expires_at
-    FROM email_verification_codes
-    WHERE
-      (
-        ($4::int IS NOT NULL AND id = $4)
-        OR
-        ($4::int IS NULL AND LOWER(email) = LOWER($1) AND purpose = $2 AND ($3::int IS NULL OR user_id = $3))
-      )
-    ORDER BY created_at DESC
-    LIMIT 1
-    `,
-    [normalizedEmail, purpose, userId, verificationId]
-  );
+  if (verificationId != null) {
+    const byIdRes = await pool.query(
+      `
+      SELECT id, code, verified, expires_at
+      FROM email_verification_codes
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [verificationId]
+    );
 
-  const record = recordRes.rows[0];
+    record = byIdRes.rows[0] || null;
+  }
+
+  if (!record) {
+    const byCodeRes = await pool.query(
+      `
+      SELECT id, code, verified, expires_at
+      FROM email_verification_codes
+      WHERE LOWER(email) = LOWER($1)
+        AND purpose = $2
+        AND ($3::int IS NULL OR user_id = $3)
+        AND code = $4
+      ORDER BY created_at DESC
+      LIMIT 1
+      `,
+      [normalizedEmail, purpose, userId, normalizedCode]
+    );
+
+    record = byCodeRes.rows[0] || null;
+  }
+
   if (!record) {
     return { ok: false, error: "verification_code_not_found" };
   }
@@ -827,7 +843,7 @@ async function verifyEmailVerificationCode({
     [record.id]
   );
 
-  return { ok: true };
+  return { ok: true, verificationId: Number(record.id) || null };
 }
 
 async function consumeVerifiedEmailCode({
@@ -2992,7 +3008,7 @@ app.post("/verify-code", async (req, res) => {
       return res.status(400).json({ error: result.error });
     }
 
-    res.json({ success: true });
+    res.json({ success: true, verificationId: result.verificationId || null });
   } catch (err) {
     console.error("VERIFY CODE ERROR:", err);
     res.status(500).json({ error: "server_error" });
