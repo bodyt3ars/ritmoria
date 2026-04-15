@@ -791,7 +791,7 @@ async function verifyEmailVerificationCode({
   if (verificationId != null) {
     const byIdRes = await pool.query(
       `
-      SELECT id, code, verified, expires_at
+      SELECT id, code, verified, expires_at, expires_at < now() AS is_expired
       FROM email_verification_codes
       WHERE id = $1
       LIMIT 1
@@ -805,7 +805,7 @@ async function verifyEmailVerificationCode({
   if (!record) {
     const byCodeRes = await pool.query(
       `
-      SELECT id, code, verified, expires_at
+      SELECT id, code, verified, expires_at, expires_at < now() AS is_expired
       FROM email_verification_codes
       WHERE LOWER(email) = LOWER($1)
         AND purpose = $2
@@ -824,7 +824,7 @@ async function verifyEmailVerificationCode({
     return { ok: false, error: "verification_code_not_found" };
   }
 
-  if (new Date(record.expires_at).getTime() < Date.now()) {
+  if (record.is_expired) {
     await pool.query("DELETE FROM email_verification_codes WHERE id = $1", [record.id]);
     return { ok: false, error: "verification_code_expired" };
   }
@@ -857,7 +857,7 @@ async function consumeVerifiedEmailCode({
 
   const recordRes = await pool.query(
     `
-    SELECT id, expires_at, verified
+    SELECT id, expires_at, verified, expires_at < now() AS is_expired
     FROM email_verification_codes
     WHERE
       (
@@ -876,7 +876,7 @@ async function consumeVerifiedEmailCode({
     return { ok: false, error: "verification_code_not_found" };
   }
 
-  if (new Date(record.expires_at).getTime() < Date.now()) {
+  if (record.is_expired) {
     await pool.query("DELETE FROM email_verification_codes WHERE id = $1", [record.id]);
     return { ok: false, error: "verification_code_expired" };
   }
