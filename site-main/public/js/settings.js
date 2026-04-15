@@ -30,6 +30,76 @@ function setCollectivePreviewState(name = "") {
   badgeName.textContent = hasName ? String(name).trim() : "Твоё объединение";
 }
 
+const settingsCollectiveExpandedIds = new Set();
+
+function isCollectiveExpanded(collectiveId) {
+  return settingsCollectiveExpandedIds.has(Number(collectiveId));
+}
+
+function toggleCollectiveMembers(collectiveId) {
+  const numericId = Number(collectiveId || 0);
+  if (!numericId) return;
+
+  if (settingsCollectiveExpandedIds.has(numericId)) {
+    settingsCollectiveExpandedIds.delete(numericId);
+  } else {
+    settingsCollectiveExpandedIds.add(numericId);
+  }
+
+  loadCollectiveSection();
+}
+
+function renderCollectiveDirectory(directory = [], currentCollectiveId = 0) {
+  if (!Array.isArray(directory) || !directory.length) {
+    return `<div class="settings-empty-state">Пока нет ни одного объединения.</div>`;
+  }
+
+  return `
+    <div class="settings-collective-directory">
+      ${directory.map((collective) => {
+        const collectiveId = Number(collective?.id || 0);
+        const members = Array.isArray(collective?.members) ? collective.members : [];
+        const isExpanded = isCollectiveExpanded(collectiveId);
+        const isCurrent = Number(currentCollectiveId || 0) === collectiveId;
+
+        return `
+          <div class="settings-collective-directory-item ${isCurrent ? "is-current" : ""}">
+            <div class="settings-collective-directory-row">
+              <div class="settings-collective-directory-main">
+                <div class="settings-collective-directory-name">${settingsEscapeHtml(collective?.name || "Без названия")}</div>
+                <div class="settings-collective-directory-meta">${members.length} участ.</div>
+              </div>
+
+              <button
+                type="button"
+                class="settings-collective-directory-toggle"
+                onclick="toggleCollectiveMembers(${collectiveId})"
+              >
+                ${isExpanded ? "Скрыть состав" : "Показать состав"}
+              </button>
+            </div>
+
+            ${
+              isExpanded
+                ? `
+                  <div class="settings-collective-directory-members">
+                    ${members.length ? members.map((member) => `
+                      <div class="settings-collective-directory-member">
+                        <span>${settingsEscapeHtml(member.username || "Пользователь")} <span class="settings-collective-member-tag">@${settingsEscapeHtml(member.username_tag || "")}</span></span>
+                        <span class="settings-collective-member-role">${member.role === "owner" ? "создатель" : "участник"}</span>
+                      </div>
+                    `).join("") : `<div class="settings-empty-state">Состав пока пуст.</div>`}
+                  </div>
+                `
+                : ``
+            }
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 async function loadCollectiveSection() {
   const body = document.getElementById("modalBody");
   if (!body) return;
@@ -50,10 +120,11 @@ async function loadCollectiveSection() {
 
     const data = await res.json();
     const collective = data?.collective || null;
+    const isOwner = Boolean(data?.isOwner);
     const collectiveName = String(collective?.name || "").trim();
-    const invites = Array.isArray(data?.invites) ? data.invites : [];
     const members = Array.isArray(data?.members) ? data.members : [];
     const outgoingInvites = Array.isArray(data?.outgoingInvites) ? data.outgoingInvites : [];
+    const directory = Array.isArray(data?.directory) ? data.directory : [];
     const canCreate = Boolean(data?.canCreate);
 
     body.innerHTML = `
@@ -63,7 +134,7 @@ async function loadCollectiveSection() {
             <div class="settings-badge-kicker">Музыкальные объединения</div>
             <h3 class="settings-badge-title">${collective ? "Твоё объединение" : "Создай своё объединение"}</h3>
             <p class="settings-badge-text">
-              Здесь можно создать уникальное музыкальное объединение и приглашать туда других людей. Название будет отображаться возле ника как приписка.
+              Название объединения будет показываться возле ника как аккуратная приписка. Приглашения приходят человеку в уведомления.
             </p>
           </div>
         </div>
@@ -97,10 +168,10 @@ async function loadCollectiveSection() {
         </div>
 
         ${
-          collective
+          collective && isOwner
             ? `
               <div class="settings-badge-preview-wrap">
-                <div class="settings-badge-preview-label">Пригласить в объединение</div>
+                <div class="settings-badge-preview-label">Пригласить по @username</div>
                 <div class="settings-communication-actions" style="gap:12px; flex-wrap:wrap;">
                   <input id="settingsCollectiveInviteTag" class="settings-badge-input" type="text" placeholder="@username" style="max-width:320px;">
                   <button type="button" class="settings-badge-save" onclick="inviteToCollective()">Пригласить</button>
@@ -111,10 +182,23 @@ async function loadCollectiveSection() {
         }
 
         ${
-          members.length
+          collective && isOwner
             ? `
               <div class="settings-badge-preview-wrap">
-                <div class="settings-badge-preview-label">Участники</div>
+                <div class="settings-badge-preview-label">Управление объединением</div>
+                <div class="settings-collective-owner-actions">
+                  <button type="button" class="settings-collective-delete-btn" onclick="deleteCollective()">Удалить объединение</button>
+                </div>
+              </div>
+            `
+            : ``
+        }
+
+        ${
+          collective && members.length
+            ? `
+              <div class="settings-badge-preview-wrap">
+                <div class="settings-badge-preview-label">${isOwner ? "Твой состав" : "Состав твоего объединения"}</div>
                 <div class="settings-collective-members-list">
                   ${members.map((member) => `
                     <div class="settings-collective-member-item">
@@ -129,10 +213,10 @@ async function loadCollectiveSection() {
         }
 
         ${
-          outgoingInvites.length
+          collective && isOwner && outgoingInvites.length
             ? `
               <div class="settings-badge-preview-wrap">
-                <div class="settings-badge-preview-label">Ожидают приглашение</div>
+                <div class="settings-badge-preview-label">Отправленные приглашения</div>
                 <div class="settings-collective-members-list">
                   ${outgoingInvites.map((invite) => `
                     <div class="settings-collective-member-item">
@@ -146,32 +230,13 @@ async function loadCollectiveSection() {
             : ``
         }
 
-        ${
-          invites.length
-            ? `
-              <div class="settings-badge-preview-wrap">
-                <div class="settings-badge-preview-label">Тебя пригласили</div>
-                <div class="settings-collective-members-list">
-                  ${invites.map((invite) => `
-                    <div class="settings-collective-invite-item">
-                      <div class="settings-collective-invite-copy">
-                        <div class="settings-collective-invite-title">${settingsEscapeHtml(invite.collective_name || "")}</div>
-                        <div class="settings-collective-member-tag">от @${settingsEscapeHtml(invite.username_tag || "")}</div>
-                      </div>
-                      <div class="settings-communication-actions" style="gap:8px;">
-                        <button type="button" class="settings-badge-save" onclick="respondToCollectiveInvite(${Number(invite.id)}, 'accept')">Принять</button>
-                        <button type="button" class="profile-secondary-btn" onclick="respondToCollectiveInvite(${Number(invite.id)}, 'reject')">Отклонить</button>
-                      </div>
-                    </div>
-                  `).join("")}
-                </div>
-              </div>
-            `
-            : ``
-        }
-
         <p id="settingsCollectiveError" class="privacy-error"></p>
         <p id="settingsCollectiveSuccess" class="privacy-success"></p>
+
+        <div class="settings-badge-preview-wrap">
+          <div class="settings-badge-preview-label">Список объединений</div>
+          ${renderCollectiveDirectory(directory, collective?.id)}
+        </div>
       </div>
     `;
 
@@ -274,6 +339,7 @@ async function inviteToCollective() {
         errorEl.textContent =
           code === "invite_user_not_found" ? "Такой пользователь не найден." :
           code === "collective_invite_user_already_in_collective" ? "Этот пользователь уже состоит в объединении." :
+          code === "collective_invite_already_sent" ? "Приглашение уже ждёт ответа." :
           code === "collective_invite_self" ? "Себя приглашать не нужно." :
           "Не удалось отправить приглашение.";
       }
@@ -287,6 +353,50 @@ async function inviteToCollective() {
   } catch (err) {
     console.error("inviteToCollective error:", err);
     if (errorEl) errorEl.textContent = "Не удалось отправить приглашение.";
+  }
+}
+
+async function deleteCollective() {
+  const errorEl = document.getElementById("settingsCollectiveError");
+  const successEl = document.getElementById("settingsCollectiveSuccess");
+  if (errorEl) errorEl.textContent = "";
+  if (successEl) successEl.textContent = "";
+
+  const confirmed = await window.showAppConfirm?.({
+    title: "Удалить объединение",
+    text: "Объединение исчезнет для всех участников. Это действие лучше делать осознанно.",
+    confirmText: "Удалить",
+    cancelText: "Отмена",
+    danger: true
+  });
+
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch("/api/settings/collective/delete", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + settingsGetToken()
+      }
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (errorEl) {
+        errorEl.textContent = String(data?.error || "") === "collective_delete_forbidden"
+          ? "Удалять объединение может только создатель."
+          : "Не удалось удалить объединение.";
+      }
+      return;
+    }
+
+    settingsCollectiveExpandedIds.clear();
+    await loadCollectiveSection();
+    const nextSuccessEl = document.getElementById("settingsCollectiveSuccess");
+    if (nextSuccessEl) nextSuccessEl.textContent = "Объединение удалено.";
+  } catch (err) {
+    console.error("deleteCollective error:", err);
+    if (errorEl) errorEl.textContent = "Не удалось удалить объединение.";
   }
 }
 
@@ -1602,6 +1712,9 @@ window.saveCommunicationSettings = saveCommunicationSettings;
 window.createCollective = createCollective;
 window.inviteToCollective = inviteToCollective;
 window.respondToCollectiveInvite = respondToCollectiveInvite;
+window.deleteCollective = deleteCollective;
+window.toggleCollectiveMembers = toggleCollectiveMembers;
+window.loadCollectiveSection = loadCollectiveSection;
 window.initSettingsPage = function () {
   const root = document.querySelector(".settings-page");
   if (!root) {

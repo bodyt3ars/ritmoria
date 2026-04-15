@@ -6,6 +6,7 @@ let appConfirmPromiseResolver = null;
 let navbarNotificationsInterval = null;
 let navbarRealtimeInitialized = false;
 let navbarRealtimeLoopInterval = null;
+let collectiveInviteDecisionResolver = null;
 
 function setNavbarBadgeState(badge, count) {
   if (!badge) return;
@@ -161,6 +162,78 @@ function showAppConfirm({
 
   return new Promise((resolve) => {
     appConfirmPromiseResolver = resolve;
+  });
+}
+
+function ensureCollectiveInviteModal() {
+  if (document.getElementById("collectiveInviteModal")) return;
+
+  const modal = document.createElement("div");
+  modal.id = "collectiveInviteModal";
+  modal.className = "app-confirm-modal";
+  modal.innerHTML = `
+    <div class="app-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="collectiveInviteTitle">
+      <div class="app-confirm-icon">
+        <i class="fa-solid fa-users"></i>
+      </div>
+      <div class="app-confirm-copy">
+        <h3 id="collectiveInviteTitle" class="app-confirm-title">Приглашение в объединение</h3>
+        <p id="collectiveInviteText" class="app-confirm-text">Тебя пригласили в объединение.</p>
+      </div>
+      <div class="app-confirm-actions">
+        <button type="button" id="collectiveInviteDecline" class="app-confirm-btn app-confirm-btn-secondary">Отклонить</button>
+        <button type="button" id="collectiveInviteAccept" class="app-confirm-btn app-confirm-btn-primary">Принять</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const resolveDecision = (value) => {
+    modal.classList.remove("active");
+    document.body.classList.remove("app-confirm-open");
+    if (collectiveInviteDecisionResolver) {
+      collectiveInviteDecisionResolver(value);
+      collectiveInviteDecisionResolver = null;
+    }
+  };
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      resolveDecision(null);
+    }
+  });
+
+  modal.querySelector("#collectiveInviteDecline")?.addEventListener("click", () => resolveDecision("reject"));
+  modal.querySelector("#collectiveInviteAccept")?.addEventListener("click", () => resolveDecision("accept"));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("active")) {
+      resolveDecision(null);
+    }
+  });
+}
+
+function showCollectiveInviteDecision({ collectiveName = "", actorTag = "" } = {}) {
+  ensureCollectiveInviteModal();
+
+  const modal = document.getElementById("collectiveInviteModal");
+  const textEl = document.getElementById("collectiveInviteText");
+  if (!modal || !textEl) {
+    return Promise.resolve(null);
+  }
+
+  const collective = String(collectiveName || "").trim();
+  const tag = String(actorTag || "").trim();
+  textEl.textContent = collective
+    ? `${tag ? `@${tag} ` : ""}пригласил тебя в объединение "${collective}".`
+    : "Тебя пригласили в музыкальное объединение.";
+
+  modal.classList.add("active");
+  document.body.classList.add("app-confirm-open");
+
+  return new Promise((resolve) => {
+    collectiveInviteDecisionResolver = resolve;
   });
 }
 
@@ -457,6 +530,39 @@ async function loadNavbarNotifications() {
             return;
           }
           navigate(`/track/${entityId}`);
+          return;
+        }
+        if (type === "collective_invite" && metadata.inviteId) {
+          const decision = await showCollectiveInviteDecision({
+            collectiveName: metadata.collectiveName,
+            actorTag
+          });
+
+          if (!decision) {
+            return;
+          }
+
+          await fetch(`/api/settings/collective/invite/${Number(metadata.inviteId)}/respond`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + token
+            },
+            body: JSON.stringify({ action: decision })
+          }).catch((err) => {
+            console.error("Collective invite decision error:", err);
+          });
+
+          await loadNavbarNotifications();
+          await loadNavbarUser();
+
+          if (typeof window.loadCollectiveSection === "function") {
+            try {
+              await window.loadCollectiveSection();
+            } catch (err) {
+              console.error("Collective section refresh error:", err);
+            }
+          }
           return;
         }
         if (entityType === "open_track") {

@@ -829,6 +829,106 @@ body.settings-modal-open .persistent-player {
   color: #fff2f8;
 }
 
+.settings-collective-owner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.settings-collective-delete-btn {
+  min-height: 50px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 125, 156, 0.28);
+  border-radius: 16px;
+  background: rgba(114, 34, 59, 0.38);
+  color: #ffb5cb;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.settings-collective-delete-btn:hover {
+  background: rgba(142, 43, 74, 0.5);
+  border-color: rgba(255, 146, 177, 0.42);
+  transform: translateY(-1px);
+}
+
+.settings-collective-directory {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-collective-directory-item {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 154, 199, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+  overflow: hidden;
+}
+
+.settings-collective-directory-item.is-current {
+  border-color: rgba(255, 167, 210, 0.26);
+  box-shadow: 0 0 0 1px rgba(255, 167, 210, 0.1) inset;
+}
+
+.settings-collective-directory-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.settings-collective-directory-main {
+  min-width: 0;
+}
+
+.settings-collective-directory-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff2f8;
+  word-break: break-word;
+}
+
+.settings-collective-directory-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 205, 227, 0.62);
+}
+
+.settings-collective-directory-toggle {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ff9ec5;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.settings-collective-directory-toggle:hover {
+  color: #ffc5dd;
+}
+
+.settings-collective-directory-members {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 18px 16px;
+}
+
+.settings-collective-directory-member {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 154, 199, 0.1);
+}
+
 
 .settings-saved-posts-grid {
   display: grid;

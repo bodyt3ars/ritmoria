@@ -3746,6 +3746,7 @@ app.get("/api/settings/collective", auth, async (req, res) => {
 
     let members = [];
     let outgoingInvites = [];
+    let directory = [];
 
     if (collectiveId) {
       const membersRes = await pool.query(
@@ -3783,6 +3784,52 @@ app.get("/api/settings/collective", auth, async (req, res) => {
       }
     }
 
+    const directoryRes = await pool.query(
+      `
+      SELECT
+        mc.id,
+        mc.name,
+        mc.owner_user_id,
+        u.id AS user_id,
+        u.username,
+        u.username_tag,
+        m.role
+      FROM music_collectives mc
+      LEFT JOIN music_collective_members m ON m.collective_id = mc.id
+      LEFT JOIN users u ON u.id = m.user_id
+      ORDER BY LOWER(mc.name) ASC, CASE WHEN m.role = 'owner' THEN 0 ELSE 1 END, LOWER(COALESCE(u.username, '')) ASC
+      `
+    );
+
+    const directoryMap = new Map();
+    for (const row of directoryRes.rows) {
+      const collectiveKey = Number(row.id || 0);
+      if (!collectiveKey) continue;
+
+      if (!directoryMap.has(collectiveKey)) {
+        directoryMap.set(collectiveKey, {
+          id: collectiveKey,
+          name: row.name,
+          owner_user_id: Number(row.owner_user_id || 0),
+          members: []
+        });
+      }
+
+      if (row.user_id) {
+        directoryMap.get(collectiveKey).members.push({
+          id: Number(row.user_id),
+          username: row.username,
+          username_tag: row.username_tag,
+          role: row.role
+        });
+      }
+    }
+
+    directory = Array.from(directoryMap.values()).map((item) => ({
+      ...item,
+      members_count: item.members.length
+    }));
+
     res.json({
       collective: collectiveId
         ? {
@@ -3792,9 +3839,11 @@ app.get("/api/settings/collective", auth, async (req, res) => {
           }
         : null,
       canCreate: !collectiveId,
+      isOwner: collectiveId ? Number(current.owner_user_id || 0) === userId : false,
       members,
       invites: invitesRes.rows,
-      outgoingInvites
+      outgoingInvites,
+      directory
     });
   } catch (err) {
     console.error("COLLECTIVE LOAD ERROR:", err);
@@ -3927,14 +3976,33 @@ app.post("/api/settings/collective/invite", auth, async (req, res) => {
       return res.status(400).json({ error: "collective_invite_user_already_in_collective" });
     }
 
-    await pool.query(
+    const inviteRes = await pool.query(
       `
       INSERT INTO music_collective_invites (collective_id, invited_user_id, invited_by_user_id, status)
       VALUES ($1, $2, $3, 'pending')
       ON CONFLICT DO NOTHING
+      RETURNING id
       `,
       [collective.id, target.id, userId]
     );
+
+    if (!inviteRes.rows.length) {
+      return res.status(400).json({ error: "collective_invite_already_sent" });
+    }
+
+    await createNotification({
+      userId: Number(target.id),
+      actorId: userId,
+      type: "collective_invite",
+      entityType: "collective",
+      entityId: Number(collective.id),
+      text: `${req.user.username || req.user.username_tag || "Пользователь"} пригласил тебя в объединение "${collective.name}"`,
+      metadata: {
+        inviteId: Number(inviteRes.rows[0].id),
+        collectiveId: Number(collective.id),
+        collectiveName: collective.name
+      }
+    });
 
     res.json({
       success: true,
@@ -3947,6 +4015,57 @@ app.post("/api/settings/collective/invite", auth, async (req, res) => {
   } catch (err) {
     console.error("COLLECTIVE INVITE ERROR:", err);
     res.status(500).json({ error: "collective_invite_failed" });
+  }
+});
+
+app.post("/api/settings/collective/delete", auth, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const collectiveRes = await pool.query(
+      `
+      SELECT id, name
+      FROM music_collectives
+      WHERE owner_user_id = $1
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (!collectiveRes.rows.length) {
+      return res.status(403).json({ error: "collective_delete_forbidden" });
+    }
+
+    const collective = collectiveRes.rows[0];
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `UPDATE users SET collective_id = NULL WHERE collective_id = $1`,
+        [collective.id]
+      );
+      await client.query(
+        `DELETE FROM music_collective_invites WHERE collective_id = $1`,
+        [collective.id]
+      );
+      await client.query(
+        `DELETE FROM music_collective_members WHERE collective_id = $1`,
+        [collective.id]
+      );
+      await client.query(
+        `DELETE FROM music_collectives WHERE id = $1`,
+        [collective.id]
+      );
+      await client.query("COMMIT");
+      res.json({ success: true, deletedCollectiveId: Number(collective.id) });
+    } catch (innerErr) {
+      await client.query("ROLLBACK");
+      throw innerErr;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error("COLLECTIVE DELETE ERROR:", err);
+    res.status(500).json({ error: "collective_delete_failed" });
   }
 });
 
