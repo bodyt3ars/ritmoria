@@ -4566,11 +4566,82 @@ app.get("/api/home", async (req, res) => {
             FROM post_reposts
             WHERE post_reposts.post_id = posts.id
               AND post_reposts.user_id = $1
-          ) AS reposted
+          ) AS reposted,
+          (
+            CASE
+              WHEN COALESCE(posts.is_pinned, false) THEN 40
+              ELSE 0
+            END
+            +
+            CASE
+              WHEN $1::int IS NOT NULL AND EXISTS(
+                SELECT 1
+                FROM follows f
+                WHERE f.follower_id = $1
+                  AND f.following_id = posts.user_id
+              ) THEN 24
+              ELSE 0
+            END
+            +
+            CASE
+              WHEN $1::int IS NOT NULL AND NOT EXISTS(
+                SELECT 1
+                FROM post_views pv
+                WHERE pv.post_id = posts.id
+                  AND pv.user_id = $1
+              ) THEN 16
+              ELSE 0
+            END
+            +
+            CASE
+              WHEN posts.user_id = $1 THEN -18
+              ELSE 0
+            END
+            +
+            LEAST(36, COALESCE((
+              SELECT COUNT(*)::int * 6
+              FROM post_reactions pr
+              WHERE pr.post_id = posts.id
+                AND pr.reaction = 'like'
+            ), 0))
+            -
+            LEAST(18, COALESCE((
+              SELECT COUNT(*)::int * 4
+              FROM post_reactions pr
+              WHERE pr.post_id = posts.id
+                AND pr.reaction = 'dislike'
+            ), 0))
+            +
+            LEAST(28, COALESCE((
+              SELECT COUNT(*)::int * 7
+              FROM post_comments pc
+              WHERE pc.post_id = posts.id
+            ), 0))
+            +
+            LEAST(24, COALESCE((
+              SELECT COUNT(*)::int * 8
+              FROM post_reposts rep
+              WHERE rep.post_id = posts.id
+            ), 0))
+            +
+            LEAST(14, COALESCE((
+              SELECT FLOOR(COUNT(*)::numeric / 3)::int
+              FROM post_views pv
+              WHERE pv.post_id = posts.id
+            ), 0))
+            +
+            GREATEST(
+              0,
+              18 - FLOOR(EXTRACT(EPOCH FROM (now() - posts.created_at)) / 3600 / 10)::int
+            )
+            +
+            FLOOR(RANDOM() * 15)::int
+          ) AS recommendation_score
         FROM posts
         JOIN users ON users.id = posts.user_id
         WHERE COALESCE(posts.is_archived, false) = false
         ORDER BY
+          recommendation_score DESC,
           RANDOM()
         LIMIT 6
         `,
