@@ -1567,6 +1567,50 @@ async function ensureHomeNewsSchema() {
     `);
   }
 
+async function ensureCollectivesSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS music_collectives (
+      id SERIAL PRIMARY KEY,
+      owner_user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name varchar(80) NOT NULL,
+      logo_url text,
+      created_at timestamp without time zone NOT NULL DEFAULT now(),
+      updated_at timestamp without time zone NOT NULL DEFAULT now()
+    );
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS collective_id integer REFERENCES music_collectives(id) ON DELETE SET NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_music_collectives_owner
+      ON music_collectives(owner_user_id);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_music_collectives_name_lower
+      ON music_collectives(LOWER(name));
+
+    CREATE INDEX IF NOT EXISTS idx_users_collective_id
+      ON users(collective_id)
+      WHERE collective_id IS NOT NULL;
+  `);
+}
+
+async function saveCollectiveLogo(file, collectiveId) {
+  if (!file || !collectiveId) return null;
+  if (!String(file.mimetype || "").startsWith("image/")) {
+    throw new Error("invalid_collective_logo");
+  }
+
+  const fileName = `collective-${collectiveId}.webp`;
+  const filePath = path.join(__dirname, "..", "public", "uploads", "collectives", fileName);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+  await sharp(file.buffer)
+    .resize(256, 256, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .webp({ quality: 94 })
+    .toFile(filePath);
+
+  return `/uploads/collectives/${fileName}`;
+}
+
 async function saveClosedQueueTopTracksSnapshot() {
   const snapshotRes = await pool.query(`
     SELECT
@@ -2304,11 +2348,15 @@ app.get("/me", auth, async (req, res) => {
     COALESCE(notifications_enabled, true) AS notifications_enabled,
     COALESCE(dms_enabled, true) AS dms_enabled,
     COALESCE(is_verified, false) AS is_verified,
+    mc.id AS collective_id,
+    mc.name AS collective_name,
+    mc.logo_url AS collective_logo,
     CASE 
       WHEN password IS NULL THEN false 
       ELSE true 
     END as has_password
   FROM users 
+  LEFT JOIN music_collectives mc ON mc.id = users.collective_id
   WHERE id = $1
   `,
   [userId]
@@ -3466,16 +3514,20 @@ app.get("/api/profile", async (req, res) => {
           bio,
           xp,
           COALESCE(is_verified, false) AS is_verified,
+          mc.id AS collective_id,
+          mc.name AS collective_name,
+          mc.logo_url AS collective_logo,
           soundcloud,
           instagram,
           twitter,
           telegram,
           website
-        FROM users
-        WHERE LOWER(username_tag) = LOWER($1)
-        `,
-        [tag]
-      );
+          FROM users
+          LEFT JOIN music_collectives mc ON mc.id = users.collective_id
+          WHERE LOWER(username_tag) = LOWER($1)
+          `,
+          [tag]
+        );
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "User not found" });
@@ -3506,20 +3558,24 @@ app.get("/api/profile", async (req, res) => {
         id,
         username,
         username_tag,
-        avatar,
-        bio,
-        xp,
-        COALESCE(is_verified, false) AS is_verified,
-        soundcloud,
-        instagram,
-        twitter,
-        telegram,
-        website
-      FROM users
-      WHERE id = $1
-      `,
-      [payload.id]
-    );
+          avatar,
+          bio,
+          xp,
+          COALESCE(is_verified, false) AS is_verified,
+          mc.id AS collective_id,
+          mc.name AS collective_name,
+          mc.logo_url AS collective_logo,
+          soundcloud,
+          instagram,
+          twitter,
+          telegram,
+          website
+        FROM users
+        LEFT JOIN music_collectives mc ON mc.id = users.collective_id
+        WHERE id = $1
+        `,
+        [payload.id]
+      );
 
     res.json(attachRankState(result.rows[0]));
 
@@ -3644,6 +3700,149 @@ app.put("/update-profile", authMiddleware, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "update_profile_failed" });
+  }
+});
+
+app.get("/api/settings/collective", auth, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const result = await pool.query(
+      `
+      SELECT
+        mc.id,
+        mc.name,
+        mc.logo_url,
+        mc.owner_user_id,
+        mc.created_at,
+        mc.updated_at
+      FROM users u
+      LEFT JOIN music_collectives mc ON mc.id = u.collective_id
+      WHERE u.id = $1
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    const collective = result.rows[0]?.id ? result.rows[0] : null;
+    res.json({
+      collective,
+      canCreate: !collective
+    });
+  } catch (err) {
+    console.error("SETTINGS COLLECTIVE LOAD ERROR:", err);
+    res.status(500).json({ error: "collective_load_failed" });
+  }
+});
+
+app.post("/api/settings/collective", auth, upload.single("logo"), async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const name = String(req.body?.name || "").trim();
+
+    if (!name || name.length < 2) {
+      return res.status(400).json({ error: "collective_name_too_short" });
+    }
+
+    if (name.length > 80) {
+      return res.status(400).json({ error: "collective_name_too_long" });
+    }
+
+    const userRes = await pool.query(
+      "SELECT collective_id FROM users WHERE id = $1 LIMIT 1",
+      [userId]
+    );
+
+    if (!userRes.rows.length) {
+      return res.status(404).json({ error: "user_not_found" });
+    }
+
+    const existingNameRes = await pool.query(
+      `
+      SELECT id
+      FROM music_collectives
+      WHERE LOWER(name) = LOWER($1)
+        AND owner_user_id != $2
+      LIMIT 1
+      `,
+      [name, userId]
+    );
+
+    if (existingNameRes.rows.length) {
+      return res.status(400).json({ error: "collective_name_taken" });
+    }
+
+    let collectiveId = Number(userRes.rows[0]?.collective_id || 0) || null;
+    let logoUrl = null;
+
+    if (collectiveId) {
+      await pool.query(
+        `
+        UPDATE music_collectives
+        SET name = $1,
+            updated_at = now()
+        WHERE id = $2
+          AND owner_user_id = $3
+        `,
+        [name, collectiveId, userId]
+      );
+    } else {
+      const insertRes = await pool.query(
+        `
+        INSERT INTO music_collectives (owner_user_id, name)
+        VALUES ($1, $2)
+        RETURNING id
+        `,
+        [userId, name]
+      );
+
+      collectiveId = Number(insertRes.rows[0]?.id || 0) || null;
+
+      await pool.query(
+        "UPDATE users SET collective_id = $1 WHERE id = $2",
+        [collectiveId, userId]
+      );
+    }
+
+    if (req.file) {
+      logoUrl = await saveCollectiveLogo(req.file, collectiveId);
+      await pool.query(
+        `
+        UPDATE music_collectives
+        SET logo_url = $1,
+            updated_at = now()
+        WHERE id = $2
+        `,
+        [logoUrl, collectiveId]
+      );
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        name,
+        logo_url,
+        owner_user_id,
+        created_at,
+        updated_at
+      FROM music_collectives
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [collectiveId]
+    );
+
+    res.json({
+      success: true,
+      collective: result.rows[0] || null
+    });
+  } catch (err) {
+    console.error("SETTINGS COLLECTIVE SAVE ERROR:", err);
+    const errorCode = String(err?.message || "");
+    if (errorCode === "invalid_collective_logo") {
+      return res.status(400).json({ error: "invalid_collective_logo" });
+    }
+    res.status(500).json({ error: "collective_save_failed" });
   }
 });
 
@@ -5041,33 +5240,45 @@ app.get("/api/tracks/queue", async (req, res) => {
 
 
 // ❌ удалить трек
-app.delete("/api/tracks/:id", requireRole(["judge", "admin"]), async (req, res) => {
-  try {
-    const tag = req.query.tag;
+app.delete("/api/tracks/:id", auth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const requesterId = Number(req.user.id || 0);
 
-let userId;
+      const requesterRes = await pool.query(
+        "SELECT id, role FROM users WHERE id = $1 LIMIT 1",
+        [requesterId]
+      );
 
-if(tag){
-  const user = await pool.query(
-    "SELECT id FROM users WHERE LOWER(username_tag) = LOWER($1)",
-    [tag]
-  );
+      if (!requesterRes.rows.length) {
+        return res.status(401).json({ error: "user_not_found" });
+      }
 
-  if(user.rows.length === 0){
-    return res.json([]);
-  }
+      const requester = requesterRes.rows[0];
 
-  userId = user.rows[0].id;
-}else{
-  userId = req.user.id;
-}
+      const trackRes = await pool.query(
+        "SELECT id, user_id FROM tracks WHERE id = $1 LIMIT 1",
+        [id]
+      );
 
-    const id = req.params.id;
-await pool.query("DELETE FROM tracks WHERE id = $1", [id]);
+      if (!trackRes.rows.length) {
+        return res.status(404).json({ error: "track_not_found" });
+      }
 
-    res.json({ success: true });
+      const track = trackRes.rows[0];
+      const canDelete =
+        ["judge", "admin"].includes(String(requester.role || "")) ||
+        Number(track.user_id || 0) === requesterId;
 
-  } catch (err) {
+      if (!canDelete) {
+        return res.status(403).json({ error: "forbidden" });
+      }
+
+      await pool.query("DELETE FROM tracks WHERE id = $1", [id]);
+
+      res.json({ success: true });
+
+    } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Ошибка удаления" });
   }
@@ -8769,6 +8980,7 @@ await ensureTrackCommentsSchema();
 await ensureTrackRepostSchema();
 await ensureMentionsSchema();
 await ensureHomeNewsSchema();
+await ensureCollectivesSchema();
 await ensureCommunitySchema();
     app.listen(APP_PORT, () => {
       console.log(`Server running on ${APP_BASE_URL} (port ${APP_PORT})`);

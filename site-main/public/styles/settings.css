@@ -682,6 +682,225 @@ body.settings-modal-open .persistent-player {
   text-align: center;
 }
 
+.settings-hidden {
+  display: none !important;
+}
+
+.settings-collective-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.settings-collective-hero {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.settings-collective-logo-picker {
+  display: block;
+  cursor: pointer;
+}
+
+.settings-collective-logo-shell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(42, 18, 42, 0.96), rgba(24, 14, 30, 0.98)),
+    radial-gradient(circle at top left, rgba(255, 94, 168, 0.2), transparent 40%);
+  border: 1px solid rgba(255, 154, 199, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 20px 40px rgba(0, 0, 0, 0.28);
+}
+
+.settings-collective-logo-preview,
+.settings-collective-logo-placeholder {
+  width: 100%;
+  height: 100%;
+}
+
+.settings-collective-logo-preview {
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.settings-collective-logo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 68px;
+  font-weight: 800;
+  color: rgba(255, 235, 244, 0.92);
+}
+
+.settings-collective-logo-overlay {
+  position: absolute;
+  inset: auto 14px 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(14, 10, 18, 0.72);
+  border: 1px solid rgba(255, 154, 199, 0.18);
+  color: #ffe7f2;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  transition: 0.22s ease;
+}
+
+.settings-collective-logo-shell:hover .settings-collective-logo-overlay {
+  transform: translateY(-2px);
+  background: rgba(28, 16, 34, 0.82);
+}
+
+.settings-collective-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-collective-kicker {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 194, 221, 0.72);
+}
+
+.settings-collective-title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.05;
+  color: #fff3f9;
+}
+
+.settings-collective-text {
+  margin: 0;
+  max-width: 640px;
+  color: rgba(255, 231, 241, 0.82);
+  line-height: 1.6;
+}
+
+.settings-collective-preview-card {
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 154, 199, 0.14);
+}
+
+.settings-collective-preview-label {
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 205, 227, 0.72);
+}
+
+.settings-collective-badge-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 94, 168, 0.2), rgba(144, 78, 137, 0.24));
+  border: 1px solid rgba(255, 154, 199, 0.18);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
+}
+
+.settings-collective-badge-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.settings-collective-badge-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff3f9;
+}
+
+.settings-collective-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-collective-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-collective-field span {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 205, 227, 0.8);
+}
+
+.settings-collective-input {
+  width: 100%;
+  min-height: 56px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 154, 199, 0.16);
+  border-radius: 18px;
+  background: rgba(18, 13, 26, 0.84);
+  color: #fff3f9;
+  font-size: 15px;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.settings-collective-input:focus {
+  border-color: rgba(255, 154, 199, 0.34);
+  box-shadow: 0 0 0 3px rgba(255, 94, 168, 0.12);
+}
+
+.settings-collective-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.settings-collective-save {
+  min-width: 220px;
+  min-height: 54px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ff5ea8, #b76cff);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow:
+    0 20px 44px rgba(255, 94, 168, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: 0.22s ease;
+}
+
+.settings-collective-save:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 26px 48px rgba(255, 94, 168, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.settings-collective-save:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
 .settings-saved-posts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -1055,6 +1274,14 @@ body.view-post-open .persistent-player {
   .view-post-media {
     max-height: 52vh;
   }
+
+  .settings-collective-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-collective-logo-shell {
+    max-width: 240px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -1064,6 +1291,18 @@ body.view-post-open .persistent-player {
 
   .settings-page-card {
     padding: 22px 18px;
+  }
+
+  .settings-collective-title {
+    font-size: 24px;
+  }
+
+  .settings-collective-save {
+    width: 100%;
+  }
+
+  .settings-collective-logo-shell {
+    max-width: 100%;
   }
 
   .settings-page-modal-header h2 {

@@ -181,6 +181,35 @@ function renderVerifiedBadge(user) {
   badge.classList.toggle("profile-hidden", !user?.is_verified);
 }
 
+function renderCollectiveBadge(user) {
+  const badge = document.getElementById("profileCollectiveBadge");
+  const logo = document.getElementById("profileCollectiveBadgeLogo");
+  const name = document.getElementById("profileCollectiveBadgeName");
+  if (!badge || !logo || !name) return;
+
+  const collectiveName = String(user?.collective_name || "").trim();
+  const collectiveLogo = String(user?.collective_logo || "").trim();
+  const hasCollective = Boolean(collectiveName);
+
+  badge.classList.toggle("profile-hidden", !hasCollective);
+
+  if (!hasCollective) {
+    name.textContent = "";
+    logo.src = "";
+    logo.classList.add("profile-hidden");
+    return;
+  }
+
+  name.textContent = collectiveName;
+  if (collectiveLogo) {
+    logo.src = collectiveLogo;
+    logo.classList.remove("profile-hidden");
+  } else {
+    logo.src = "";
+    logo.classList.add("profile-hidden");
+  }
+}
+
 function initProfileBioCounter() {
   const bioInput = document.getElementById("editBio");
   const bioCount = document.getElementById("bioCount");
@@ -384,6 +413,7 @@ updateRankUI(rankData);
     setText("username", user.username);
     setText("usernameTag", user.username_tag ? "@" + user.username_tag : "");
     renderVerifiedBadge(user);
+    renderCollectiveBadge(user);
 
     const bioEl = document.getElementById("bio");
     if (!bioEl) return user;

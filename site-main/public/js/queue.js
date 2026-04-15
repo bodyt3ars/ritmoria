@@ -36,6 +36,12 @@ function isQueueAdmin() {
   return queueCurrentUser?.role === "admin";
 }
 
+function canDeleteQueueTrack(track) {
+  if (!track || !queueCurrentUser) return false;
+  if (isQueueAdmin()) return true;
+  return Number(track.user_id || 0) === Number(queueCurrentUser.id || 0);
+}
+
 function canQueueRate() {
   return Boolean(queueCurrentUser);
 }
@@ -123,7 +129,7 @@ async function loadQueue() {
                   </button>
 
                   ${
-                    isQueueAdmin()
+                    canDeleteQueueTrack(track)
                       ? `
                         <button class="queue-delete-btn">
                           <i class="fa-solid fa-trash"></i>
@@ -151,7 +157,7 @@ async function loadQueue() {
         }
       }
 
-      if (isQueueAdmin()) {
+      if (canDeleteQueueTrack(track)) {
         const deleteBtn = trackCard.querySelector(".queue-delete-btn");
 
         if (deleteBtn) {

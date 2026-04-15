@@ -1,6 +1,7 @@
 let currentSettingsArchiveAudio = null;
 window.settingsReady = false;
 const settingsSavedPostsStorageKey = "savedPostIds";
+let settingsCollectiveLogoFile = null;
 
 
 function settingsGetToken() {
@@ -18,6 +19,235 @@ function settingsEscapeHtml(value) {
 
 function setSettingsModalMode(open) {
   document.body.classList.toggle("settings-modal-open", !!open);
+}
+
+function settingsSetCollectiveLogoPreview(src, name) {
+  const logo = document.getElementById("collectiveLogoPreview");
+  const badgeLogo = document.getElementById("collectiveBadgeLogo");
+  const placeholder = document.getElementById("collectiveLogoPlaceholder");
+
+  if (logo) {
+    logo.src = src || "";
+    logo.classList.toggle("settings-hidden", !src);
+  }
+
+  if (badgeLogo) {
+    badgeLogo.src = src || "";
+    badgeLogo.classList.toggle("settings-hidden", !src);
+  }
+
+  if (placeholder) {
+    placeholder.classList.toggle("settings-hidden", !!src);
+    placeholder.textContent = name ? name.slice(0, 1).toUpperCase() : "M";
+  }
+}
+
+async function loadCollectiveSection() {
+  const body = document.getElementById("modalBody");
+  if (!body) return;
+
+  settingsCollectiveLogoFile = null;
+  body.innerHTML = `<div class="settings-loading-state">Загружаем объединение...</div>`;
+
+  try {
+    const res = await fetch("/api/settings/collective", {
+      headers: {
+        Authorization: "Bearer " + settingsGetToken()
+      }
+    });
+
+    if (!res.ok) {
+      body.innerHTML = `<div class="settings-empty-state">Не удалось загрузить раздел объединения.</div>`;
+      return;
+    }
+
+    const data = await res.json();
+    const collective = data?.collective || null;
+    const collectiveName = String(collective?.name || "").trim();
+    const collectiveLogo = String(collective?.logo_url || "").trim();
+    const canCreate = Boolean(data?.canCreate || collective);
+
+    body.innerHTML = `
+      <div class="settings-collective-panel">
+        <div class="settings-collective-hero">
+          <label class="settings-collective-logo-picker">
+            <input id="collectiveLogoInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+            <div class="settings-collective-logo-shell">
+              <img
+                id="collectiveLogoPreview"
+                class="settings-collective-logo-preview ${collectiveLogo ? "" : "settings-hidden"}"
+                src="${settingsEscapeHtml(collectiveLogo)}"
+                alt=""
+              >
+              <div
+                id="collectiveLogoPlaceholder"
+                class="settings-collective-logo-placeholder ${collectiveLogo ? "settings-hidden" : ""}"
+              >
+                ${settingsEscapeHtml((collectiveName || "M").slice(0, 1).toUpperCase())}
+              </div>
+              <div class="settings-collective-logo-overlay">
+                <i class="fa-solid fa-image"></i>
+                <span>${collectiveLogo ? "Сменить логотип" : "Выбрать логотип"}</span>
+              </div>
+            </div>
+          </label>
+
+          <div class="settings-collective-copy">
+            <div class="settings-collective-kicker">Музыкальное объединение</div>
+            <h3 class="settings-collective-title">${collective ? "Настрой своё объединение" : "Создай своё объединение"}</h3>
+            <p class="settings-collective-text">
+              Здесь позже будет каталог муз. объединений. Пока ты можешь создать своё, загрузить PNG-логотип и получить красивый бэдж возле ника.
+            </p>
+          </div>
+        </div>
+
+        <div class="settings-collective-preview-card">
+          <div class="settings-collective-preview-label">Как это будет выглядеть возле ника</div>
+          <div class="settings-collective-badge-preview">
+            <img
+              id="collectiveBadgeLogo"
+              class="settings-collective-badge-logo ${collectiveLogo ? "" : "settings-hidden"}"
+              src="${settingsEscapeHtml(collectiveLogo)}"
+              alt=""
+            >
+            <span id="collectiveBadgeName" class="settings-collective-badge-name">
+              ${settingsEscapeHtml(collectiveName || "Твоё объединение")}
+            </span>
+          </div>
+        </div>
+
+        <div class="settings-collective-fields">
+          <label class="settings-collective-field">
+            <span>Название объединения</span>
+            <input
+              id="collectiveName"
+              class="settings-collective-input"
+              type="text"
+              maxlength="80"
+              placeholder="Например, NIGHTDISTRICT"
+              value="${settingsEscapeHtml(collectiveName)}"
+              ${canCreate ? "" : "disabled"}
+            >
+          </label>
+        </div>
+
+        <div class="settings-collective-actions">
+          <button
+            type="button"
+            class="settings-collective-save"
+            onclick="saveCollectiveSettings()"
+            ${canCreate ? "" : "disabled"}
+          >
+            ${collective ? "Сохранить изменения" : "Создать объединение"}
+          </button>
+        </div>
+
+        ${canCreate ? "" : `<div class="settings-empty-state">Сейчас создать объединение нельзя для этого аккаунта.</div>`}
+
+        <p id="collectiveError" class="privacy-error"></p>
+        <p id="collectiveSuccess" class="privacy-success"></p>
+      </div>
+    `;
+
+    const logoInput = document.getElementById("collectiveLogoInput");
+    const nameInput = document.getElementById("collectiveName");
+    const badgeName = document.getElementById("collectiveBadgeName");
+
+    if (logoInput) {
+      logoInput.addEventListener("change", (event) => {
+        const file = event.target?.files?.[0] || null;
+        if (!file) return;
+        settingsCollectiveLogoFile = file;
+        settingsSetCollectiveLogoPreview(URL.createObjectURL(file), nameInput?.value?.trim() || collectiveName || "M");
+      });
+    }
+
+    if (nameInput && badgeName) {
+      nameInput.addEventListener("input", () => {
+        const value = nameInput.value.trim();
+        badgeName.textContent = value || "Твоё объединение";
+        const placeholder = document.getElementById("collectiveLogoPlaceholder");
+        if (placeholder && !document.getElementById("collectiveLogoPreview")?.getAttribute("src")) {
+          placeholder.textContent = (value || "M").slice(0, 1).toUpperCase();
+        }
+      });
+    }
+  } catch (error) {
+    console.error("loadCollectiveSection error:", error);
+    body.innerHTML = `<div class="settings-empty-state">Не удалось загрузить раздел объединения.</div>`;
+  }
+}
+
+async function saveCollectiveSettings() {
+  const nameInput = document.getElementById("collectiveName");
+  const errorEl = document.getElementById("collectiveError");
+  const successEl = document.getElementById("collectiveSuccess");
+  const saveBtn = document.querySelector(".settings-collective-save");
+
+  if (errorEl) errorEl.textContent = "";
+  if (successEl) successEl.textContent = "";
+
+  const name = String(nameInput?.value || "").trim();
+
+  if (name.length < 2) {
+    if (errorEl) errorEl.textContent = "Название объединения должно быть не короче 2 символов.";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("name", name);
+  if (settingsCollectiveLogoFile) {
+    formData.append("logo", settingsCollectiveLogoFile);
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Сохраняем...";
+  }
+
+  try {
+    const res = await fetch("/api/settings/collective", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + settingsGetToken()
+      },
+      body: formData
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const code = String(data?.error || "");
+      const message =
+        code === "collective_name_taken" ? "Такое название объединения уже занято." :
+        code === "collective_name_too_long" ? "Название объединения слишком длинное." :
+        code === "invalid_collective_logo" ? "Логотип должен быть обычной картинкой PNG/JPG/WEBP." :
+        "Не удалось сохранить объединение.";
+
+      if (errorEl) errorEl.textContent = message;
+      return;
+    }
+
+    settingsCollectiveLogoFile = null;
+    if (successEl) {
+      successEl.textContent = data?.collective ? "Объединение сохранено." : "Объединение создано.";
+    }
+
+    await loadCollectiveSection();
+
+    const collectiveSuccess = document.getElementById("collectiveSuccess");
+    if (collectiveSuccess) {
+      collectiveSuccess.textContent = "Объединение сохранено.";
+    }
+  } catch (error) {
+    console.error("saveCollectiveSettings error:", error);
+    if (errorEl) errorEl.textContent = "Не удалось сохранить объединение.";
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Сохранить изменения";
+    }
+  }
 }
 
 function settingsGetSavedPostIds() {
@@ -633,6 +863,12 @@ if (type === "archive") {
   if (type === "communication") {
     title.innerText = "Сообщения и уведомления";
     loadCommunicationSection();
+    return;
+  }
+
+  if (type === "collective") {
+    title.innerText = "Объединение";
+    loadCollectiveSection();
     return;
   }
 
@@ -1282,6 +1518,7 @@ window.sendDeleteAccountCode = sendDeleteAccountCode;
 window.confirmDeleteAccountByCode = confirmDeleteAccountByCode;
 window.deleteAccountWithoutEmail = deleteAccountWithoutEmail;
 window.saveCommunicationSettings = saveCommunicationSettings;
+window.saveCollectiveSettings = saveCollectiveSettings;
 
 window.initSettingsPage = function () {
   const root = document.querySelector(".settings-page");
