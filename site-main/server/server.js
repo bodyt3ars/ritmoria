@@ -762,22 +762,27 @@ async function createEmailVerificationCode({
     [normalizedEmail, purpose, userId]
   );
 
-  await pool.query(
+  const insertRes = await pool.query(
     `
     INSERT INTO email_verification_codes (email, user_id, purpose, code, expires_at)
     VALUES ($1, $2, $3, $4, now() + interval '10 minutes')
+    RETURNING id
     `,
     [normalizedEmail, userId, purpose, code]
   );
 
-  return code;
+  return {
+    code,
+    verificationId: Number(insertRes.rows[0]?.id || 0) || null
+  };
 }
 
 async function verifyEmailVerificationCode({
   email,
   code,
   purpose = "register",
-  userId = null
+  userId = null,
+  verificationId = null
 }) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
   const normalizedCode = String(code || "").trim();
@@ -786,13 +791,16 @@ async function verifyEmailVerificationCode({
     `
     SELECT id, code, verified, expires_at
     FROM email_verification_codes
-    WHERE LOWER(email) = LOWER($1)
-      AND purpose = $2
-      AND ($3::int IS NULL OR user_id = $3)
+    WHERE
+      (
+        ($4::int IS NOT NULL AND id = $4)
+        OR
+        ($4::int IS NULL AND LOWER(email) = LOWER($1) AND purpose = $2 AND ($3::int IS NULL OR user_id = $3))
+      )
     ORDER BY created_at DESC
     LIMIT 1
     `,
-    [normalizedEmail, purpose, userId]
+    [normalizedEmail, purpose, userId, verificationId]
   );
 
   const record = recordRes.rows[0];
@@ -826,7 +834,8 @@ async function consumeVerifiedEmailCode({
   email,
   purpose = "register",
   userId = null,
-  consume = true
+  consume = true,
+  verificationId = null
 }) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
@@ -834,13 +843,16 @@ async function consumeVerifiedEmailCode({
     `
     SELECT id, expires_at, verified
     FROM email_verification_codes
-    WHERE LOWER(email) = LOWER($1)
-      AND purpose = $2
-      AND ($3::int IS NULL OR user_id = $3)
+    WHERE
+      (
+        ($4::int IS NOT NULL AND id = $4)
+        OR
+        ($4::int IS NULL AND LOWER(email) = LOWER($1) AND purpose = $2 AND ($3::int IS NULL OR user_id = $3))
+      )
     ORDER BY created_at DESC
     LIMIT 1
     `,
-    [normalizedEmail, purpose, userId]
+    [normalizedEmail, purpose, userId, verificationId]
   );
 
   const record = recordRes.rows[0];
@@ -861,11 +873,9 @@ async function consumeVerifiedEmailCode({
     await pool.query(
       `
       DELETE FROM email_verification_codes
-      WHERE LOWER(email) = LOWER($1)
-        AND purpose = $2
-        AND ($3::int IS NULL OR user_id = $3)
+      WHERE id = $1
       `,
-      [normalizedEmail, purpose, userId]
+      [verificationId || record.id]
     );
   }
 
@@ -2810,7 +2820,7 @@ app.post("/api/telegram-auth/webhook", async (req, res) => {
 });
 
 app.post("/register", async (req, res) => {
-  const { username, email, password, username_tag } = req.body;
+  const { username, email, password, username_tag, verificationId } = req.body;
 
   try {
     const cleanUsername = String(username || "").trim();
@@ -2832,7 +2842,8 @@ app.post("/register", async (req, res) => {
     const emailCheck = await consumeVerifiedEmailCode({
       email: cleanEmail,
       purpose: "register",
-      consume: false
+      consume: false,
+      verificationId: Number(verificationId) || null
     });
 
     if (!emailCheck.ok) {
@@ -2873,10 +2884,9 @@ const result = await pool.query(
     await pool.query(
       `
       DELETE FROM email_verification_codes
-      WHERE LOWER(email) = LOWER($1)
-        AND purpose = 'register'
+      WHERE id = $1
       `,
-      [cleanEmail]
+      [Number(verificationId) || null]
     );
 
     res.json(result.rows[0]);
@@ -2908,14 +2918,14 @@ app.post("/send-code", async (req, res) => {
     return res.status(400).json({ error: "email_already_used" });
   }
 
-  const code = await createEmailVerificationCode({
+  const verification = await createEmailVerificationCode({
     email: normalizedEmail,
     purpose: "register"
   });
 
   try {
     if (!resend) {
-      return res.json({ success: true });
+      return res.json({ success: true, verificationId: verification.verificationId });
     }
 
     await resend.emails.send({
@@ -2942,7 +2952,7 @@ app.post("/send-code", async (req, res) => {
       display:inline-block;
       margin-bottom:20px;
     ">
-      ${code}
+      ${verification.code}
     </div>
 
     <p style="color:#9ca3af;font-size:14px;">
@@ -2960,7 +2970,7 @@ app.post("/send-code", async (req, res) => {
 `
     });
 
-    res.json({ success: true });
+    res.json({ success: true, verificationId: verification.verificationId });
 
   } catch (err) {
     console.log("EMAIL ERROR:", err);
@@ -2969,12 +2979,13 @@ app.post("/send-code", async (req, res) => {
 });
 
 app.post("/verify-code", async (req, res) => {
-  const { email, code } = req.body;
+  const { email, code, verificationId } = req.body;
   try {
     const result = await verifyEmailVerificationCode({
       email,
       code,
-      purpose: "register"
+      purpose: "register",
+      verificationId: Number(verificationId) || null
     });
 
     if (!result.ok) {

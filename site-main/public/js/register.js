@@ -250,7 +250,8 @@ function initRegisterPage() {
       username,
       username_tag,
       email,
-      password
+      password,
+      verificationId: null
     };
 
     try {
@@ -268,6 +269,8 @@ function initRegisterPage() {
         setRegisterError(window.getApiErrorMessage?.(data, "Не удалось отправить код") || "Не удалось отправить код");
         return;
       }
+
+      pendingRegistrationData.verificationId = Number(data.verificationId || 0) || null;
 
       openCodeModal();
     } catch (error) {
@@ -294,6 +297,10 @@ function initRegisterPage() {
       }
 
       try {
+        if (confirmCodeBtn) {
+          confirmCodeBtn.disabled = true;
+        }
+
         const response = await fetch("/verify-code", {
           method: "POST",
           headers: {
@@ -301,7 +308,8 @@ function initRegisterPage() {
           },
           body: JSON.stringify({
             email: pendingRegistrationData.email,
-            code
+            code,
+            verificationId: pendingRegistrationData.verificationId
           })
         });
 
@@ -319,6 +327,10 @@ function initRegisterPage() {
         console.error("Verify code error:", error);
         if (codeError) {
           codeError.innerText = "Ошибка сервера";
+        }
+      } finally {
+        if (confirmCodeBtn) {
+          confirmCodeBtn.disabled = false;
         }
       }
     });
