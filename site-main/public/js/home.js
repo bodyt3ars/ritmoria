@@ -111,7 +111,7 @@ function renderHomeTopTracks(tracks = []) {
 
   container.innerHTML = tracks.map((track, index) => `
     <article class="home-track-card" data-track-id="${Number(track.id)}">
-      <button type="button" class="home-track-cover-btn" data-home-track-play="${Number(track.id)}" aria-label="Включить ${homeEscapeHtml(track.title || "трек")}">
+      <button type="button" class="home-track-cover-btn" data-home-track-open="/track/${Number(track.id)}" aria-label="Открыть ${homeEscapeHtml(track.title || "трек")}">
         <img src="${homeEscapeHtml(track.cover || "/images/default-cover.jpg")}" alt="${homeEscapeHtml(track.title || "Track cover")}">
         <span class="home-track-play-badge"><i class="fa-solid fa-play"></i></span>
       </button>
@@ -205,28 +205,14 @@ function bindHomeInteractions(homeData) {
     });
   });
 
-  document.querySelectorAll("[data-home-track-play]").forEach((button) => {
-    if (button.dataset.playBound === "1") return;
-    button.dataset.playBound = "1";
+  document.querySelectorAll("[data-home-track-open]").forEach((button) => {
+    if (button.dataset.openBound === "1") return;
+    button.dataset.openBound = "1";
     button.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const trackId = Number(button.dataset.homeTrackPlay);
-      const track = homeData.topTracks.find((item) => Number(item.id) === trackId);
-      if (!track || typeof window.playTrackGlobal !== "function") return;
-
-      window.playTrackGlobal({
-        id: Number(track.id) || 0,
-        title: track.title || "Без названия",
-        artist: formatHomeTrackArtists(track),
-        artist_mentions: Array.isArray(track.artist_mentions) ? track.artist_mentions : [],
-        cover: track.cover || "/images/default-cover.jpg",
-        audioSrc: track.audio || "",
-        soundcloud: track.soundcloud || "",
-        slug: "",
-        username_tag: "",
-        duration: Number(track.duration || 0) || 0
-      });
+      const href = button.dataset.homeTrackOpen;
+      if (href) navigate(href);
     });
   });
 }
