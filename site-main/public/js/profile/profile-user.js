@@ -187,15 +187,100 @@ function renderUserBadge(user) {
   if (!badge || !name) return;
 
   const badgeName = String(user?.collective_name || "").trim();
+  const collectiveId = Number(user?.collective_id || 0);
   const hasBadge = Boolean(badgeName);
 
   badge.classList.toggle("profile-hidden", !hasBadge);
   if (!hasBadge) {
     name.textContent = "";
+    badge.removeAttribute("data-collective-id");
+    badge.classList.remove("is-clickable");
+    badge.onclick = null;
     return;
   }
 
   name.textContent = badgeName;
+  badge.dataset.collectiveId = collectiveId ? String(collectiveId) : "";
+  badge.classList.toggle("is-clickable", Boolean(collectiveId));
+  badge.onclick = collectiveId ? () => openCollectiveModal(collectiveId, badgeName) : null;
+}
+
+function closeCollectiveModal() {
+  const modal = document.getElementById("collectiveModal");
+  if (!modal) return;
+  modal.style.display = "none";
+  document.body.classList.remove("profile-composer-open");
+}
+
+function openMemberProfile(usernameTag) {
+  const safeTag = String(usernameTag || "").trim();
+  if (!safeTag) return;
+
+  closeCollectiveModal();
+
+  if (typeof navigate === "function") {
+    navigate(`/${safeTag}`);
+  } else {
+    window.location.href = `/${safeTag}`;
+  }
+}
+
+async function openCollectiveModal(collectiveId, collectiveName = "") {
+  const modal = document.getElementById("collectiveModal");
+  const title = document.getElementById("collectiveModalTitle");
+  const body = document.getElementById("collectiveModalBody");
+
+  if (!modal || !title || !body || !collectiveId) return;
+
+  title.textContent = collectiveName || "Состав";
+  body.innerHTML = `<div class="profile-collective-loading">Загружаем состав...</div>`;
+  modal.style.display = "flex";
+  document.body.classList.add("profile-composer-open");
+
+  try {
+    const res = await fetch(`/api/collectives/${Number(collectiveId)}`);
+    if (!res.ok) {
+      throw new Error("collective_load_failed");
+    }
+
+    const data = await res.json();
+    const members = Array.isArray(data?.members) ? data.members : [];
+    const collective = data?.collective || {};
+    title.textContent = collective?.name || collectiveName || "Состав";
+
+    body.innerHTML = members.length
+      ? `
+        <div class="profile-collective-members">
+          ${members.map((member) => `
+            <button type="button" class="profile-collective-member-card" onclick="openMemberProfile('${String(member.username_tag || "").replace(/'/g, "\\'")}')">
+              <img
+                src="${settingsEscapeProfileHtml(member.avatar || "/images/default-avatar.jpg")}"
+                class="profile-collective-member-avatar"
+                alt=""
+              >
+              <div class="profile-collective-member-copy">
+                <div class="profile-collective-member-name">${settingsEscapeProfileHtml(member.username || "Пользователь")}</div>
+                <div class="profile-collective-member-tag">@${settingsEscapeProfileHtml(member.username_tag || "")}</div>
+              </div>
+              <div class="profile-collective-member-role">${member.role === "owner" ? "создатель" : "участник"}</div>
+            </button>
+          `).join("")}
+        </div>
+      `
+      : `<div class="profile-collective-loading">Состав пока пуст.</div>`;
+  } catch (err) {
+    console.error("openCollectiveModal error:", err);
+    body.innerHTML = `<div class="profile-collective-loading">Не удалось загрузить состав объединения.</div>`;
+  }
+}
+
+function settingsEscapeProfileHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function initProfileBioCounter() {
@@ -979,6 +1064,9 @@ window.closeFollowModal = closeFollowModal;
 window.goToUserProfile = goToUserProfile;
 window.initFollowSystem = initFollowSystem;
 window.loadFollowCounts = loadFollowCounts;
+window.openCollectiveModal = openCollectiveModal;
+window.closeCollectiveModal = closeCollectiveModal;
+window.openMemberProfile = openMemberProfile;
 
 function showXP(amount) {
   const toast = document.getElementById("xpToast");

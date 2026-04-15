@@ -2344,6 +2344,7 @@ app.get("/me", auth, async (req, res) => {
     users.avatar,
     users.role,
     users.email,
+    users.collective_id,
     mc.name AS collective_name,
     COALESCE(users.notifications_enabled, true) AS notifications_enabled,
     COALESCE(users.dms_enabled, true) AS dms_enabled,
@@ -3520,6 +3521,7 @@ app.get("/api/profile", async (req, res) => {
           users.avatar,
           users.bio,
           users.xp,
+          users.collective_id,
           mc.name AS collective_name,
           COALESCE(users.is_verified, false) AS is_verified,
           users.soundcloud,
@@ -3566,6 +3568,7 @@ app.get("/api/profile", async (req, res) => {
           users.avatar,
           users.bio,
           users.xp,
+          users.collective_id,
           mc.name AS collective_name,
           COALESCE(users.is_verified, false) AS is_verified,
           users.soundcloud,
@@ -3847,6 +3850,54 @@ app.get("/api/settings/collective", auth, async (req, res) => {
     });
   } catch (err) {
     console.error("COLLECTIVE LOAD ERROR:", err);
+    res.status(500).json({ error: "collective_load_failed" });
+  }
+});
+
+app.get("/api/collectives/:id", async (req, res) => {
+  try {
+    const collectiveId = Number(req.params.id || 0);
+
+    if (!collectiveId) {
+      return res.status(400).json({ error: "collective_not_found" });
+    }
+
+    const collectiveRes = await pool.query(
+      `
+      SELECT id, name, owner_user_id
+      FROM music_collectives
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [collectiveId]
+    );
+
+    if (!collectiveRes.rows.length) {
+      return res.status(404).json({ error: "collective_not_found" });
+    }
+
+    const membersRes = await pool.query(
+      `
+      SELECT
+        u.id,
+        u.username,
+        u.username_tag,
+        u.avatar,
+        m.role
+      FROM music_collective_members m
+      JOIN users u ON u.id = m.user_id
+      WHERE m.collective_id = $1
+      ORDER BY CASE WHEN m.role = 'owner' THEN 0 ELSE 1 END, LOWER(COALESCE(u.username, '')) ASC
+      `,
+      [collectiveId]
+    );
+
+    res.json({
+      collective: collectiveRes.rows[0],
+      members: membersRes.rows
+    });
+  } catch (err) {
+    console.error("COLLECTIVE DETAILS ERROR:", err);
     res.status(500).json({ error: "collective_load_failed" });
   }
 });

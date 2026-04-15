@@ -226,6 +226,24 @@
       </div>
     </div>
 
+    <div id="collectiveModal" class="profile-modal">
+      <div class="profile-modal-content profile-collective-modal-content">
+        <div class="profile-collective-modal-head">
+          <div>
+            <div class="profile-collective-kicker">Музыкальное объединение</div>
+            <h3 id="collectiveModalTitle">Состав</h3>
+          </div>
+          <button class="profile-icon-btn" type="button" onclick="closeCollectiveModal()" title="Закрыть">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div id="collectiveModalBody" class="profile-collective-modal-body">
+          <div class="profile-collective-loading">Загружаем состав...</div>
+        </div>
+      </div>
+    </div>
+
     <div id="postModal" class="profile-post-modal">
       <div class="profile-post-modal-content">
         <button class="profile-post-modal-close" onclick="closePostModal()">
