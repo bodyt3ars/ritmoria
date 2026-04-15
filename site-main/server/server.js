@@ -2338,23 +2338,23 @@ app.get("/me", auth, async (req, res) => {
     const user = await pool.query(
   `
   SELECT 
-    id,
-    username,
-    username_tag,
-    avatar,
-    role,
-    email,
+    users.id,
+    users.username,
+    users.username_tag,
+    users.avatar,
+    users.role,
+    users.email,
     mc.name AS collective_name,
-    COALESCE(notifications_enabled, true) AS notifications_enabled,
-    COALESCE(dms_enabled, true) AS dms_enabled,
-    COALESCE(is_verified, false) AS is_verified,
+    COALESCE(users.notifications_enabled, true) AS notifications_enabled,
+    COALESCE(users.dms_enabled, true) AS dms_enabled,
+    COALESCE(users.is_verified, false) AS is_verified,
     CASE 
-      WHEN password IS NULL THEN false 
+      WHEN users.password IS NULL THEN false 
       ELSE true 
     END as has_password
   FROM users
   LEFT JOIN music_collectives mc ON mc.id = users.collective_id
-  WHERE id = $1
+  WHERE users.id = $1
   `,
   [userId]
 );
@@ -3514,22 +3514,22 @@ app.get("/api/profile", async (req, res) => {
       const result = await pool.query(
         `
         SELECT
-          id,
-          username,
-          username_tag,
-          avatar,
-          bio,
-          xp,
+          users.id,
+          users.username,
+          users.username_tag,
+          users.avatar,
+          users.bio,
+          users.xp,
           mc.name AS collective_name,
-          COALESCE(is_verified, false) AS is_verified,
-          soundcloud,
-          instagram,
-          twitter,
-          telegram,
-          website
+          COALESCE(users.is_verified, false) AS is_verified,
+          users.soundcloud,
+          users.instagram,
+          users.twitter,
+          users.telegram,
+          users.website
           FROM users
           LEFT JOIN music_collectives mc ON mc.id = users.collective_id
-          WHERE LOWER(username_tag) = LOWER($1)
+          WHERE LOWER(users.username_tag) = LOWER($1)
           `,
           [tag]
         );
@@ -3560,22 +3560,22 @@ app.get("/api/profile", async (req, res) => {
     const result = await pool.query(
       `
       SELECT
-        id,
-        username,
-        username_tag,
-          avatar,
-          bio,
-          xp,
+        users.id,
+        users.username,
+        users.username_tag,
+          users.avatar,
+          users.bio,
+          users.xp,
           mc.name AS collective_name,
-          COALESCE(is_verified, false) AS is_verified,
-          soundcloud,
-          instagram,
-          twitter,
-          telegram,
-          website
+          COALESCE(users.is_verified, false) AS is_verified,
+          users.soundcloud,
+          users.instagram,
+          users.twitter,
+          users.telegram,
+          users.website
         FROM users
         LEFT JOIN music_collectives mc ON mc.id = users.collective_id
-        WHERE id = $1
+        WHERE users.id = $1
         `,
         [payload.id]
       );
