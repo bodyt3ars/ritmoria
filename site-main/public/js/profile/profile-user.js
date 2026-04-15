@@ -15,6 +15,34 @@ function clearMessages() {
   setText("usernameError", "");
 }
 
+function redirectToUpdatedProfileTag(nextTag, previousTag = "") {
+  const safeNextTag = String(nextTag || "").trim();
+  const safePreviousTag = String(previousTag || "").trim().toLowerCase();
+  const currentRouteTag = String(window.__profileTag || "").trim().toLowerCase();
+  const currentPath = String(window.location.pathname || "");
+  const onGenericProfileRoute = currentPath === "/profile" || currentPath === "/profile/";
+
+  if (!safeNextTag) return false;
+
+  const normalizedNextTag = safeNextTag.toLowerCase();
+  const shouldRedirect =
+    onGenericProfileRoute ||
+    currentRouteTag === safePreviousTag ||
+    (currentRouteTag && currentRouteTag !== normalizedNextTag);
+
+  if (!shouldRedirect) return false;
+
+  window.__profileTag = safeNextTag;
+
+  if (typeof navigate === "function") {
+    navigate(`/${safeNextTag}`);
+  } else {
+    window.location.href = `/${safeNextTag}`;
+  }
+
+  return true;
+}
+
 function normalizeUrl(url) {
   if (!url) return "";
   const value = url.trim();
@@ -470,7 +498,8 @@ async function saveUsername() {
   }
 
   const username = document.getElementById("usernameInput")?.value.trim() || "";
-  const usernameTag = document.getElementById("editUsernameTag")?.value.trim() || window.currentProfile?.username_tag || "";
+  const previousUsernameTag = String(window.currentProfile?.username_tag || "").trim();
+  const usernameTag = document.getElementById("editUsernameTag")?.value.trim() || previousUsernameTag || "";
 
   setText("usernameError", "");
   setText("profileError", "");
@@ -510,17 +539,28 @@ async function saveUsername() {
       return;
     }
 
-    document.getElementById("username").innerText = data.username || username;
+    const nextUsername = data.username || username;
+    const nextUsernameTag = data.username_tag || usernameTag;
+
+    document.getElementById("username").innerText = nextUsername;
     if (window.currentProfile) {
-      window.currentProfile.username = data.username || username;
-      window.currentProfile.username_tag = data.username_tag || usernameTag;
+      window.currentProfile.username = nextUsername;
+      window.currentProfile.username_tag = nextUsernameTag;
     }
     const editUsernameEl = document.getElementById("editUsername");
-    if (editUsernameEl) editUsernameEl.value = data.username || username;
+    if (editUsernameEl) editUsernameEl.value = nextUsername;
     const usernameTagEl = document.getElementById("usernameTag");
-    if (usernameTagEl) usernameTagEl.innerText = (data.username_tag || usernameTag) ? "@" + (data.username_tag || usernameTag) : "";
+    if (usernameTagEl) usernameTagEl.innerText = nextUsernameTag ? "@" + nextUsernameTag : "";
 
     cancelUsernameEdit();
+
+    if (typeof loadNavbarUser === "function") {
+      await loadNavbarUser();
+    }
+
+    if (redirectToUpdatedProfileTag(nextUsernameTag, previousUsernameTag)) {
+      return;
+    }
   } catch (error) {
     console.error(error);
     setText("usernameError", "Не удалось изменить ник");
@@ -536,6 +576,7 @@ async function saveProfile() {
   clearMessages();
 
   const username = document.getElementById("editUsername")?.value.trim() || "";
+  const previousUsernameTag = String(window.currentProfile?.username_tag || "").trim();
   const username_tag = document.getElementById("editUsernameTag")?.value.trim() || "";
   const bio = document.getElementById("editBio")?.value.trim() || "";
   const soundcloud = document.getElementById("editSoundcloud")?.value.trim() || "";
@@ -620,14 +661,26 @@ async function saveProfile() {
       return;
     }
 
+    const nextUsernameTag = data.username_tag || username_tag || previousUsernameTag;
+
+    if (window.currentProfile) {
+      window.currentProfile.username = data.username || username;
+      window.currentProfile.username_tag = nextUsernameTag;
+    }
+
     closeEdit();
     setText("profileSuccess", "Профиль сохранён");
 
-    await loadProfile();
-    await handleProfileUI();
     if (typeof loadNavbarUser === "function") {
       await loadNavbarUser();
     }
+
+    if (redirectToUpdatedProfileTag(nextUsernameTag, previousUsernameTag)) {
+      return;
+    }
+
+    await loadProfile();
+    await handleProfileUI();
   } catch (error) {
     console.error(error);
     setText("editProfileError", "Не удалось сохранить профиль");
