@@ -4889,6 +4889,7 @@ app.get("/api/tracks/:id", async (req, res) => {
     const result = await pool.query(`
       SELECT 
         t.*,
+        u.username_tag,
 
         (
           SELECT ROUND(AVG(score))
@@ -4974,6 +4975,7 @@ app.get("/api/tracks/:id", async (req, res) => {
         ) as my_action
 
       FROM tracks t
+      LEFT JOIN users u ON u.id = t.user_id
       WHERE t.id = $1
     `, [id, viewerId]);
 

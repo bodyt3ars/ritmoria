@@ -90,6 +90,35 @@ function initTrackPage() {
     }
   }
 
+  function bindTrackArtistLink(track) {
+    const tag = String(track?.username_tag || "").trim();
+    const displayName = track?.artist || "Неизвестный артист";
+    const targetPath = tag ? `/${tag}` : "";
+
+    const applyTarget = (el) => {
+      if (!el) return;
+
+      el.textContent = displayName;
+      el.classList.toggle("track-page-artist-linkable", !!targetPath);
+
+      el.onclick = null;
+      if (!targetPath) return;
+
+      el.onclick = (e) => {
+        e.preventDefault?.();
+        e.stopPropagation?.();
+        if (typeof window.navigate === "function") {
+          window.navigate(targetPath);
+        } else {
+          window.location.href = targetPath;
+        }
+      };
+    };
+
+    applyTarget(document.getElementById("trackArtist"));
+    applyTarget(playerArtist);
+  }
+
   function applyCommentXp(data) {
     if (!data?.xp) return;
     if (typeof window.applyXPAndCheckRank === "function") {
@@ -238,10 +267,9 @@ function initTrackPage() {
 
       document.getElementById("trackName").textContent =
         track.title || "Без названия";
-      document.getElementById("trackArtist").textContent =
-        track.artist || "Неизвестный артист";
       document.getElementById("trackCover").src =
         track.cover || "/images/cover-placeholder.jpg";
+      bindTrackArtistLink(track);
 
       const judgeScore = track.judge_score;
       document.getElementById("judgeScore").textContent =

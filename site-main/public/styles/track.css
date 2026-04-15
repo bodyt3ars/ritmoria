@@ -103,6 +103,16 @@
   word-break: break-word;
 }
 
+.track-page-artist-linkable {
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.track-page-artist-linkable:hover {
+  color: #ffd1e5 !important;
+  opacity: 1;
+}
+
 .track-page-scores {
   display: flex;
   gap: 12px;
