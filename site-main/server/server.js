@@ -4892,6 +4892,7 @@ app.get("/api/tracks/:id", async (req, res) => {
   try {
 
     const id = req.params.id;
+    const viewerId = getOptionalUserIdFromReq(req);
 
     const result = await pool.query(`
       SELECT 
@@ -4959,11 +4960,30 @@ app.get("/api/tracks/:id", async (req, res) => {
             )
           ORDER BY ut.created_at DESC
           LIMIT 1
-        ) as comment_track_id
+        ) as comment_track_id,
+
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM track_actions ta
+          WHERE ta.track_id = t.id AND ta.action = 'like'
+        ), 0) as likes,
+
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM track_actions ta
+          WHERE ta.track_id = t.id AND ta.action = 'dislike'
+        ), 0) as dislikes,
+
+        (
+          SELECT ta.action
+          FROM track_actions ta
+          WHERE ta.track_id = t.id AND ta.user_id = $2
+          LIMIT 1
+        ) as my_action
 
       FROM tracks t
       WHERE t.id = $1
-    `, [id]);
+    `, [id, viewerId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Трек не найден" });
@@ -7753,18 +7773,46 @@ app.post("/track-action", auth, async (req, res) => {
       return res.status(400).json({ error: "invalid_data" });
     }
 
+    const existingRes = await pool.query(
+      `SELECT action FROM track_actions WHERE user_id = $1 AND track_id = $2`,
+      [req.user.id, trackId]
+    );
+
+    const existing = existingRes.rows[0]?.action || null;
+
     await pool.query(
       `DELETE FROM track_actions WHERE user_id = $1 AND track_id = $2`,
       [req.user.id, trackId]
     );
 
-    await pool.query(
-      `INSERT INTO track_actions (user_id, track_id, action)
-       VALUES ($1, $2, $3)`,
-      [req.user.id, trackId, action]
+    let nextAction = null;
+
+    if (existing !== action) {
+      await pool.query(
+        `INSERT INTO track_actions (user_id, track_id, action)
+         VALUES ($1, $2, $3)`,
+        [req.user.id, trackId, action]
+      );
+      nextAction = action;
+    }
+
+    const countsRes = await pool.query(
+      `
+      SELECT
+        COUNT(*) FILTER (WHERE action = 'like')::int AS likes,
+        COUNT(*) FILTER (WHERE action = 'dislike')::int AS dislikes
+      FROM track_actions
+      WHERE track_id = $1
+      `,
+      [trackId]
     );
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      action: nextAction,
+      likes: Number(countsRes.rows[0]?.likes || 0),
+      dislikes: Number(countsRes.rows[0]?.dislikes || 0)
+    });
   } catch (err) {
     console.error("TRACK ACTION ERROR:", err);
     res.status(500).json({ error: "action error" });

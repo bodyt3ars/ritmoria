@@ -45,6 +45,7 @@ function initTrackPage() {
   let scIsPlaying = false;
   let scReady = false;
   let commentsController = null;
+  let currentReaction = null;
 
   const criteria = [
     { key: "rhymes_avg", label: "Рифмы и образы" },
@@ -69,6 +70,24 @@ function initTrackPage() {
     durationEl.textContent = "0:00";
     customPlayer?.classList.remove("playing");
     playerCover?.classList.remove("playing");
+  }
+
+  function applyTrackReactionUi(action, likes, dislikes) {
+    currentReaction = action || null;
+
+    likeBtn?.classList.toggle("active", currentReaction === "like");
+    dislikeBtn?.classList.toggle("active", currentReaction === "dislike");
+
+    const likesEl = document.getElementById("likes");
+    const dislikesEl = document.getElementById("dislikes");
+
+    if (likesEl && Number.isFinite(Number(likes))) {
+      likesEl.textContent = String(Number(likes) || 0);
+    }
+
+    if (dislikesEl && Number.isFinite(Number(dislikes))) {
+      dislikesEl.textContent = String(Number(dislikes) || 0);
+    }
   }
 
   function applyCommentXp(data) {
@@ -208,7 +227,11 @@ function initTrackPage() {
 
   async function loadTrack() {
     try {
-      const res = await fetch(`/api/tracks/${trackId}`);
+      const res = await fetch(`/api/tracks/${trackId}`, {
+        headers: localStorage.getItem("token")
+          ? { Authorization: "Bearer " + localStorage.getItem("token") }
+          : {}
+      });
       if (!res.ok) throw new Error("track load failed");
 
       const track = await res.json();
@@ -228,8 +251,7 @@ function initTrackPage() {
       document.getElementById("userScore").textContent =
         userScore ? Number(userScore).toFixed(1) : "—";
 
-      document.getElementById("likes").textContent = track.likes || 0;
-      document.getElementById("dislikes").textContent = track.dislikes || 0;
+      applyTrackReactionUi(track.my_action || null, track.likes || 0, track.dislikes || 0);
 
       playerCover.src = track.cover || "/images/cover-placeholder.jpg";
       playerTitle.textContent = track.title || "Без названия";
@@ -446,14 +468,40 @@ function initTrackPage() {
   });
 
   if (likeBtn && dislikeBtn) {
+    const sendTrackReaction = async (action) => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Нужно войти в аккаунт.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/track-action", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token
+          },
+          body: JSON.stringify({ trackId, action })
+        });
+
+        if (!res.ok) {
+          throw new Error(`track action failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+        applyTrackReactionUi(data.action || null, data.likes, data.dislikes);
+      } catch (err) {
+        console.error("track reaction error", err);
+      }
+    };
+
     likeBtn.onclick = () => {
-      likeBtn.classList.toggle("active");
-      dislikeBtn.classList.remove("active");
+      sendTrackReaction("like");
     };
 
     dislikeBtn.onclick = () => {
-      dislikeBtn.classList.toggle("active");
-      likeBtn.classList.remove("active");
+      sendTrackReaction("dislike");
     };
   }
 
