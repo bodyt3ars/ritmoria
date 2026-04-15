@@ -36,6 +36,10 @@ function isQueueAdmin() {
   return queueCurrentUser?.role === "admin";
 }
 
+function canQueueRate() {
+  return Boolean(queueCurrentUser);
+}
+
 async function loadQueue() {
   if (!queueList) {
     queueList = document.getElementById("queueList");
@@ -110,7 +114,7 @@ async function loadQueue() {
           </div>
 
           ${
-            isQueueAdmin()
+            canQueueRate()
               ? `
                 <div class="queue-track-right">
                   <button class="queue-judge-btn">
@@ -118,9 +122,15 @@ async function loadQueue() {
                     Оценить
                   </button>
 
-                  <button class="queue-delete-btn">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
+                  ${
+                    isQueueAdmin()
+                      ? `
+                        <button class="queue-delete-btn">
+                          <i class="fa-solid fa-trash"></i>
+                        </button>
+                      `
+                      : ""
+                  }
                 </div>
               `
               : ""
@@ -129,16 +139,20 @@ async function loadQueue() {
         </div>
       `;
 
-      if (isQueueAdmin()) {
+      if (canQueueRate()) {
         const judgeBtn = trackCard.querySelector(".queue-judge-btn");
-        const deleteBtn = trackCard.querySelector(".queue-delete-btn");
 
         if (judgeBtn) {
           judgeBtn.addEventListener("click", (e) => {
+            e.preventDefault();
             e.stopPropagation();
             startJudge(track.id);
           });
         }
+      }
+
+      if (isQueueAdmin()) {
+        const deleteBtn = trackCard.querySelector(".queue-delete-btn");
 
         if (deleteBtn) {
           deleteBtn.addEventListener("click", async (e) => {
@@ -179,7 +193,7 @@ async function loadQueue() {
 }
 
 function startJudge(trackId) {
-  if (!isQueueAdmin()) return;
+  if (!canQueueRate()) return;
   navigate(`/judge?track=${trackId}`);
 }
 

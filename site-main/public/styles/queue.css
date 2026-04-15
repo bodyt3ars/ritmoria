@@ -15,10 +15,6 @@
   gap: 18px;
 }
 
-.queue-hidden {
-  display: none;
-}
-
 .queue-header {
   display: flex;
   justify-content: space-between;
@@ -51,6 +47,10 @@
   gap: 10px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+}
+
+.queue-hidden {
+  display: none;
 }
 
 .queue-admin-btn {
