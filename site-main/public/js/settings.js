@@ -1,6 +1,7 @@
 let currentSettingsArchiveAudio = null;
 window.settingsReady = false;
 const settingsSavedPostsStorageKey = "savedPostIds";
+let settingsBadgeLogoFile = null;
 
 
 function settingsGetToken() {
@@ -18,6 +19,201 @@ function settingsEscapeHtml(value) {
 
 function setSettingsModalMode(open) {
   document.body.classList.toggle("settings-modal-open", !!open);
+}
+
+function setBadgePreviewState(name = "", logo = "") {
+  const badge = document.getElementById("settingsBadgePreview");
+  const badgeName = document.getElementById("settingsBadgePreviewName");
+  const badgeLogo = document.getElementById("settingsBadgePreviewLogo");
+
+  if (!badge || !badgeName || !badgeLogo) return;
+
+  const hasName = Boolean(String(name || "").trim());
+  badge.classList.toggle("settings-badge-preview-empty", !hasName);
+  badgeName.textContent = hasName ? String(name).trim() : "Твой бэйдж";
+
+  if (logo) {
+    badgeLogo.src = logo;
+    badgeLogo.classList.remove("settings-hidden");
+  } else {
+    badgeLogo.src = "";
+    badgeLogo.classList.add("settings-hidden");
+  }
+}
+
+async function loadBadgeSection() {
+  const body = document.getElementById("modalBody");
+  if (!body) return;
+
+  settingsBadgeLogoFile = null;
+  body.innerHTML = `<div class="settings-loading-state">Загружаем бэйдж...</div>`;
+
+  try {
+    const res = await fetch("/api/settings/badge", {
+      headers: {
+        Authorization: "Bearer " + settingsGetToken()
+      }
+    });
+
+    if (!res.ok) {
+      body.innerHTML = `<div class="settings-empty-state">Не удалось загрузить настройки бэйджа.</div>`;
+      return;
+    }
+
+    const data = await res.json();
+    const badgeName = String(data?.badge_name || "").trim();
+    const badgeLogo = String(data?.badge_logo || "").trim();
+
+    body.innerHTML = `
+      <div class="settings-badge-panel">
+        <div class="settings-badge-head">
+          <div class="settings-badge-copy">
+            <div class="settings-badge-kicker">Простой бэйдж</div>
+            <h3 class="settings-badge-title">Подпись возле ника</h3>
+            <p class="settings-badge-text">
+              Можешь поставить короткую приписку и логотип. Это будет отображаться возле твоего ника в профиле.
+            </p>
+          </div>
+
+          <label class="settings-badge-logo-picker">
+            <input id="settingsBadgeLogoInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+            <div class="settings-badge-logo-shell">
+              <img
+                id="settingsBadgeLogoPreview"
+                class="settings-badge-logo-preview ${badgeLogo ? "" : "settings-hidden"}"
+                src="${settingsEscapeHtml(badgeLogo)}"
+                alt=""
+              >
+              <div class="settings-badge-logo-overlay">
+                <i class="fa-solid fa-image"></i>
+                <span>${badgeLogo ? "Сменить логотип" : "Выбрать логотип"}</span>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <div class="settings-badge-preview-wrap">
+          <div class="settings-badge-preview-label">Превью возле ника</div>
+          <div id="settingsBadgePreview" class="settings-badge-preview ${badgeName ? "" : "settings-badge-preview-empty"}">
+            <img
+              id="settingsBadgePreviewLogo"
+              class="settings-badge-preview-logo ${badgeLogo ? "" : "settings-hidden"}"
+              src="${settingsEscapeHtml(badgeLogo)}"
+              alt=""
+            >
+            <span id="settingsBadgePreviewName">${settingsEscapeHtml(badgeName || "Твой бэйдж")}</span>
+          </div>
+        </div>
+
+        <label class="settings-badge-field">
+          <span>Название бэйджа</span>
+          <input
+            id="settingsBadgeName"
+            class="settings-badge-input"
+            type="text"
+            maxlength="48"
+            placeholder="Например, JUDGE"
+            value="${settingsEscapeHtml(badgeName)}"
+          >
+        </label>
+
+        <div class="settings-badge-actions">
+          <button type="button" class="settings-badge-save" onclick="saveBadgeSettings()">Сохранить бэйдж</button>
+        </div>
+
+        <p id="settingsBadgeError" class="privacy-error"></p>
+        <p id="settingsBadgeSuccess" class="privacy-success"></p>
+      </div>
+    `;
+
+    const nameInput = document.getElementById("settingsBadgeName");
+    const logoInput = document.getElementById("settingsBadgeLogoInput");
+
+    nameInput?.addEventListener("input", () => {
+      const previewLogoSrc = document.getElementById("settingsBadgePreviewLogo")?.getAttribute("src") || "";
+      setBadgePreviewState(nameInput.value, previewLogoSrc);
+    });
+
+    logoInput?.addEventListener("change", (event) => {
+      const file = event.target?.files?.[0] || null;
+      if (!file) return;
+      settingsBadgeLogoFile = file;
+      const previewUrl = URL.createObjectURL(file);
+      const image = document.getElementById("settingsBadgeLogoPreview");
+      if (image) {
+        image.src = previewUrl;
+        image.classList.remove("settings-hidden");
+      }
+      setBadgePreviewState(nameInput?.value || "", previewUrl);
+    });
+  } catch (err) {
+    console.error("loadBadgeSection error:", err);
+    body.innerHTML = `<div class="settings-empty-state">Не удалось загрузить настройки бэйджа.</div>`;
+  }
+}
+
+async function saveBadgeSettings() {
+  const errorEl = document.getElementById("settingsBadgeError");
+  const successEl = document.getElementById("settingsBadgeSuccess");
+  const nameInput = document.getElementById("settingsBadgeName");
+  const saveBtn = document.querySelector(".settings-badge-save");
+  const badgeName = String(nameInput?.value || "").trim();
+
+  if (errorEl) errorEl.textContent = "";
+  if (successEl) successEl.textContent = "";
+
+  if (badgeName.length > 48) {
+    if (errorEl) errorEl.textContent = "Бэйдж слишком длинный.";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("badge_name", badgeName);
+  if (settingsBadgeLogoFile) {
+    formData.append("badgeLogo", settingsBadgeLogoFile);
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Сохраняем...";
+  }
+
+  try {
+    const res = await fetch("/api/settings/badge", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + settingsGetToken()
+      },
+      body: formData
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const code = String(data?.error || "");
+      if (errorEl) {
+        errorEl.textContent =
+          code === "badge_name_too_long" ? "Бэйдж слишком длинный." :
+          code === "invalid_badge_logo" ? "Логотип бэйджа должен быть картинкой." :
+          "Не удалось сохранить бэйдж.";
+      }
+      return;
+    }
+
+    settingsBadgeLogoFile = null;
+    if (successEl) successEl.textContent = "Бэйдж сохранён.";
+    await loadBadgeSection();
+    const nextSuccessEl = document.getElementById("settingsBadgeSuccess");
+    if (nextSuccessEl) nextSuccessEl.textContent = "Бэйдж сохранён.";
+  } catch (err) {
+    console.error("saveBadgeSettings error:", err);
+    if (errorEl) errorEl.textContent = "Не удалось сохранить бэйдж.";
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Сохранить бэйдж";
+    }
+  }
 }
 
 function settingsGetSavedPostIds() {
@@ -633,6 +829,12 @@ if (type === "archive") {
   if (type === "communication") {
     title.innerText = "Сообщения и уведомления";
     loadCommunicationSection();
+    return;
+  }
+
+  if (type === "badge") {
+    title.innerText = "Бэйдж";
+    loadBadgeSection();
     return;
   }
 
@@ -1282,6 +1484,7 @@ window.sendDeleteAccountCode = sendDeleteAccountCode;
 window.confirmDeleteAccountByCode = confirmDeleteAccountByCode;
 window.deleteAccountWithoutEmail = deleteAccountWithoutEmail;
 window.saveCommunicationSettings = saveCommunicationSettings;
+window.saveBadgeSettings = saveBadgeSettings;
 window.initSettingsPage = function () {
   const root = document.querySelector(".settings-page");
   if (!root) {

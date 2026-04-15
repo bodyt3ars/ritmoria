@@ -1565,7 +1565,33 @@ async function ensureHomeNewsSchema() {
       CREATE INDEX IF NOT EXISTS idx_home_stream_top_tracks_position
         ON home_stream_top_tracks(position);
     `);
+}
+
+async function ensureUserBadgeSchema() {
+  await pool.query(`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS badge_name varchar(48),
+      ADD COLUMN IF NOT EXISTS badge_logo text;
+  `);
+}
+
+async function saveUserBadgeLogo(file, userId) {
+  if (!file || !userId) return null;
+  if (!String(file.mimetype || "").startsWith("image/")) {
+    throw new Error("invalid_badge_logo");
   }
+
+  const fileName = `user-badge-${userId}.webp`;
+  const filePath = path.join(__dirname, "..", "public", "uploads", "badges", fileName);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+  await sharp(file.buffer)
+    .resize(160, 160, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .webp({ quality: 94 })
+    .toFile(filePath);
+
+  return `/uploads/badges/${fileName}`;
+}
 
 
 async function saveClosedQueueTopTracksSnapshot() {
@@ -2302,6 +2328,8 @@ app.get("/me", auth, async (req, res) => {
     avatar,
     role,
     email,
+    badge_name,
+    badge_logo,
     COALESCE(notifications_enabled, true) AS notifications_enabled,
     COALESCE(dms_enabled, true) AS dms_enabled,
     COALESCE(is_verified, false) AS is_verified,
@@ -3476,6 +3504,8 @@ app.get("/api/profile", async (req, res) => {
           avatar,
           bio,
           xp,
+          badge_name,
+          badge_logo,
           COALESCE(is_verified, false) AS is_verified,
           soundcloud,
           instagram,
@@ -3520,6 +3550,8 @@ app.get("/api/profile", async (req, res) => {
           avatar,
           bio,
           xp,
+          badge_name,
+          badge_logo,
           COALESCE(is_verified, false) AS is_verified,
           soundcloud,
           instagram,
@@ -3655,6 +3687,66 @@ app.put("/update-profile", authMiddleware, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "update_profile_failed" });
+  }
+});
+
+app.get("/api/settings/badge", auth, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const result = await pool.query(
+      `
+      SELECT badge_name, badge_logo
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "user_not_found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("BADGE LOAD ERROR:", err);
+    res.status(500).json({ error: "badge_load_failed" });
+  }
+});
+
+app.post("/api/settings/badge", auth, upload.single("badgeLogo"), async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const badgeName = String(req.body?.badge_name || "").trim();
+
+    if (badgeName.length > 48) {
+      return res.status(400).json({ error: "badge_name_too_long" });
+    }
+
+    let badgeLogo = null;
+    if (req.file) {
+      badgeLogo = await saveUserBadgeLogo(req.file, userId);
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET
+        badge_name = $1,
+        badge_logo = COALESCE($2, badge_logo)
+      WHERE id = $3
+      RETURNING badge_name, badge_logo
+      `,
+      [badgeName || null, badgeLogo, userId]
+    );
+
+    res.json(result.rows[0] || { badge_name: null, badge_logo: null });
+  } catch (err) {
+    console.error("BADGE SAVE ERROR:", err);
+    if (String(err?.message || "") === "invalid_badge_logo") {
+      return res.status(400).json({ error: "invalid_badge_logo" });
+    }
+    res.status(500).json({ error: "badge_save_failed" });
   }
 });
 
@@ -8792,6 +8884,7 @@ await ensureTrackCommentsSchema();
 await ensureTrackRepostSchema();
 await ensureMentionsSchema();
 await ensureHomeNewsSchema();
+await ensureUserBadgeSchema();
 await ensureCommunitySchema();
     app.listen(APP_PORT, () => {
       console.log(`Server running on ${APP_BASE_URL} (port ${APP_PORT})`);

@@ -5,6 +5,7 @@ let navbarInitialized = false;
 let appConfirmPromiseResolver = null;
 let navbarNotificationsInterval = null;
 let navbarRealtimeInitialized = false;
+let navbarRealtimeLoopInterval = null;
 
 function setNavbarBadgeState(badge, count) {
   if (!badge) return;
@@ -55,9 +56,31 @@ async function loadNavbarMessagesBadge() {
 
 async function refreshNavbarRealtimeState() {
   if (!localStorage.getItem("token")) return;
+  ensureNavbarRealtimeLoop();
   await loadNavbarUser();
   await loadNavbarNotifications();
   await loadNavbarMessagesBadge();
+}
+
+function ensureNavbarRealtimeLoop() {
+  if (navbarRealtimeLoopInterval) return;
+
+  navbarRealtimeLoopInterval = setInterval(async () => {
+    if (document.visibilityState === "hidden") return;
+    if (!localStorage.getItem("token")) return;
+
+    const notificationsWrap = document.getElementById("navNotificationsWrap");
+    const messagesLink = document.getElementById("navMessagesLink");
+
+    if (!notificationsWrap && !messagesLink) return;
+
+    try {
+      await loadNavbarNotifications();
+      await loadNavbarMessagesBadge();
+    } catch (err) {
+      console.error("Navbar realtime loop error:", err);
+    }
+  }, 5000);
 }
 
 function ensureAppConfirmModal() {
@@ -183,6 +206,7 @@ async function loadNavbar() {
     await loadQueueStatus();
     await loadNavbarNotifications();
     await loadNavbarMessagesBadge();
+    ensureNavbarRealtimeLoop();
     navbarQueueInterval = setInterval(loadQueueStatus, 5000);
     navbarNotificationsInterval = setInterval(async () => {
       await loadNavbarNotifications();
@@ -801,6 +825,7 @@ if (!navbarInitialized) {
 
 if (!navbarRealtimeInitialized) {
   navbarRealtimeInitialized = true;
+  ensureNavbarRealtimeLoop();
 
   window.addEventListener("focus", () => {
     refreshNavbarRealtimeState().catch((err) => {

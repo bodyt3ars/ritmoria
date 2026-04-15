@@ -682,6 +682,159 @@ body.settings-modal-open .persistent-player {
   text-align: center;
 }
 
+.settings-hidden {
+  display: none !important;
+}
+
+.settings-badge-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-badge-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 22px;
+  align-items: center;
+}
+
+.settings-badge-kicker {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 194, 221, 0.72);
+}
+
+.settings-badge-title {
+  margin: 8px 0 10px;
+  font-size: 28px;
+  color: #fff2f8;
+}
+
+.settings-badge-text {
+  margin: 0;
+  color: rgba(255, 231, 241, 0.82);
+  line-height: 1.6;
+}
+
+.settings-badge-logo-picker {
+  display: block;
+  cursor: pointer;
+}
+
+.settings-badge-logo-shell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 26px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(42, 18, 42, 0.96), rgba(24, 14, 30, 0.98)),
+    radial-gradient(circle at top left, rgba(255, 94, 168, 0.18), transparent 40%);
+  border: 1px solid rgba(255, 154, 199, 0.18);
+}
+
+.settings-badge-logo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.settings-badge-logo-overlay {
+  position: absolute;
+  inset: auto 12px 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(17, 12, 24, 0.78);
+  color: #ffe9f3;
+  font-weight: 700;
+  border: 1px solid rgba(255, 154, 199, 0.16);
+}
+
+.settings-badge-preview-wrap {
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 154, 199, 0.14);
+}
+
+.settings-badge-preview-label {
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 205, 227, 0.72);
+}
+
+.settings-badge-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 94, 168, 0.2), rgba(144, 78, 137, 0.24));
+  border: 1px solid rgba(255, 154, 199, 0.18);
+}
+
+.settings-badge-preview-empty {
+  opacity: 0.72;
+}
+
+.settings-badge-preview-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.settings-badge-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-badge-field span {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 205, 227, 0.8);
+}
+
+.settings-badge-input {
+  width: 100%;
+  min-height: 56px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 154, 199, 0.16);
+  border-radius: 18px;
+  background: rgba(18, 13, 26, 0.84);
+  color: #fff3f9;
+  font-size: 15px;
+  outline: none;
+}
+
+.settings-badge-actions {
+  display: flex;
+}
+
+.settings-badge-save {
+  min-width: 220px;
+  min-height: 54px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ff5ea8, #b76cff);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 
 .settings-saved-posts-grid {
   display: grid;
@@ -1057,6 +1210,14 @@ body.view-post-open .persistent-player {
     max-height: 52vh;
   }
 
+  .settings-badge-head {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-badge-logo-shell {
+    max-width: 240px;
+  }
+
 }
 
 @media (max-width: 520px) {
@@ -1066,6 +1227,14 @@ body.view-post-open .persistent-player {
 
   .settings-page-card {
     padding: 22px 18px;
+  }
+
+  .settings-badge-title {
+    font-size: 24px;
+  }
+
+  .settings-badge-save {
+    width: 100%;
   }
 
   .settings-page-modal-header h2 {
