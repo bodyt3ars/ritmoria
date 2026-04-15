@@ -11,7 +11,8 @@ let messagesState = {
   pendingInvites: [],
   attachmentFile: null,
   createAvatarFile: null,
-  editAvatarFile: null
+  editAvatarFile: null,
+  livePollInterval: null
 };
 
 function msgEscape(value) {
@@ -62,6 +63,130 @@ function formatConversationMonth(value) {
 
 function getCurrentConversation() {
   return messagesState.conversations.find((item) => Number(item.id) === Number(messagesState.activeConversationId)) || null;
+}
+
+function clearMessagesLivePolling() {
+  if (messagesState.livePollInterval) {
+    clearInterval(messagesState.livePollInterval);
+    messagesState.livePollInterval = null;
+  }
+}
+
+function getMessagesThreadBottomOffset(thread) {
+  if (!thread) return 0;
+  return thread.scrollHeight - thread.scrollTop - thread.clientHeight;
+}
+
+function haveActiveMessagesChanged(nextItems = []) {
+  const currentItems = Array.isArray(messagesState.activeMessages) ? messagesState.activeMessages : [];
+  const safeNextItems = Array.isArray(nextItems) ? nextItems : [];
+
+  if (currentItems.length !== safeNextItems.length) return true;
+
+  for (let i = 0; i < safeNextItems.length; i += 1) {
+    const current = currentItems[i];
+    const next = safeNextItems[i];
+
+    if (!current || !next) return true;
+    if (Number(current.id) !== Number(next.id)) return true;
+    if (String(current.text || "") !== String(next.text || "")) return true;
+    if (Boolean(current.is_read) !== Boolean(next.is_read)) return true;
+    if (String(current.updated_at || "") !== String(next.updated_at || "")) return true;
+    if (String(current.attachment_url || "") !== String(next.attachment_url || "")) return true;
+    if (JSON.stringify(current.reactions || []) !== JSON.stringify(next.reactions || [])) return true;
+  }
+
+  return false;
+}
+
+function renderActiveConversationMessages(items, options = {}) {
+  const {
+    forceScrollBottom = false,
+    preserveViewport = true
+  } = options;
+
+  const thread = document.getElementById("messagesThread");
+  if (!thread) return;
+
+  const previousScrollTop = thread.scrollTop;
+  const previousBottomOffset = getMessagesThreadBottomOffset(thread);
+  const shouldStickToBottom = forceScrollBottom || previousBottomOffset < 120;
+
+  messagesState.activeMessages = Array.isArray(items) ? items : [];
+
+  thread.innerHTML = messagesState.activeMessages.length
+    ? messagesState.activeMessages.map((item) => renderMessageBubble(item)).join("")
+    : `<div class="messages-empty">Сообщений пока нет</div>`;
+
+  bindThreadInteractions();
+
+  if (shouldStickToBottom) {
+    thread.scrollTop = thread.scrollHeight;
+    return;
+  }
+
+  if (preserveViewport) {
+    thread.scrollTop = previousScrollTop;
+  }
+}
+
+async function refreshActiveConversationMessages(options = {}) {
+  const {
+    forceScrollBottom = false,
+    refreshConversations = false
+  } = options;
+
+  const token = localStorage.getItem("token");
+  const conversationId = Number(messagesState.activeConversationId || 0);
+  const thread = document.getElementById("messagesThread");
+  const head = document.getElementById("messagesChatHead");
+
+  if (!token || !conversationId || !thread || !head) return;
+
+  const res = await fetch(`/api/messages/conversations/${conversationId}`, {
+    headers: { Authorization: "Bearer " + token }
+  });
+
+  const items = res.ok ? await res.json() : [];
+  const safeItems = Array.isArray(items) ? items : [];
+  const changed = haveActiveMessagesChanged(safeItems);
+
+  if (changed || forceScrollBottom) {
+    renderActiveConversationMessages(safeItems, {
+      forceScrollBottom,
+      preserveViewport: !forceScrollBottom
+    });
+  }
+
+  if (refreshConversations) {
+    await loadConversations();
+  }
+
+  applyConversationPermissions();
+}
+
+function startMessagesLivePolling() {
+  clearMessagesLivePolling();
+
+  messagesState.livePollInterval = setInterval(async () => {
+    const thread = document.getElementById("messagesThread");
+    const conversationList = document.getElementById("messagesConversationList");
+
+    if (!thread || !conversationList) {
+      clearMessagesLivePolling();
+      return;
+    }
+
+    if (!messagesState.activeConversationId) return;
+
+    try {
+      await refreshActiveConversationMessages({ refreshConversations: true });
+      await window.loadNavbarNotifications?.();
+      await window.loadNavbarMessagesBadge?.();
+    } catch (error) {
+      console.error("messages live polling error:", error);
+    }
+  }, 2500);
 }
 
 function applyConversationPermissions() {
@@ -977,18 +1102,15 @@ async function openConversation(conversationId) {
     headers: { Authorization: "Bearer " + token }
   });
   const items = res.ok ? await res.json() : [];
-  messagesState.activeMessages = Array.isArray(items) ? items : [];
-
-  thread.innerHTML = messagesState.activeMessages.length
-    ? messagesState.activeMessages.map((item) => renderMessageBubble(item)).join("")
-    : `<div class="messages-empty">Сообщений пока нет</div>`;
-
-  thread.scrollTop = thread.scrollHeight;
-  bindThreadInteractions();
+  renderActiveConversationMessages(Array.isArray(items) ? items : [], {
+    forceScrollBottom: true,
+    preserveViewport: false
+  });
   await loadConversations();
   applyConversationPermissions();
   await window.loadNavbarNotifications?.();
   await window.loadNavbarMessagesBadge?.();
+  startMessagesLivePolling();
 }
 
 async function startConversation(targetIdValue) {
@@ -1644,4 +1766,6 @@ window.initMessagesPage = async function initMessagesPage() {
   } else if (messagesState.conversations[0]?.id) {
     await openConversation(messagesState.conversations[0].id);
   }
+
+  startMessagesLivePolling();
 };
