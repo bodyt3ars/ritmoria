@@ -825,7 +825,8 @@ async function verifyEmailVerificationCode({
 async function consumeVerifiedEmailCode({
   email,
   purpose = "register",
-  userId = null
+  userId = null,
+  consume = true
 }) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
@@ -856,15 +857,17 @@ async function consumeVerifiedEmailCode({
     return { ok: false, error: "email_not_verified" };
   }
 
-  await pool.query(
-    `
-    DELETE FROM email_verification_codes
-    WHERE LOWER(email) = LOWER($1)
-      AND purpose = $2
-      AND ($3::int IS NULL OR user_id = $3)
-    `,
-    [normalizedEmail, purpose, userId]
-  );
+  if (consume) {
+    await pool.query(
+      `
+      DELETE FROM email_verification_codes
+      WHERE LOWER(email) = LOWER($1)
+        AND purpose = $2
+        AND ($3::int IS NULL OR user_id = $3)
+      `,
+      [normalizedEmail, purpose, userId]
+    );
+  }
 
   return { ok: true };
 }
@@ -2828,7 +2831,8 @@ app.post("/register", async (req, res) => {
 
     const emailCheck = await consumeVerifiedEmailCode({
       email: cleanEmail,
-      purpose: "register"
+      purpose: "register",
+      consume: false
     });
 
     if (!emailCheck.ok) {
@@ -2865,6 +2869,16 @@ const result = await pool.query(
   "INSERT INTO users (username,email,password,avatar,username_tag) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,username_tag,email,avatar",
   [cleanUsername, cleanEmail, hash, "/images/default-avatar.jpg", finalUsernameTag]
 );
+
+    await pool.query(
+      `
+      DELETE FROM email_verification_codes
+      WHERE LOWER(email) = LOWER($1)
+        AND purpose = 'register'
+      `,
+      [cleanEmail]
+    );
+
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
