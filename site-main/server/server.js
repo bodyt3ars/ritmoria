@@ -3451,26 +3451,36 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Нет данных" });
     }
 
-    let cleanLogin = login.trim();
+    const rawLogin = String(login || "").trim();
+    const cleanLogin = rawLogin.startsWith("@") ? rawLogin.slice(1).trim() : rawLogin;
 
-if (cleanLogin.startsWith("@")) {
-  cleanLogin = cleanLogin.slice(1);
-}
+    let result;
 
-// если это email → ищем только по email
-let result;
-
-if (cleanLogin.includes("@")) {
-  result = await pool.query(
-    "SELECT * FROM users WHERE LOWER(email)=LOWER($1)",
-    [cleanLogin]
-  );
-} else {
-  result = await pool.query(
-    "SELECT * FROM users WHERE LOWER(username_tag)=LOWER($1)",
-    [cleanLogin]
-  );
-}
+    if (rawLogin.includes("@") && !rawLogin.startsWith("@")) {
+      result = await pool.query(
+        `
+        SELECT *
+        FROM users
+        WHERE LOWER(email) = LOWER($1)
+        ORDER BY id DESC
+        LIMIT 1
+        `,
+        [rawLogin]
+      );
+    } else {
+      result = await pool.query(
+        `
+        SELECT *
+        FROM users
+        WHERE LOWER(username_tag) = LOWER($1)
+           OR LOWER(username) = LOWER($2)
+           OR LOWER(email) = LOWER($3)
+        ORDER BY id DESC
+        LIMIT 1
+        `,
+        [cleanLogin, cleanLogin, cleanLogin]
+      );
+    }
 
     if (result.rows.length === 0) {
       return res.status(401).json({ error: "Пользователь не найден" });
