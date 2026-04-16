@@ -6324,6 +6324,23 @@ app.post("/api/rate/user", requireRole(["user", "judge", "admin"]), async (req, 
     } = req.body;
 
     const user = req.user;
+    const trackOwnerRes = await pool.query(
+      `
+      SELECT user_id
+      FROM tracks
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [track_id]
+    );
+
+    if (!trackOwnerRes.rows.length) {
+      return res.status(404).json({ error: "track_not_found" });
+    }
+
+    if (String(user.role || "") === "user" && Number(trackOwnerRes.rows[0].user_id || 0) === Number(user.id || 0)) {
+      return res.status(403).json({ error: "self_rate_forbidden" });
+    }
 
     await pool.query(`
       INSERT INTO track_ratings (track_id, user_id, type, score)

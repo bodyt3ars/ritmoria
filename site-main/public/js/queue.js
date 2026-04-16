@@ -55,6 +55,12 @@ function canQueueRate() {
   return Boolean(queueCurrentUser);
 }
 
+function canRateQueueTrack(track) {
+  if (!track || !queueCurrentUser) return false;
+  if (isQueueAdmin() || queueCurrentUser?.role === "judge") return true;
+  return Number(track.user_id || 0) !== Number(queueCurrentUser.id || 0);
+}
+
 async function loadQueue() {
   if (!queueList) {
     queueList = document.getElementById("queueList");
@@ -132,10 +138,16 @@ async function loadQueue() {
             canQueueRate()
               ? `
                 <div class="queue-track-right">
-                  <button class="queue-judge-btn">
-                    <i class="fa-solid fa-play"></i>
-                    Оценить
-                  </button>
+                  ${
+                    canRateQueueTrack(track)
+                      ? `
+                        <button class="queue-judge-btn">
+                          <i class="fa-solid fa-play"></i>
+                          Оценить
+                        </button>
+                      `
+                      : ""
+                  }
 
                   ${
                     canDeleteQueueTrack(track)
@@ -154,7 +166,7 @@ async function loadQueue() {
         </div>
       `;
 
-      if (canQueueRate()) {
+      if (canRateQueueTrack(track)) {
         const judgeBtn = trackCard.querySelector(".queue-judge-btn");
 
         if (judgeBtn) {

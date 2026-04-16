@@ -32,6 +32,36 @@ function initJudgePage() {
   let scWidget = null;
   let scIsPlaying = false;
   let scReady = false;
+  let judgeCurrentUser = null;
+
+  async function loadJudgeCurrentUser() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      judgeCurrentUser = null;
+      return null;
+    }
+
+    try {
+      const res = await fetch("/me", {
+        headers: {
+          Authorization: "Bearer " + token
+        }
+      });
+
+      if (!res.ok) {
+        judgeCurrentUser = null;
+        return null;
+      }
+
+      const user = await res.json();
+      judgeCurrentUser = user;
+      return user;
+    } catch (err) {
+      console.error("loadJudgeCurrentUser error", err);
+      judgeCurrentUser = null;
+      return null;
+    }
+  }
 
   function getTrackId() {
     const params = new URLSearchParams(window.location.search);
@@ -221,7 +251,7 @@ function initJudgePage() {
   async function checkIfRated() {
     const trackId = getTrackId();
     const token = localStorage.getItem("token");
-    if (!token || !trackId) return;
+    if (!token || !trackId || rateBtn.disabled) return;
 
     try {
       const res = await fetch(`/api/rate/check/${trackId}`, {
@@ -279,6 +309,10 @@ function initJudgePage() {
       if (!res.ok) throw new Error("Ошибка загрузки трека");
 
       const track = await res.json();
+      const isOwnTrack =
+        judgeCurrentUser &&
+        String(judgeCurrentUser.role || "") === "user" &&
+        Number(track.user_id || 0) === Number(judgeCurrentUser.id || 0);
 
       const judgeEl = document.getElementById("judgeScore");
       const userEl = document.getElementById("userScore");
@@ -298,6 +332,16 @@ function initJudgePage() {
       playerCover.src = track.cover || "/images/cover-placeholder.jpg";
       playerTitle.textContent = track.title || "Без названия";
       playerArtist.textContent = track.artist || "Unknown artist";
+
+      if (isOwnTrack) {
+        rateBtn.disabled = true;
+        rateBtn.textContent = "Нельзя оценить свой трек";
+        rateBtn.style.opacity = "0.6";
+      } else {
+        rateBtn.disabled = false;
+        rateBtn.textContent = "ОЦЕНИТЬ";
+        rateBtn.style.opacity = "";
+      }
 
       resetPlayerUI();
 
@@ -537,6 +581,7 @@ function initJudgePage() {
   });
 
   (async () => {
+    await loadJudgeCurrentUser();
     await loadMyRating();
 
     document.querySelectorAll('.judge-page input[type="range"]').forEach(el => {
