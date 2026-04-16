@@ -5595,6 +5595,62 @@ const result = await pool.query(
   }
 });
 
+app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), async (req, res) => {
+  try {
+    const q = await pool.query(
+      "SELECT value FROM system_settings WHERE key = 'queue_state'"
+    );
+
+    const state = q.rows[0]?.value || "open";
+
+    if (state !== "open") {
+      return res.status(403).json({ message: "Очередь закрыта или на паузе" });
+    }
+
+    const userTrackId = Number(req.body?.userTrackId || 0);
+    if (!userTrackId) {
+      return res.status(400).json({ error: "track_not_found" });
+    }
+
+    const userId = Number(req.user?.id || 0);
+    const trackRes = await pool.query(
+      `SELECT id, user_id, artist, title, soundcloud, cover, audio
+       FROM user_tracks
+       WHERE id = $1 AND user_id = $2
+       LIMIT 1`,
+      [userTrackId, userId]
+    );
+
+    if (!trackRes.rows.length) {
+      return res.status(404).json({ error: "track_not_found" });
+    }
+
+    const sourceTrack = trackRes.rows[0];
+    if (!sourceTrack.audio) {
+      return res.status(400).json({ error: "audio_required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+       RETURNING *`,
+      [
+        sourceTrack.artist || "",
+        sourceTrack.title || "Без названия",
+        sourceTrack.soundcloud || "",
+        sourceTrack.cover || null,
+        sourceTrack.audio,
+        userId
+      ]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(buildPublicErrorPayload(err, "track_create_failed", "Не удалось отправить трек из профиля."));
+  }
+});
+
 
 // 📥 очередь
 app.get("/api/tracks/queue", async (req, res) => {

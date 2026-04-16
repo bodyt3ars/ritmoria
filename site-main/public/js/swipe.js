@@ -41,6 +41,7 @@ let discoverPreloadAudio = null;
 let discoverLastTrackId = null;
 let discoverRenderToken = 0;
 let discoverSwipeUnlockTimer = null;
+let discoverPointerEventsBound = false;
 
 const DISCOVER_VOLUME_KEY = "discoverVolume";
 const DISCOVER_MUTED_KEY = "discoverMuted";
@@ -887,8 +888,6 @@ function handlePointerDown(e) {
   discoverPointerId = e.pointerId;
   discoverStartX = e.clientX;
   discoverDeltaX = 0;
-
-  discoverCard.setPointerCapture?.(e.pointerId);
   discoverCard.style.transition = "none";
 }
 
@@ -903,9 +902,9 @@ function handlePointerMove(e) {
 }
 
 function handlePointerEnd(e) {
-  if (!discoverDragging || e.pointerId !== discoverPointerId) return;
+  if (!discoverDragging) return;
+  if (e?.pointerId !== undefined && discoverPointerId !== null && e.pointerId !== discoverPointerId) return;
 
-  discoverCard?.releasePointerCapture?.(e.pointerId);
   discoverDragging = false;
   discoverPointerId = null;
 
@@ -923,21 +922,31 @@ function bindDiscoverCardEvents() {
 
   discoverCard.dataset.bound = "1";
   discoverCard.addEventListener("pointerdown", handlePointerDown);
-  discoverCard.addEventListener("pointermove", handlePointerMove);
-  discoverCard.addEventListener("pointerup", handlePointerEnd);
-  discoverCard.addEventListener("pointercancel", handlePointerEnd);
-  discoverCard.addEventListener("lostpointercapture", handlePointerEnd);
+}
+
+function bindDiscoverPointerEvents() {
+  if (discoverPointerEventsBound) return;
+
+  window.addEventListener("pointermove", handlePointerMove);
+  window.addEventListener("pointerup", handlePointerEnd);
+  window.addEventListener("pointercancel", handlePointerEnd);
+  discoverPointerEventsBound = true;
 }
 
 function unbindDiscoverCardEvents() {
   if (!discoverCard || discoverCard.dataset.bound !== "1") return;
 
   discoverCard.removeEventListener("pointerdown", handlePointerDown);
-  discoverCard.removeEventListener("pointermove", handlePointerMove);
-  discoverCard.removeEventListener("pointerup", handlePointerEnd);
-  discoverCard.removeEventListener("pointercancel", handlePointerEnd);
-  discoverCard.removeEventListener("lostpointercapture", handlePointerEnd);
   delete discoverCard.dataset.bound;
+}
+
+function unbindDiscoverPointerEvents() {
+  if (!discoverPointerEventsBound) return;
+
+  window.removeEventListener("pointermove", handlePointerMove);
+  window.removeEventListener("pointerup", handlePointerEnd);
+  window.removeEventListener("pointercancel", handlePointerEnd);
+  discoverPointerEventsBound = false;
 }
 
 function bindDiscoverProgressSeek() {
@@ -1156,6 +1165,7 @@ window.initDiscoverPage = function () {
   discoverDeltaX = 0;
 
   bindDiscoverCardEvents();
+  bindDiscoverPointerEvents();
   bindDiscoverProgressSeek();
   bindDiscoverAudioEvents();
   bindDiscoverVolumeEvents();
@@ -1195,6 +1205,7 @@ window.initDiscoverPage = function () {
 
 window.destroyDiscoverPage = function () {
   unbindDiscoverCardEvents();
+  unbindDiscoverPointerEvents();
 
   if (discoverAudio) {
     discoverAudio.pause();
