@@ -2539,6 +2539,8 @@ body.profile-composer-open #app {
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition: 0.25s;
+  position: relative;
+  overflow: hidden;
 }
 
 .profile-file-input:hover {
@@ -2555,6 +2557,28 @@ body.profile-composer-open #app {
   background: rgba(255, 255, 255, 0.1);
   padding: 6px 12px;
   border-radius: 10px;
+}
+
+.profile-hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.profile-file-input-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
 }
 
 .profile-preview {

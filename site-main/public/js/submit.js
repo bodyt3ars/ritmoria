@@ -128,6 +128,10 @@ function initSubmitPage() {
     coverPlaceholder.style.display = "none";
   });
 
+  coverInput?.addEventListener("click", function () {
+    this.value = "";
+  });
+
   audioInput?.addEventListener("change", function () {
     const file = this.files?.[0];
 
@@ -145,6 +149,10 @@ function initSubmitPage() {
     audioFileName.textContent = file.name;
     audioPreview.src = URL.createObjectURL(file);
     audioPreviewWrap.style.display = "block";
+  });
+
+  audioInput?.addEventListener("click", function () {
+    this.value = "";
   });
 
   fetchBtn?.addEventListener("click", async () => {

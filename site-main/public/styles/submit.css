@@ -97,7 +97,15 @@
 }
 
 .submit-hidden-input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .submit-cover-hint {
@@ -201,6 +209,8 @@
   gap: 14px;
   cursor: pointer;
   transition: 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .submit-file-trigger:hover {
@@ -233,6 +243,16 @@
   white-space: nowrap;
   color: rgba(255, 255, 255, 0.8);
   font-size: 15px;
+}
+
+.submit-file-input-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
 }
 
 .submit-audio-preview-wrap {

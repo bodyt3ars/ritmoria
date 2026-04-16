@@ -1166,6 +1166,10 @@ function initTrackModal() {
   if (coverInput && !coverInput.dataset.trackModalInit) {
     coverInput.dataset.trackModalInit = "true";
 
+    coverInput.addEventListener("click", () => {
+      coverInput.value = "";
+    });
+
     coverInput.addEventListener("change", () => {
       const file = coverInput.files[0];
       if (!file) return;
@@ -1178,6 +1182,10 @@ function initTrackModal() {
 
   if (audioInput && !audioInput.dataset.trackAudioInit) {
     audioInput.dataset.trackAudioInit = "true";
+
+    audioInput.addEventListener("click", () => {
+      audioInput.value = "";
+    });
 
     audioInput.addEventListener("change", () => {
       const file = audioInput.files[0];
