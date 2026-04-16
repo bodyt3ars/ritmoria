@@ -40,6 +40,7 @@ let discoverIsLoading = false;
 let discoverPreloadAudio = null;
 let discoverLastTrackId = null;
 let discoverRenderToken = 0;
+let discoverSwipeUnlockTimer = null;
 
 const DISCOVER_VOLUME_KEY = "discoverVolume";
 const DISCOVER_MUTED_KEY = "discoverMuted";
@@ -798,6 +799,7 @@ async function swipeCurrentTrack(direction, options = {}) {
   } = options;
 
   discoverSwipeLocked = true;
+  clearTimeout(discoverSwipeUnlockTimer);
 
   discoverCard.style.transition = "transform 0.30s ease, opacity 0.30s ease";
   discoverCard.style.transform =
@@ -833,9 +835,28 @@ async function swipeCurrentTrack(direction, options = {}) {
   }
 
   setTimeout(() => {
-    goToNextDiscoverTrack();
-    discoverSwipeLocked = false;
+    try {
+      goToNextDiscoverTrack();
+    } catch (err) {
+      console.error("discover swipe transition error", err);
+      resetDraggedCard();
+      renderDiscoverCards();
+      playCurrentDiscoverTrack();
+    } finally {
+      discoverSwipeLocked = false;
+    }
   }, 260);
+
+  discoverSwipeUnlockTimer = setTimeout(() => {
+    if (!discoverSwipeLocked) return;
+
+    console.warn("discover swipe fallback unlock");
+    discoverSwipeLocked = false;
+    discoverDragging = false;
+    discoverPointerId = null;
+    resetDraggedCard();
+    renderDiscoverCards();
+  }, 900);
 
   Promise.allSettled(pendingTasks).catch(() => {});
 }
@@ -884,6 +905,7 @@ function handlePointerMove(e) {
 function handlePointerEnd(e) {
   if (!discoverDragging || e.pointerId !== discoverPointerId) return;
 
+  discoverCard?.releasePointerCapture?.(e.pointerId);
   discoverDragging = false;
   discoverPointerId = null;
 
@@ -1233,6 +1255,8 @@ window.destroyDiscoverPage = function () {
   discoverDeltaX = 0;
   discoverPointerId = null;
   discoverSwipeLocked = false;
+  clearTimeout(discoverSwipeUnlockTimer);
+  discoverSwipeUnlockTimer = null;
   discoverPreloadAudio = null;
   discoverIsLoading = false;
   discoverInited = false;

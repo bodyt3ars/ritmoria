@@ -11,8 +11,6 @@ let cropState = {
   startY: 0
 };
 
-let cropControlsInited = false;
-
 function updateCropZoomVisual() {
   const zoomRange = document.getElementById("zoomRange");
   if (!zoomRange) return;
@@ -333,40 +331,35 @@ async function initAvatarCrop() {
 }
 
 function initCropControls() {
-  if (cropControlsInited) return;
-
   const cropCircle = document.getElementById("cropCircle");
   const zoomRange = document.getElementById("zoomRange");
 
   if (!cropCircle || !zoomRange) return;
+  if (cropCircle.dataset.cropBound !== "true") {
+    cropCircle.dataset.cropBound = "true";
 
-  cropControlsInited = true;
+    cropCircle.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      startCropDrag(e.clientX, e.clientY);
+    });
+  }
 
-  cropCircle.addEventListener("mousedown", (e) => {
-    startCropDrag(e.clientX, e.clientY);
-  });
+  if (!window.__avatarCropPointerMoveBound) {
+    window.__avatarCropPointerMoveBound = true;
+    window.addEventListener("pointermove", (e) => {
+      moveCropDrag(e.clientX, e.clientY);
+    });
+  }
 
-  window.addEventListener("mousemove", (e) => {
-    moveCropDrag(e.clientX, e.clientY);
-  });
-
-  window.addEventListener("mouseup", () => {
-    endCropDrag();
-  });
-
-  cropCircle.addEventListener("touchstart", (e) => {
-    if (!e.touches[0]) return;
-    startCropDrag(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
-
-  window.addEventListener("touchmove", (e) => {
-    if (!e.touches[0]) return;
-    moveCropDrag(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
-
-  window.addEventListener("touchend", () => {
-    endCropDrag();
-  });
+  if (!window.__avatarCropPointerUpBound) {
+    window.__avatarCropPointerUpBound = true;
+    window.addEventListener("pointerup", () => {
+      endCropDrag();
+    });
+    window.addEventListener("pointercancel", () => {
+      endCropDrag();
+    });
+  }
 
   const handleZoomChange = () => {
     const oldScale = cropState.scale || 1;
@@ -384,8 +377,12 @@ function initCropControls() {
     updateCropImageTransform();
   };
 
-  zoomRange.addEventListener("input", handleZoomChange);
-  zoomRange.addEventListener("change", handleZoomChange);
+  if (zoomRange.dataset.zoomBound !== "true") {
+    zoomRange.dataset.zoomBound = "true";
+    zoomRange.addEventListener("input", handleZoomChange);
+    zoomRange.addEventListener("change", handleZoomChange);
+  }
+
   updateCropZoomVisual();
 }
 
