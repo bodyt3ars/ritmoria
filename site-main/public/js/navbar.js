@@ -422,18 +422,42 @@ function initDropdown() {
   if (btn.dataset.dropdownInitialized === "true") return;
   btn.dataset.dropdownInitialized = "true";
 
+  const closeDropdown = () => {
+    dropdown.classList.remove("active");
+    btn.setAttribute("aria-expanded", "false");
+  };
+
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
-    dropdown.classList.toggle("active");
+    const willOpen = !dropdown.classList.contains("active");
+    dropdown.classList.toggle("active", willOpen);
+    btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
   });
 
   dropdown.addEventListener("click", (e) => {
     e.stopPropagation();
   });
 
-  document.addEventListener("click", () => {
-    dropdown.classList.remove("active");
+  dropdown.querySelectorAll(".navbar-dropdown-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      closeDropdown();
+    });
   });
+
+  document.addEventListener("click", () => {
+    closeDropdown();
+  });
+}
+
+function closeNavbarProfileDropdown() {
+  const dropdown = document.getElementById("navDropdown");
+  const btn = document.getElementById("navUserBtn");
+  if (dropdown) {
+    dropdown.classList.remove("active");
+  }
+  if (btn) {
+    btn.setAttribute("aria-expanded", "false");
+  }
 }
 
 function formatNotificationTime(value) {
@@ -613,6 +637,7 @@ function initNotificationsDropdown() {
 
 async function goToProfile(e) {
   if (e) e.stopPropagation();
+  closeNavbarProfileDropdown();
 
   const token = localStorage.getItem("token");
   if (!token) {
@@ -645,11 +670,13 @@ async function goToProfile(e) {
 
 function goToSettings(e) {
   if (e) e.stopPropagation();
+  closeNavbarProfileDropdown();
   navigate("/settings");
 }
 
 async function performLogout(e) {
   if (e) e.stopPropagation();
+  closeNavbarProfileDropdown();
   localStorage.removeItem("token");
   localStorage.removeItem("userAvatar");
   window.currentUser = null;
@@ -661,6 +688,7 @@ async function performLogout(e) {
 
 async function confirmLogout(e) {
   if (e) e.stopPropagation();
+  closeNavbarProfileDropdown();
   const confirmed = await showAppConfirm({
     title: "Выйти из аккаунта",
     text: "Сессия завершится на этом устройстве.",
@@ -673,6 +701,7 @@ async function confirmLogout(e) {
 
 function goToAdmin(e) {
   if (e) e.stopPropagation();
+  closeNavbarProfileDropdown();
   if (window.currentUser?.role !== "admin") return;
   navigate("/admin");
 }
