@@ -146,7 +146,9 @@ const PUBLIC_ERROR_MESSAGES = {
   check_failed: "Не удалось выполнить проверку. Попробуй ещё раз.",
   failed: "Не удалось загрузить данные. Попробуй обновить страницу.",
   invalid_data: "Некорректные данные. Проверь заполненные поля.",
-  action_error: "Не удалось выполнить действие. Попробуй ещё раз."
+  action_error: "Не удалось выполнить действие. Попробуй ещё раз.",
+  audio_required: "Загрузите песню.",
+  cover_required: "Загрузите обложку."
 };
 
 function humanizeServerError(rawError, fallbackMessage = "Что-то пошло не так. Попробуй ещё раз.") {
@@ -5546,6 +5548,10 @@ if (state !== "open") {
       return res.status(400).json({ error: "title_required" });
     }
 
+    if (!req.files?.audio?.[0]) {
+      return res.status(400).json({ error: "audio_required" });
+    }
+
     // 🎵 audio
     if (req.files?.audio) {
       const file = req.files.audio[0];
@@ -6234,6 +6240,14 @@ const slug = slugify(title);
 
 let audioPath = null;
 let coverPath = null;
+
+if (!req.files?.audio?.[0]) {
+  return res.status(400).json({ error: "audio_required" });
+}
+
+if (!req.files?.cover?.[0]) {
+  return res.status(400).json({ error: "cover_required" });
+}
 
 // 🎵 AUDIO
 if (req.files?.audio) {

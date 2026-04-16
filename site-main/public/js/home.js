@@ -76,11 +76,13 @@ function renderHomeNews(news = []) {
 
   if (!Array.isArray(news) || !news.length) {
     block.classList.add("home-news-empty");
-    container.innerHTML = `<div class="home-loading-card">Новостей пока нет.</div>`;
+    block.style.display = "none";
+    container.innerHTML = "";
     return;
   }
 
   block.classList.remove("home-news-empty");
+  block.style.removeProperty("display");
   container.innerHTML = news.map((item) => `
     <article class="home-news-card">
       <div class="home-news-top">

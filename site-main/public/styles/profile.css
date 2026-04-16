@@ -2187,7 +2187,7 @@
 /* ===== POST MODAL ===== */
 
 .profile-post-modal {
-  z-index: 100000;
+  z-index: 100220;
   align-items: flex-start;
 }
 
@@ -2206,7 +2206,7 @@
   color: #fff;
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  z-index: 100001;
+  z-index: 100221;
   margin: 0 auto;
 }
 

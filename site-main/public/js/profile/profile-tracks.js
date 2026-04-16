@@ -1307,6 +1307,16 @@ async function submitUserTrack() {
     return;
   }
 
+  if (!editId && !audioFile) {
+    alert("Загрузите песню");
+    return;
+  }
+
+  if (!editId && !coverFile) {
+    alert("Загрузите обложку");
+    return;
+  }
+
   const formData = new FormData();
   formData.append("title", title);
   formData.append("artist", artist);

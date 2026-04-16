@@ -200,12 +200,11 @@ function initSubmitPage() {
 
     const audioFile = audioInput?.files?.[0];
     const coverFile = coverInput?.files?.[0];
-    const soundcloudUrl = soundcloudInput.value.trim();
     const artist = artistInput.value.trim();
     const title = titleInput.value.trim();
 
-    if (!audioFile && !soundcloudUrl) {
-      setStatus("Добавь аудиофайл или ссылку SoundCloud", "error");
+    if (!audioFile) {
+      setStatus("Загрузите песню", "error");
       return;
     }
 
@@ -217,7 +216,7 @@ function initSubmitPage() {
     const formData = new FormData();
     formData.append("artist", artist);
     formData.append("title", title);
-    formData.append("soundcloud", soundcloudUrl);
+    formData.append("soundcloud", "");
 
     if (audioFile) {
       formData.append("audio", audioFile);
