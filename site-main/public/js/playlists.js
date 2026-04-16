@@ -1,4 +1,6 @@
 window.initPlaylistsPage = async function () {
+  await window.RitmoriaPlaylistStore?.ensureInitialized?.({ force: true });
+
   const root = document.querySelector(".playlists-page");
   if (!root) return;
 
@@ -122,6 +124,10 @@ window.initPlaylistsPage = async function () {
     return payload?.id || "guest";
   }
 
+  function getPlaylistStore() {
+    return window.RitmoriaPlaylistStore || null;
+  }
+
   function getStorageKey() {
     return `ritmoria_playlists_user_${getCurrentUserId()}`;
   }
@@ -202,6 +208,11 @@ window.initPlaylistsPage = async function () {
   }
 
   function getPlaylists() {
+    const store = getPlaylistStore();
+    if (store?.getLocal) {
+      return ensureFavoritesPlaylist(store.getLocal());
+    }
+
     try {
       const raw = JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
       return ensureFavoritesPlaylist(raw);
@@ -213,6 +224,12 @@ window.initPlaylistsPage = async function () {
 
   function savePlaylists(playlists) {
     const safe = ensureFavoritesPlaylist(playlists);
+    const store = getPlaylistStore();
+
+    if (store?.persist) {
+      return store.persist(safe);
+    }
+
     localStorage.setItem(getStorageKey(), JSON.stringify(safe));
     window.dispatchEvent(new CustomEvent("ritmoria:playlists-updated"));
     return safe;

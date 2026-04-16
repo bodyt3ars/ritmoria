@@ -53,6 +53,8 @@ function initLoginPage() {
 
       localStorage.setItem("token", data.token);
 
+      await window.RitmoriaPlaylistStore?.ensureInitialized?.({ force: true, dispatch: true });
+
       if (window.refreshNavbarRealtimeState) {
         await window.refreshNavbarRealtimeState();
       } else {
@@ -156,6 +158,8 @@ function initLoginPage() {
           if (statusData.status === "approved" && statusData.token) {
             stopTelegramPolling();
             localStorage.setItem("token", statusData.token);
+
+            await window.RitmoriaPlaylistStore?.ensureInitialized?.({ force: true, dispatch: true });
 
             if (window.refreshNavbarRealtimeState) {
               await window.refreshNavbarRealtimeState();

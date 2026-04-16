@@ -40,6 +40,16 @@
     return `ritmoria_playlists_user_${getCurrentUserId()}`;
   }
 
+  function getPlaylistAuthHeaders() {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    };
+  }
+
   function normalizeTrackForPlaylist(track) {
     if (!track) return null;
 
@@ -119,6 +129,209 @@
     return safe;
   }
 
+  function mergePlaylistCollections(primary, secondary) {
+    const base = ensureFavoritesPlaylist(primary);
+    const extra = ensureFavoritesPlaylist(secondary);
+    const merged = new Map();
+
+    const mergeTracks = (firstTracks = [], secondTracks = []) => {
+      const next = [];
+      const seen = new Set();
+
+      [firstTracks, secondTracks].forEach((items) => {
+        items.forEach((track) => {
+          const normalized = normalizeTrackForPlaylist(track);
+          if (!normalized) return;
+
+          const trackKey = `${Number(normalized.id) || 0}|${normalized.audioSrc || ""}|${normalized.soundcloud || ""}`;
+          if (seen.has(trackKey)) return;
+
+          seen.add(trackKey);
+          next.push(normalized);
+        });
+      });
+
+      return next;
+    };
+
+    const upsertPlaylist = (playlist, secondaryPlaylist = null) => {
+      if (!playlist) return;
+
+      const playlistId = String(playlist.id || secondaryPlaylist?.id || "").trim() || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const isFavorites = playlistId === "favorites";
+      const preferredName = String(playlist.name || "").trim();
+      const fallbackName = String(secondaryPlaylist?.name || "").trim();
+      const preferredCover = String(playlist.cover || "").trim();
+      const fallbackCover = String(secondaryPlaylist?.cover || "").trim();
+
+      merged.set(playlistId, {
+        id: playlistId,
+        name: isFavorites ? "Любимые треки" : (preferredName || fallbackName || "Без названия"),
+        system: isFavorites || !!playlist.system || !!secondaryPlaylist?.system,
+        cover: preferredCover || fallbackCover || "",
+        tracks: mergeTracks(playlist.tracks, secondaryPlaylist?.tracks)
+      });
+    };
+
+    base.forEach((playlist) => {
+      const secondaryPlaylist = extra.find((candidate) => String(candidate?.id || "") === String(playlist?.id || ""));
+      upsertPlaylist(playlist, secondaryPlaylist);
+    });
+
+    extra.forEach((playlist) => {
+      const playlistId = String(playlist?.id || "").trim();
+      if (!playlistId || merged.has(playlistId)) return;
+      upsertPlaylist(playlist);
+    });
+
+    return ensureFavoritesPlaylist(Array.from(merged.values()));
+  }
+
+  const playlistSyncState = {
+    syncPromise: null,
+    syncedUserId: null,
+    remoteSavePromise: null,
+    lastSavedByUser: new Map()
+  };
+
+  async function loadRemotePlaylists() {
+    const headers = getPlaylistAuthHeaders();
+    if (!headers) {
+      return null;
+    }
+
+    const response = await fetch("/api/playlists", {
+      headers
+    });
+
+    if (!response.ok) {
+      throw new Error(`playlists_load_${response.status}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return ensureFavoritesPlaylist(data?.playlists || []);
+  }
+
+  async function saveRemotePlaylists(playlists) {
+    const headers = getPlaylistAuthHeaders();
+    if (!headers) {
+      return ensureFavoritesPlaylist(playlists);
+    }
+
+    const safe = ensureFavoritesPlaylist(playlists);
+    const userId = String(getCurrentUserId());
+    const serialized = JSON.stringify(safe);
+    const lastSerialized = playlistSyncState.lastSavedByUser.get(userId);
+
+    if (serialized === lastSerialized) {
+      return safe;
+    }
+
+    const savePromise = fetch("/api/playlists", {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ playlists: safe })
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`playlists_save_${response.status}`);
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const normalized = ensureFavoritesPlaylist(data?.playlists || safe);
+        const normalizedSerialized = JSON.stringify(normalized);
+        playlistSyncState.lastSavedByUser.set(userId, normalizedSerialized);
+        saveAllPlaylistsRaw(normalized);
+        return normalized;
+      })
+      .catch((error) => {
+        console.error("playlist remote save error", error);
+        throw error;
+      })
+      .finally(() => {
+        if (playlistSyncState.remoteSavePromise === savePromise) {
+          playlistSyncState.remoteSavePromise = null;
+        }
+      });
+
+    playlistSyncState.remoteSavePromise = savePromise;
+    return savePromise;
+  }
+
+  const playlistStore = window.RitmoriaPlaylistStore || {
+    getLocal() {
+      return getAllPlaylistsRaw();
+    },
+
+    saveLocal(playlists, { dispatch = true } = {}) {
+      const safe = saveAllPlaylistsRaw(playlists);
+      if (dispatch) {
+        window.dispatchEvent(new CustomEvent("ritmoria:playlists-updated"));
+      }
+      return safe;
+    },
+
+    persist(playlists, { dispatch = true } = {}) {
+      const safe = this.saveLocal(playlists, { dispatch });
+      if (localStorage.getItem("token")) {
+        saveRemotePlaylists(safe).catch(() => {});
+      }
+      return safe;
+    },
+
+    async ensureInitialized({ force = false, dispatch = false } = {}) {
+      const token = localStorage.getItem("token");
+      const userId = String(getCurrentUserId());
+      const localPlaylists = this.saveLocal(this.getLocal(), { dispatch: false });
+
+      if (!token) {
+        playlistSyncState.syncedUserId = null;
+        return localPlaylists;
+      }
+
+      if (!force && playlistSyncState.syncedUserId === userId) {
+        return this.getLocal();
+      }
+
+      if (playlistSyncState.syncPromise) {
+        return playlistSyncState.syncPromise;
+      }
+
+      const previousSerialized = JSON.stringify(localPlaylists);
+
+      playlistSyncState.syncPromise = (async () => {
+        try {
+          const remotePlaylists = await loadRemotePlaylists();
+          const merged = mergePlaylistCollections(remotePlaylists || [], localPlaylists);
+          const mergedSerialized = JSON.stringify(merged);
+
+          this.saveLocal(merged, { dispatch: dispatch || mergedSerialized !== previousSerialized });
+          playlistSyncState.syncedUserId = userId;
+
+          const remoteSerialized = JSON.stringify(remotePlaylists || ensureFavoritesPlaylist([]));
+          if (mergedSerialized !== remoteSerialized) {
+            playlistSyncState.lastSavedByUser.delete(userId);
+            saveRemotePlaylists(merged).catch(() => {});
+          } else {
+            playlistSyncState.lastSavedByUser.set(userId, remoteSerialized);
+          }
+
+          return merged;
+        } catch (error) {
+          console.error("playlist sync error", error);
+          playlistSyncState.syncedUserId = userId;
+          return localPlaylists;
+        } finally {
+          playlistSyncState.syncPromise = null;
+        }
+      })();
+
+      return playlistSyncState.syncPromise;
+    }
+  };
+
+  window.RitmoriaPlaylistStore = playlistStore;
+
   function ensurePlaylistApi() {
     if (window.RitmoriaPlaylists) {
       try {
@@ -129,26 +342,26 @@
 
     window.RitmoriaPlaylists = {
       getAll() {
-        return getAllPlaylistsRaw();
+        return playlistStore.getLocal();
       },
 
       getById(playlistId) {
-        return getAllPlaylistsRaw().find((p) => p.id === playlistId) || null;
+        return playlistStore.getLocal().find((p) => p.id === playlistId) || null;
       },
 
       getFavorites() {
-        return getAllPlaylistsRaw().find((p) => p.id === "favorites") || null;
+        return playlistStore.getLocal().find((p) => p.id === "favorites") || null;
       },
 
       ensureInitialized() {
-        saveAllPlaylistsRaw(getAllPlaylistsRaw());
+        return playlistStore.ensureInitialized({ dispatch: true });
       },
 
       createPlaylist(name) {
         const trimmed = String(name || "").trim();
         if (!trimmed) return null;
 
-        const playlists = getAllPlaylistsRaw();
+        const playlists = playlistStore.getLocal();
         const playlist = {
           id: `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           name: trimmed,
@@ -158,32 +371,31 @@
         };
 
         playlists.push(playlist);
-        saveAllPlaylistsRaw(playlists);
-        window.dispatchEvent(new CustomEvent("ritmoria:playlists-updated"));
+        playlistStore.persist(playlists);
         return playlist;
       },
 
       isTrackInFavorites(trackId) {
-        const favorites = getAllPlaylistsRaw().find((p) => p.id === "favorites");
+        const favorites = playlistStore.getLocal().find((p) => p.id === "favorites");
         if (!favorites) return false;
         return favorites.tracks.some((t) => Number(t.id) === Number(trackId));
       },
 
       isTrackInPlaylist(playlistId, trackId) {
-        const playlist = getAllPlaylistsRaw().find((p) => p.id === playlistId);
+        const playlist = playlistStore.getLocal().find((p) => p.id === playlistId);
         if (!playlist) return false;
         return playlist.tracks.some((t) => Number(t.id) === Number(trackId));
       },
 
       isTrackInAnyPlaylist(trackId) {
-        return getAllPlaylistsRaw().some((playlist) =>
+        return playlistStore.getLocal().some((playlist) =>
           Array.isArray(playlist?.tracks) &&
           playlist.tracks.some((t) => Number(t.id) === Number(trackId))
         );
       },
 
       addTrackToPlaylist(playlistId, track) {
-        const playlists = getAllPlaylistsRaw();
+        const playlists = playlistStore.getLocal();
         const playlist = playlists.find((p) => p.id === playlistId);
         const normalized = normalizeTrackForPlaylist(track);
 
@@ -198,13 +410,12 @@
           playlist.cover = normalized.cover;
         }
 
-        saveAllPlaylistsRaw(playlists);
-        window.dispatchEvent(new CustomEvent("ritmoria:playlists-updated"));
+        playlistStore.persist(playlists);
         return true;
       },
 
       removeTrackFromPlaylist(playlistId, trackId) {
-        const playlists = getAllPlaylistsRaw();
+        const playlists = playlistStore.getLocal();
         const playlist = playlists.find((p) => p.id === playlistId);
         if (!playlist) return false;
 
@@ -215,8 +426,7 @@
           playlist.cover = "";
         }
 
-        saveAllPlaylistsRaw(playlists);
-        window.dispatchEvent(new CustomEvent("ritmoria:playlists-updated"));
+        playlistStore.persist(playlists);
         return before !== playlist.tracks.length;
       },
 
@@ -224,7 +434,7 @@
         const normalized = normalizeTrackForPlaylist(track);
         if (!normalized || !normalized.id) return { added: false, removed: false };
 
-        const playlists = getAllPlaylistsRaw();
+        const playlists = playlistStore.getLocal();
         const favorites = playlists.find((p) => p.id === "favorites");
         if (!favorites) return { added: false, removed: false };
 
@@ -232,8 +442,7 @@
 
         if (exists) {
           favorites.tracks = favorites.tracks.filter((t) => Number(t.id) !== Number(normalized.id));
-          saveAllPlaylistsRaw(playlists);
-          window.dispatchEvent(new CustomEvent("ritmoria:playlists-updated"));
+          playlistStore.persist(playlists);
           return { added: false, removed: true };
         }
 
@@ -242,8 +451,7 @@
           favorites.cover = normalized.cover;
         }
 
-        saveAllPlaylistsRaw(playlists);
-        window.dispatchEvent(new CustomEvent("ritmoria:playlists-updated"));
+        playlistStore.persist(playlists);
         return { added: true, removed: false };
       }
     };

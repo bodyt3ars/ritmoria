@@ -202,11 +202,12 @@ function initSubmitPage() {
 
     const audioFile = audioInput?.files?.[0];
     const coverFile = coverInput?.files?.[0];
+    const soundcloud = soundcloudInput?.value.trim() || "";
     const artist = artistInput.value.trim();
     const title = titleInput.value.trim();
 
-    if (!audioFile) {
-      setStatus("Загрузите песню", "error");
+    if (!audioFile && !soundcloud) {
+      setStatus("Загрузите песню или вставьте ссылку SoundCloud", "error");
       return;
     }
 
@@ -218,7 +219,7 @@ function initSubmitPage() {
     const formData = new FormData();
     formData.append("artist", artist);
     formData.append("title", title);
-    formData.append("soundcloud", "");
+    formData.append("soundcloud", soundcloud);
 
     if (audioFile) {
       formData.append("audio", audioFile);

@@ -2407,6 +2407,138 @@ async function getUserFromToken(req) {
   }
 }
 
+function normalizePlaylistTrackForStorage(track) {
+  if (!track || typeof track !== "object") {
+    return null;
+  }
+
+  const id = Number(track.id) || 0;
+  const title = String(track.title || "").trim() || "Без названия";
+  const artist = String(track.artist || "").trim() || "Unknown artist";
+  const cover = String(track.cover || "").trim();
+  const audioSrc = String(track.audioSrc || track.audio || "").trim();
+  const soundcloud = String(track.soundcloud || "").trim();
+  const slug = String(track.slug || "").trim();
+  const usernameTag = String(track.username_tag || "").trim();
+  const duration = Math.max(0, Number(track.duration || track._duration || 0) || 0);
+  const addedAt = track.addedAt || Date.now();
+
+  if (!id && !audioSrc && !soundcloud) {
+    return null;
+  }
+
+  return {
+    id,
+    title,
+    artist,
+    cover,
+    audioSrc,
+    soundcloud,
+    slug,
+    username_tag: usernameTag,
+    duration,
+    addedAt
+  };
+}
+
+function normalizePlaylistsForStorage(playlists) {
+  const list = Array.isArray(playlists) ? playlists : [];
+  const byId = new Map();
+
+  for (const item of list) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+
+    const rawId = String(item.id || "").trim();
+    const playlistId = rawId || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const isFavorites = playlistId === "favorites";
+
+    const current = byId.get(playlistId) || {
+      id: playlistId,
+      name: isFavorites ? "Любимые треки" : "Без названия",
+      system: isFavorites,
+      cover: "",
+      tracks: []
+    };
+
+    current.name = isFavorites
+      ? "Любимые треки"
+      : (String(item.name || "").trim() || current.name || "Без названия");
+    current.system = isFavorites || !!item.system;
+    current.cover = String(item.cover || current.cover || "").trim();
+
+    const existingTrackKeys = new Set(
+      current.tracks.map((track) => `${Number(track.id) || 0}|${track.audioSrc || ""}|${track.soundcloud || ""}`)
+    );
+
+    const tracks = Array.isArray(item.tracks) ? item.tracks : [];
+    for (const track of tracks) {
+      const normalizedTrack = normalizePlaylistTrackForStorage(track);
+      if (!normalizedTrack) {
+        continue;
+      }
+
+      const trackKey = `${Number(normalizedTrack.id) || 0}|${normalizedTrack.audioSrc || ""}|${normalizedTrack.soundcloud || ""}`;
+      if (existingTrackKeys.has(trackKey)) {
+        continue;
+      }
+
+      existingTrackKeys.add(trackKey);
+      current.tracks.push(normalizedTrack);
+    }
+
+    byId.set(playlistId, current);
+  }
+
+  const favorites = byId.get("favorites") || {
+    id: "favorites",
+    name: "Любимые треки",
+    system: true,
+    cover: "",
+    tracks: []
+  };
+
+  favorites.id = "favorites";
+  favorites.name = "Любимые треки";
+  favorites.system = true;
+  favorites.tracks = Array.isArray(favorites.tracks) ? favorites.tracks : [];
+  byId.set("favorites", favorites);
+
+  const ordered = [favorites];
+  for (const [playlistId, playlist] of byId.entries()) {
+    if (playlistId === "favorites") {
+      continue;
+    }
+
+    ordered.push({
+      id: playlist.id,
+      name: String(playlist.name || "").trim() || "Без названия",
+      system: !!playlist.system,
+      cover: String(playlist.cover || "").trim(),
+      tracks: Array.isArray(playlist.tracks) ? playlist.tracks : []
+    });
+  }
+
+  return ordered;
+}
+
+async function ensurePlaylistsSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_playlists (
+      user_id integer PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      playlists_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+      updated_at timestamp without time zone DEFAULT now()
+    );
+
+    ALTER TABLE user_playlists
+      ADD COLUMN IF NOT EXISTS playlists_json jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+    ALTER TABLE user_playlists
+      ADD COLUMN IF NOT EXISTS updated_at timestamp without time zone DEFAULT now();
+  `);
+}
+
 function requireRole(roles = []) {
   return async (req, res, next) => {
     const user = await getUserFromToken(req);
@@ -2470,6 +2602,59 @@ app.get("/me", auth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "server_error" });
+  }
+});
+
+app.get("/api/playlists", auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT playlists_json, updated_at
+      FROM user_playlists
+      WHERE user_id = $1
+      LIMIT 1
+      `,
+      [req.user.id]
+    );
+
+    const row = result.rows[0] || null;
+    const playlists = normalizePlaylistsForStorage(row?.playlists_json || []);
+
+    res.json({
+      playlists,
+      updated_at: row?.updated_at || null
+    });
+  } catch (err) {
+    console.error("PLAYLISTS LOAD ERROR:", err);
+    res.status(500).json({ error: "playlists_load_failed" });
+  }
+});
+
+app.put("/api/playlists", auth, async (req, res) => {
+  try {
+    const playlists = normalizePlaylistsForStorage(req.body?.playlists || []);
+
+    const result = await pool.query(
+      `
+      INSERT INTO user_playlists (user_id, playlists_json, updated_at)
+      VALUES ($1, $2::jsonb, now())
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        playlists_json = EXCLUDED.playlists_json,
+        updated_at = now()
+      RETURNING updated_at
+      `,
+      [req.user.id, JSON.stringify(playlists)]
+    );
+
+    res.json({
+      success: true,
+      playlists,
+      updated_at: result.rows[0]?.updated_at || null
+    });
+  } catch (err) {
+    console.error("PLAYLISTS SAVE ERROR:", err);
+    res.status(500).json({ error: "playlists_save_failed" });
   }
 });
 
@@ -5577,7 +5762,7 @@ if (state !== "open") {
       return res.status(400).json({ error: "title_required" });
     }
 
-    if (!req.files?.audio?.[0]) {
+    if (!req.files?.audio?.[0] && !soundcloud) {
       return res.status(400).json({ error: "audio_required" });
     }
 
@@ -9499,6 +9684,7 @@ await ensureMentionsSchema();
 await ensureHomeNewsSchema();
 await ensureUserBadgeSchema();
 await ensureCommunitySchema();
+await ensurePlaylistsSchema();
     app.listen(APP_PORT, () => {
       console.log(`Server running on ${APP_BASE_URL} (port ${APP_PORT})`);
       syncTelegramWebhooks().catch((error) => {
