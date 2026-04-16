@@ -15,10 +15,6 @@ function initSubmitPage() {
   const statusText = document.getElementById("statusText");
   const trackForm = document.getElementById("trackForm");
   const submitBtn = trackForm?.querySelector(".submit-submit-btn");
-  const profileImportBtn = document.getElementById("profileImportBtn");
-  const profileImportPanel = document.getElementById("profileImportPanel");
-  const profileImportList = document.getElementById("profileImportList");
-  const profileImportClose = document.getElementById("profileImportClose");
 
   if (!trackForm) return;
 
@@ -27,7 +23,6 @@ function initSubmitPage() {
 
   let externalCoverUrl = null;
   let queueStateInterval = null;
-  let profileTracksLoaded = false;
   const maxQueueTrackSize = 20 * 1024 * 1024;
 
   function setStatus(message, type = "") {
@@ -82,93 +77,6 @@ function initSubmitPage() {
     }
   }
 
-  function closeProfileImportPanel() {
-    profileImportPanel?.classList.add("submit-hidden");
-  }
-
-  function renderProfileImportTracks(tracks = []) {
-    if (!profileImportList) return;
-
-    const playableTracks = tracks.filter((track) => track?.audio);
-
-    if (!playableTracks.length) {
-      profileImportList.innerHTML = `<div class="home-loading-card">В профиле пока нет треков с аудио.</div>`;
-      return;
-    }
-
-    profileImportList.innerHTML = playableTracks.map((track) => `
-      <div class="submit-profile-track-item">
-        <div class="submit-profile-track-main">
-          <img class="submit-profile-track-cover" src="${track.cover || "/images/default-cover.jpg"}" alt="">
-          <div class="submit-profile-track-info">
-            <div class="submit-profile-track-title">${track.title || "Без названия"}</div>
-            <div class="submit-profile-track-meta">${track.artist || "Неизвестный артист"}</div>
-          </div>
-        </div>
-        <button type="button" class="submit-profile-track-action" data-profile-track-id="${Number(track.id || 0)}">В очередь</button>
-      </div>
-    `).join("");
-
-    profileImportList.querySelectorAll("[data-profile-track-id]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const trackId = Number(button.dataset.profileTrackId || 0);
-        if (!trackId) return;
-
-        try {
-          setStatus("Отправка трека из профиля...", "");
-          button.disabled = true;
-
-          const token = localStorage.getItem("token");
-          const res = await fetch("/api/tracks/from-profile", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: "Bearer " + token
-            },
-            body: JSON.stringify({ userTrackId: trackId })
-          });
-
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) {
-            throw new Error(window.getApiErrorMessage?.(data, "Не удалось отправить трек из профиля") || "Не удалось отправить трек из профиля");
-          }
-
-          closeProfileImportPanel();
-          setStatus("Трек из профиля успешно отправлен", "success");
-        } catch (err) {
-          console.error("profile import queue error:", err);
-          setStatus(err.message || "Не удалось отправить трек из профиля", "error");
-        } finally {
-          button.disabled = false;
-        }
-      });
-    });
-  }
-
-  async function loadProfileTracksForImport() {
-    if (!profileImportList) return;
-
-    try {
-      profileImportList.innerHTML = `<div class="home-loading-card">Загрузка треков...</div>`;
-      const token = localStorage.getItem("token");
-      const res = await fetch("/user-tracks", {
-        headers: {
-          Authorization: "Bearer " + token
-        }
-      });
-
-      const data = await res.json().catch(() => []);
-      if (!res.ok) {
-        throw new Error(window.getApiErrorMessage?.(data, "Не удалось загрузить треки профиля") || "Не удалось загрузить треки профиля");
-      }
-
-      renderProfileImportTracks(Array.isArray(data) ? data : []);
-      profileTracksLoaded = true;
-    } catch (err) {
-      console.error("profile tracks import load error:", err);
-      profileImportList.innerHTML = `<div class="home-loading-card">Не удалось загрузить треки профиля.</div>`;
-    }
-  }
 
   async function checkQueueState() {
     try {
@@ -288,20 +196,6 @@ function initSubmitPage() {
     }
   });
 
-  profileImportBtn?.addEventListener("click", async () => {
-    if (!profileImportPanel) return;
-
-    const willOpen = profileImportPanel.classList.contains("submit-hidden");
-    profileImportPanel.classList.toggle("submit-hidden", !willOpen);
-
-    if (willOpen && !profileTracksLoaded) {
-      await loadProfileTracksForImport();
-    }
-  });
-
-  profileImportClose?.addEventListener("click", () => {
-    closeProfileImportPanel();
-  });
 
   trackForm.addEventListener("submit", async (e) => {
     e.preventDefault();
