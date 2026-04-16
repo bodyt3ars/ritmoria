@@ -23,6 +23,7 @@ function initSubmitPage() {
 
   let externalCoverUrl = null;
   let queueStateInterval = null;
+  const maxQueueTrackSize = 20 * 1024 * 1024;
 
   function setStatus(message, type = "") {
     if (!statusText) return;
@@ -131,6 +132,12 @@ function initSubmitPage() {
     const file = this.files?.[0];
 
     if (!file) {
+      resetAudioPreview();
+      return;
+    }
+
+    if (file.size > maxQueueTrackSize) {
+      setStatus("Для очереди можно загрузить файл до 20 МБ", "error");
       resetAudioPreview();
       return;
     }

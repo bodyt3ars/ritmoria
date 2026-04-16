@@ -68,6 +68,13 @@ const upload = multer({
   }
 });
 
+const profileTrackUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 35 * 1024 * 1024
+  }
+});
+
 const openUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -217,6 +224,64 @@ function createHandledUpload(middleware, fallbackCode = "upload_failed", fallbac
   };
 }
 
+const AUDIO_EXTENSIONS = new Set([
+  ".mp3",
+  ".wav",
+  ".wave",
+  ".m4a",
+  ".aac",
+  ".ogg",
+  ".flac",
+  ".webm"
+]);
+
+const AUDIO_EXTENSIONS_BY_MIME = {
+  "audio/mpeg": ".mp3",
+  "audio/mp3": ".mp3",
+  "audio/wav": ".wav",
+  "audio/wave": ".wav",
+  "audio/x-wav": ".wav",
+  "audio/vnd.wave": ".wav",
+  "audio/mp4": ".m4a",
+  "audio/x-m4a": ".m4a",
+  "audio/aac": ".aac",
+  "audio/x-aac": ".aac",
+  "audio/ogg": ".ogg",
+  "application/ogg": ".ogg",
+  "audio/flac": ".flac",
+  "audio/x-flac": ".flac",
+  "audio/webm": ".webm",
+  "video/webm": ".webm"
+};
+
+function getSafeAudioExtension(file, fallback = ".mp3") {
+  const originalExt = path.extname(String(file?.originalname || "")).toLowerCase();
+  if (AUDIO_EXTENSIONS.has(originalExt)) {
+    return originalExt === ".wave" ? ".wav" : originalExt;
+  }
+
+  const mimeExt = AUDIO_EXTENSIONS_BY_MIME[String(file?.mimetype || "").toLowerCase()];
+  if (mimeExt) {
+    return mimeExt;
+  }
+
+  return fallback;
+}
+
+function assertSupportedAudioFile(file) {
+  if (!file) return;
+
+  const mimeType = String(file.mimetype || "").toLowerCase();
+  const ext = getSafeAudioExtension(file, "");
+  const looksLikeAudio = mimeType.startsWith("audio/") || AUDIO_EXTENSIONS.has(ext);
+
+  if (!looksLikeAudio) {
+    const error = new Error("unsupported_audio_type");
+    error.errorCode = "unsupported_audio_type";
+    throw error;
+  }
+}
+
 const avatarUploadSingle = createHandledUpload(
   upload.single("avatar"),
   "avatar_upload_failed",
@@ -224,6 +289,11 @@ const avatarUploadSingle = createHandledUpload(
 );
 const trackUploadFields = createHandledUpload(
   upload.fields([{ name: "audio", maxCount: 1 }, { name: "cover", maxCount: 1 }]),
+  "track_upload_failed",
+  "Не удалось загрузить трек. Проверь файл и попробуй ещё раз."
+);
+const profileTrackUploadFields = createHandledUpload(
+  profileTrackUpload.fields([{ name: "audio", maxCount: 1 }, { name: "cover", maxCount: 1 }]),
   "track_upload_failed",
   "Не удалось загрузить трек. Проверь файл и попробуй ещё раз."
 );
@@ -5464,15 +5534,24 @@ if (state !== "open") {
   return res.status(403).json({ message: "Очередь закрыта или на паузе" });
 }
 
-    const { artist, title, soundcloud, coverUrl } = req.body;
+    const artist = sanitizeTrackText(req.body?.artist, { maxLength: 255 });
+    const title = sanitizeTrackText(req.body?.title, { maxLength: 255 });
+    const soundcloud = String(req.body?.soundcloud || "").trim();
+    const coverUrl = String(req.body?.coverUrl || "").trim();
 
     let audioPath = null;
     let cover = coverUrl || null;
 
+    if (!title) {
+      return res.status(400).json({ error: "title_required" });
+    }
+
     // 🎵 audio
     if (req.files?.audio) {
       const file = req.files.audio[0];
-      const fileName = `track-${Date.now()}.mp3`;
+      assertSupportedAudioFile(file);
+      const fileExt = getSafeAudioExtension(file);
+      const fileName = `track-${Date.now()}${fileExt}`;
       const filePath = `public/uploads/tracks/${fileName}`;
 
       fs.writeFileSync(filePath, file.buffer);
@@ -6135,19 +6214,17 @@ res.json({
 });
 
 
-app.post("/add-user-track", trackUploadFields, async (req, res) => {
+app.post("/add-user-track", profileTrackUploadFields, async (req, res) => {
   try {
     
 const userId = getUserIdFromToken(req);
-    const {
-  title,
-  artist,
-  producer,
-  genre,
-  tags,
-  description,
-  soundcloud
-} = req.body;
+const title = sanitizeTrackText(req.body?.title, { maxLength: 160 });
+const artist = sanitizeTrackText(req.body?.artist, { maxLength: 255 });
+const producer = sanitizeTrackText(req.body?.producer, { maxLength: 255 });
+const genre = sanitizeTrackText(req.body?.genre, { maxLength: 120 });
+const tags = sanitizeTrackText(req.body?.tags, { maxLength: 500 });
+const description = sanitizeTrackText(req.body?.description, { maxLength: 5000, allowNewlines: true });
+const soundcloud = String(req.body?.soundcloud || "").trim();
 const slug = slugify(title);
     
 
@@ -6161,7 +6238,9 @@ let coverPath = null;
 // 🎵 AUDIO
 if (req.files?.audio) {
   const file = req.files.audio[0];
-  const fileName = `user-track-${Date.now()}.mp3`;
+  assertSupportedAudioFile(file);
+  const fileExt = getSafeAudioExtension(file);
+  const fileName = `user-track-${Date.now()}${fileExt}`;
   const filePath = `public/uploads/tracks/${fileName}`;
 
   fs.writeFileSync(filePath, file.buffer);
@@ -6225,20 +6304,22 @@ res.json({
   }
 });
 
-app.put("/update-track/:id", trackUploadFields, async (req, res) => {
+app.put("/update-track/:id", profileTrackUploadFields, async (req, res) => {
   try {
 
     const userId = getUserIdFromToken(req)
     const trackId = req.params.id
 
-    const {
-      title,
-      artist,
-      producer,
-      genre,
-      tags,
-      description
-    } = req.body
+    const title = sanitizeTrackText(req.body?.title, { maxLength: 160 })
+    const artist = sanitizeTrackText(req.body?.artist, { maxLength: 255 })
+    const producer = sanitizeTrackText(req.body?.producer, { maxLength: 255 })
+    const genre = sanitizeTrackText(req.body?.genre, { maxLength: 120 })
+    const tags = sanitizeTrackText(req.body?.tags, { maxLength: 500 })
+    const description = sanitizeTrackText(req.body?.description, { maxLength: 5000, allowNewlines: true })
+
+    if (!title) {
+      return res.status(400).json({ error: "title_required" })
+    }
 
     let audioPath = null
     let coverPath = null
@@ -6246,7 +6327,9 @@ app.put("/update-track/:id", trackUploadFields, async (req, res) => {
     // 🎵 AUDIO
     if (req.files?.audio) {
       const file = req.files.audio[0]
-      const fileName = `user-track-${Date.now()}.mp3`
+      assertSupportedAudioFile(file)
+      const fileExt = getSafeAudioExtension(file)
+      const fileName = `user-track-${Date.now()}${fileExt}`
       const filePath = `public/uploads/tracks/${fileName}`
 
       fs.writeFileSync(filePath, file.buffer)
@@ -8244,6 +8327,22 @@ function slugify(text) {
     // всё остальное
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function sanitizeTrackText(value, { maxLength = null, allowNewlines = false } = {}) {
+  let normalized = String(value ?? "").normalize("NFKC");
+  const controlChars = allowNewlines ? /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g : /[\u0000-\u001F\u007F]/g;
+
+  normalized = normalized
+    .replace(controlChars, "")
+    .replace(/[<>]/g, "")
+    .trim();
+
+  if (typeof maxLength === "number" && maxLength > 0) {
+    normalized = normalized.slice(0, maxLength);
+  }
+
+  return normalized;
 }
 
 

@@ -3,6 +3,15 @@ let queueCurrentUser = null;
 let queueReloadInterval = null;
 let queueStateInterval = null;
 
+function escapeQueueHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function loadQueueCurrentUser() {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -97,7 +106,7 @@ async function loadQueue() {
             </div>
 
             <div class="queue-cover-wrap">
-              <img src="${track.cover || "/images/default-cover.jpg"}" class="queue-track-cover" alt="">
+              <img src="${escapeQueueHtml(track.cover || "/images/default-cover.jpg")}" class="queue-track-cover" alt="">
             </div>
 
             ${
@@ -107,8 +116,8 @@ async function loadQueue() {
             }
 
             <div class="queue-track-info">
-              <div class="queue-track-artist">${track.artist || "Unknown"}</div>
-              <div class="queue-track-title">${track.title || "Без названия"}</div>
+              <div class="queue-track-artist">${escapeQueueHtml(track.artist || "Unknown")}</div>
+              <div class="queue-track-title">${escapeQueueHtml(track.title || "Без названия")}</div>
 
               ${
                 state === "closed"

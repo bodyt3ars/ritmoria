@@ -299,7 +299,7 @@ function renderTrack(track, options = {}) {
         <div class="track-header">
           <div class="track-texts">
             <div class="track-title" onclick="goToTrack(event, ${track.id})">
-              ${track.title}
+              ${escapeTrackHtml(track.title || "Без названия")}
             </div>
 
             <div class="track-artist">
@@ -310,7 +310,7 @@ function renderTrack(track, options = {}) {
           <div class="track-meta-right">
             <div class="track-meta-info">
               ${formatDate(track.created_at)}
-              ${track.genre ? `<span class="genre-chip">#${track.genre}</span>` : ""}
+              ${track.genre ? `<span class="genre-chip">#${escapeTrackHtml(track.genre)}</span>` : ""}
             </div>
 
             ${isMy ? `
@@ -951,7 +951,7 @@ function renderTags() {
     const el = document.createElement("div");
     el.className = "tag-chip";
     el.innerHTML = `
-      <span class="tag-text">${tag}</span>
+      <span class="tag-text">${escapeTrackHtml(tag)}</span>
       <span class="tag-remove" onclick="removeTag(${index})">
         <i class="fa-solid fa-xmark"></i>
       </span>
@@ -1161,6 +1161,8 @@ function initTrackModal() {
   const audioPlayer = document.getElementById("trackAudioPlayer");
   const preview = document.getElementById("trackPreview");
 
+  const maxProfileTrackSize = 35 * 1024 * 1024;
+
   if (coverInput && !coverInput.dataset.trackModalInit) {
     coverInput.dataset.trackModalInit = "true";
 
@@ -1180,6 +1182,16 @@ function initTrackModal() {
     audioInput.addEventListener("change", () => {
       const file = audioInput.files[0];
       if (!file) return;
+
+      if (file.size > maxProfileTrackSize) {
+        alert("Для треков в профиле действует лимит 35 МБ.");
+        audioInput.value = "";
+        fileName.textContent = "Файл не выбран";
+        audioPlayer.src = "";
+        audioPlayer.load();
+        preview.style.display = "none";
+        return;
+      }
 
       fileName.textContent = file.name;
       audioPlayer.src = URL.createObjectURL(file);

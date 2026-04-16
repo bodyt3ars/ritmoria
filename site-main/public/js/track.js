@@ -311,7 +311,7 @@ function initTrackPage() {
 
       await commentsController?.loadComments?.();
 
-      if (track.audio && track.audio.endsWith(".mp3")) {
+      if (track.audio) {
         showMP3Player();
         audio.src = track.audio;
         audio.load();
