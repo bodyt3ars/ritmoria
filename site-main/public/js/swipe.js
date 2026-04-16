@@ -639,7 +639,7 @@ async function sendTrackAction(trackId, action) {
         "Content-Type": "application/json",
         Authorization: "Bearer " + localStorage.getItem("token")
       },
-      body: JSON.stringify({ trackId, action })
+      body: JSON.stringify({ trackId, action, entityType: "profile" })
     });
   } catch (err) {
     console.error("track action error", err);

@@ -1541,6 +1541,35 @@ async function ensureTrackCommentsSchema() {
   `);
 }
 
+async function ensureTrackActionsSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS track_actions (
+      id SERIAL PRIMARY KEY,
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      track_id integer NOT NULL,
+      action varchar(10) NOT NULL CHECK (action IN ('like', 'dislike')),
+      entity_type varchar(20) NOT NULL DEFAULT 'profile',
+      created_at timestamp without time zone DEFAULT now()
+    );
+
+    ALTER TABLE track_actions
+      ADD COLUMN IF NOT EXISTS entity_type varchar(20) NOT NULL DEFAULT 'profile';
+
+    ALTER TABLE track_actions
+      ADD COLUMN IF NOT EXISTS created_at timestamp without time zone DEFAULT now();
+
+    UPDATE track_actions
+    SET entity_type = 'profile'
+    WHERE entity_type IS NULL OR entity_type = '';
+
+    CREATE INDEX IF NOT EXISTS idx_track_actions_track_entity
+      ON track_actions(track_id, entity_type);
+
+    CREATE INDEX IF NOT EXISTS idx_track_actions_user_track_entity
+      ON track_actions(user_id, track_id, entity_type);
+  `);
+}
+
 async function ensureTrackRepostSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS track_reposts (
@@ -5811,19 +5840,25 @@ app.get("/api/tracks/:id", async (req, res) => {
         COALESCE((
           SELECT COUNT(*)::int
           FROM track_actions ta
-          WHERE ta.track_id = t.id AND ta.action = 'like'
+          WHERE ta.track_id = t.id
+            AND COALESCE(ta.entity_type, 'profile') = 'queue'
+            AND ta.action = 'like'
         ), 0) as likes,
 
         COALESCE((
           SELECT COUNT(*)::int
           FROM track_actions ta
-          WHERE ta.track_id = t.id AND ta.action = 'dislike'
+          WHERE ta.track_id = t.id
+            AND COALESCE(ta.entity_type, 'profile') = 'queue'
+            AND ta.action = 'dislike'
         ), 0) as dislikes,
 
         (
           SELECT ta.action
           FROM track_actions ta
-          WHERE ta.track_id = t.id AND ta.user_id = $2
+          WHERE ta.track_id = t.id
+            AND ta.user_id = $2
+            AND COALESCE(ta.entity_type, 'profile') = 'queue'
           LIMIT 1
         ) as my_action
 
@@ -8666,30 +8701,34 @@ app.get("/discover-tracks", auth, async (req, res) => {
 app.post("/track-action", auth, async (req, res) => {
   try {
     const { trackId, action } = req.body;
+    const entityType = String(req.body?.entityType || "profile").trim().toLowerCase();
 
-    if (!trackId || !["like", "dislike"].includes(action)) {
+    if (!trackId || !["like", "dislike"].includes(action) || !["profile", "queue"].includes(entityType)) {
       return res.status(400).json({ error: "invalid_data" });
     }
 
     const existingRes = await pool.query(
-      `SELECT action FROM track_actions WHERE user_id = $1 AND track_id = $2`,
-      [req.user.id, trackId]
+      `SELECT action
+       FROM track_actions
+       WHERE user_id = $1 AND track_id = $2 AND COALESCE(entity_type, 'profile') = $3`,
+      [req.user.id, trackId, entityType]
     );
 
     const existing = existingRes.rows[0]?.action || null;
 
     await pool.query(
-      `DELETE FROM track_actions WHERE user_id = $1 AND track_id = $2`,
-      [req.user.id, trackId]
+      `DELETE FROM track_actions
+       WHERE user_id = $1 AND track_id = $2 AND COALESCE(entity_type, 'profile') = $3`,
+      [req.user.id, trackId, entityType]
     );
 
     let nextAction = null;
 
     if (existing !== action) {
       await pool.query(
-        `INSERT INTO track_actions (user_id, track_id, action)
-         VALUES ($1, $2, $3)`,
-        [req.user.id, trackId, action]
+        `INSERT INTO track_actions (user_id, track_id, action, entity_type)
+         VALUES ($1, $2, $3, $4)`,
+        [req.user.id, trackId, action, entityType]
       );
       nextAction = action;
     }
@@ -8701,8 +8740,9 @@ app.post("/track-action", auth, async (req, res) => {
         COUNT(*) FILTER (WHERE action = 'dislike')::int AS dislikes
       FROM track_actions
       WHERE track_id = $1
+        AND COALESCE(entity_type, 'profile') = $2
       `,
-      [trackId]
+      [trackId, entityType]
     );
 
     res.json({
@@ -9453,6 +9493,7 @@ await ensureEmailVerificationSchema();
 await ensureXPSystemSchema();
 await ensurePostSocialSchema();
 await ensureTrackCommentsSchema();
+await ensureTrackActionsSchema();
 await ensureTrackRepostSchema();
 await ensureMentionsSchema();
 await ensureHomeNewsSchema();

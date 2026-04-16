@@ -510,7 +510,7 @@ function initTrackPage() {
             "Content-Type": "application/json",
             Authorization: "Bearer " + token
           },
-          body: JSON.stringify({ trackId, action })
+          body: JSON.stringify({ trackId, action, entityType: "queue" })
         });
 
         if (!res.ok) {
