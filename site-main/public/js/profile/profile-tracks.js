@@ -852,6 +852,8 @@ function editTrack(id) {
   const modal = document.getElementById("trackModal");
   if (!modal) return;
 
+  resetTrackModal();
+
   modal.dataset.editId = id;
 
   const title = modal.querySelector(".profile-post-modal-title");
@@ -889,6 +891,11 @@ function editTrack(id) {
   }
 
   modal.style.display = "flex";
+  if (typeof window.setProfileComposerMode === "function") {
+    window.setProfileComposerMode(true);
+  } else {
+    document.body.classList.add("profile-composer-open");
+  }
 }
 
 async function deleteTrack(id) {
