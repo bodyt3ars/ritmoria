@@ -49,51 +49,40 @@ function formatHomeTrackArtists(track) {
   return String(track.artist || "").trim() || (track.username || "Неизвестный артист");
 }
 
-function openHomeProfile(event, tag) {
-  event?.preventDefault?.();
-  event?.stopPropagation?.();
-
-  const safeTag = String(tag || "").trim().replace(/^@+/, "");
-  if (!safeTag) return;
-
-  navigate(`/${safeTag}`);
-}
-
 function renderHomeTrackArtistLinks(track) {
   const profileTag = String(track.username_tag || track.username || "").trim().replace(/^@+/, "");
+  const profileHref = `/${encodeURIComponent(profileTag)}`;
 
   if (Array.isArray(track.artist_mentions) && track.artist_mentions.length) {
     if (profileTag) {
       return `
-        <button
-          type="button"
+        <a
+          href="${profileHref}"
           class="home-track-card-artist-link"
           data-home-profile-link="${homeEscapeHtml(profileTag)}"
-          onclick="openHomeProfile(event, '${homeEscapeHtml(profileTag)}')"
+          onclick="event.preventDefault(); event.stopPropagation(); window.location.href='${profileHref}';"
         >
           ${homeEscapeHtml(track.username || track.username_tag || profileTag)}
-        </button>
+        </a>
       `;
     }
   }
 
   if (profileTag) {
     return `
-      <button
-        type="button"
+      <a
+        href="${profileHref}"
         class="home-track-card-artist-link"
         data-home-profile-link="${homeEscapeHtml(profileTag)}"
-        onclick="openHomeProfile(event, '${homeEscapeHtml(profileTag)}')"
+        onclick="event.preventDefault(); event.stopPropagation(); window.location.href='${profileHref}';"
       >
         ${homeEscapeHtml(track.username || track.username_tag || profileTag)}
-      </button>
+      </a>
     `;
   }
 
   return `<span class="home-track-card-artist-link">${homeEscapeHtml(formatHomeTrackArtists(track))}</span>`;
 }
-
-window.openHomeProfile = openHomeProfile;
 
 function renderHomeNews(news = []) {
   const container = document.getElementById("homeNewsList");
