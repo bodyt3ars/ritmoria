@@ -128,9 +128,10 @@ function renderHomeTopTracks(tracks = []) {
         </div>
 
         <div class="home-track-card-stats">
+          <span><i class="fa-solid fa-scale-balanced"></i>${Number(track.judge_score || 0).toFixed(1)}</span>
           <span><i class="fa-solid fa-star"></i>${Number(track.total_score || 0).toFixed(1)}</span>
-          <span><i class="fa-solid fa-user-check"></i>${Number(track.user_votes_count || 0)}</span>
           <span><i class="fa-solid fa-scale-balanced"></i>${Number(track.judge_votes_count || 0)}</span>
+          <span><i class="fa-solid fa-user-check"></i>${Number(track.user_votes_count || 0)}</span>
           <span>${formatHomeDuration(track.duration || 0)}</span>
         </div>
       </div>

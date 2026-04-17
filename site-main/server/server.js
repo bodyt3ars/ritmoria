@@ -1759,8 +1759,8 @@ async function saveClosedQueueTopTracksSnapshot() {
       ), 0) AS judge_votes_count
     FROM tracks t
     LEFT JOIN users u ON u.id = t.user_id
-    ORDER BY total_score DESC, judge_score DESC, user_score DESC, t.createdAt DESC
-    LIMIT 5
+    ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
+    LIMIT 10
   `);
 
   await pool.query("DELETE FROM home_stream_top_tracks");
@@ -1804,6 +1804,98 @@ async function saveClosedQueueTopTracksSnapshot() {
       ]
     );
   }
+}
+
+async function getHomeTopTracksSnapshot() {
+  const snapshotRes = await pool.query(
+    `
+    SELECT
+      track_id AS id,
+      title,
+      artist,
+      cover,
+      duration,
+      username,
+      username_tag,
+      avatar,
+      user_score,
+      judge_score,
+      total_score,
+      user_votes_count,
+      judge_votes_count,
+      snapshot_at
+    FROM home_stream_top_tracks
+    ORDER BY position ASC, id ASC
+    `
+  );
+
+  if (snapshotRes.rows.length) {
+    return snapshotRes.rows;
+  }
+
+  const queueStateRes = await pool.query(
+    "SELECT value FROM system_settings WHERE key = 'queue_state'"
+  );
+
+  if (queueStateRes.rows[0]?.value !== "closed") {
+    return [];
+  }
+
+  const liveRes = await pool.query(
+    `
+    SELECT
+      t.id,
+      t.title,
+      t.artist,
+      t.cover,
+      t.duration,
+      COALESCE(u.username, u.username_tag, 'Артист') AS username,
+      u.username_tag,
+      u.avatar,
+      COALESCE((
+        SELECT ROUND(AVG(score)::numeric, 1)
+        FROM track_ratings
+        WHERE track_id = t.id AND type = 'user'
+      ), 0) AS user_score,
+      COALESCE((
+        SELECT ROUND(AVG(score)::numeric, 1)
+        FROM track_ratings
+        WHERE track_id = t.id AND type = 'judge'
+      ), 0) AS judge_score,
+      (
+        (
+          COALESCE((
+            SELECT AVG(score)
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'user'
+          ), 0)
+          +
+          COALESCE((
+            SELECT AVG(score)
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'judge'
+          ), 0)
+        ) / 2.0
+      )::numeric(10,1) AS total_score,
+      COALESCE((
+        SELECT COUNT(*)::int
+        FROM track_ratings
+        WHERE track_id = t.id AND type = 'user'
+      ), 0) AS user_votes_count,
+      COALESCE((
+        SELECT COUNT(*)::int
+        FROM track_ratings
+        WHERE track_id = t.id AND type = 'judge'
+      ), 0) AS judge_votes_count,
+      now() AS snapshot_at
+    FROM tracks t
+    LEFT JOIN users u ON u.id = t.user_id
+    ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
+    LIMIT 10
+    `
+  );
+
+  return liveRes.rows;
 }
 
 async function ensureCommunitySchema() {
@@ -5356,27 +5448,7 @@ app.get("/api/home", async (req, res) => {
         LIMIT 3
         `
       ),
-      pool.query(
-        `
-        SELECT
-          track_id AS id,
-          title,
-          artist,
-          cover,
-          duration,
-          username,
-          username_tag,
-          avatar,
-          user_score,
-          judge_score,
-          total_score,
-          user_votes_count,
-          judge_votes_count,
-          snapshot_at
-        FROM home_stream_top_tracks
-        ORDER BY position ASC, id ASC
-        `
-      ),
+      getHomeTopTracksSnapshot(),
       pool.query(
         `
         SELECT
