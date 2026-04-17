@@ -2794,7 +2794,7 @@ function requireRole(roles = []) {
 }
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/html/index.html"));
+  res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
 app.get("/me", auth, async (req, res) => {

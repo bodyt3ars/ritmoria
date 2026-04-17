@@ -11,7 +11,58 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260417-3";
+const ASSET_VERSION = "20260418-1";
+
+const DEFAULT_SEO = {
+  title: "Ритмория — музыкальная платформа для артистов",
+  description: "Ритмория — музыкальная платформа для артистов, треков, опенов, стримов и общения вокруг новой музыки.",
+  canonical: "https://ritmoria.com/",
+  image: "https://ritmoria.com/images/logo.png"
+};
+
+function upsertMeta(selector, attribute, value) {
+  if (!value) return;
+
+  let node = document.head.querySelector(selector);
+  if (!node) {
+    node = document.createElement("meta");
+    node.setAttribute(attribute, selector.match(/"([^"]+)"/)?.[1] || "");
+    document.head.appendChild(node);
+  }
+  node.setAttribute("content", value);
+}
+
+function setCanonical(url) {
+  let link = document.head.querySelector('link[rel="canonical"]');
+  if (!link) {
+    link = document.createElement("link");
+    link.setAttribute("rel", "canonical");
+    document.head.appendChild(link);
+  }
+  link.setAttribute("href", url);
+}
+
+function setSeoMeta({
+  title = DEFAULT_SEO.title,
+  description = DEFAULT_SEO.description,
+  canonical = DEFAULT_SEO.canonical,
+  image = DEFAULT_SEO.image
+} = {}) {
+  document.title = title;
+  upsertMeta('meta[name="description"]', "name", description);
+  upsertMeta('meta[name="keywords"]', "name", "Ритмория, РИТМОРИЯ, ritmoria, музыка, треки, артисты, музыкальная платформа, опены, стрим");
+  upsertMeta('meta[name="robots"]', "name", "index, follow, max-image-preview:large");
+  upsertMeta('meta[property="og:title"]', "property", title);
+  upsertMeta('meta[property="og:description"]', "property", description);
+  upsertMeta('meta[property="og:url"]', "property", canonical);
+  upsertMeta('meta[property="og:image"]', "property", image);
+  upsertMeta('meta[property="og:site_name"]', "property", "РИТМОРИЯ");
+  upsertMeta('meta[property="og:locale"]', "property", "ru_RU");
+  upsertMeta('meta[name="twitter:title"]', "name", title);
+  upsertMeta('meta[name="twitter:description"]', "name", description);
+  upsertMeta('meta[name="twitter:image"]', "name", image);
+  setCanonical(canonical);
+}
 
 function withAssetVersion(url) {
   const separator = url.includes("?") ? "&" : "?";
@@ -248,6 +299,11 @@ export async function renderPage(path) {
 
   // INDEX
   if (routePath === "/" || routePath === "/index") {
+    setSeoMeta({
+      title: "Ритмория — музыкальная платформа для артистов",
+      description: "Ритмория — музыкальная платформа для артистов, треков, опенов, стримов и общения вокруг новой музыки.",
+      canonical: "https://ritmoria.com/"
+    });
     app.style.opacity = "0";
     await addPageStyles(["/styles/style.css", "/styles/profile.css"]);
     const html = await loadPage("/html/index.html");
@@ -267,6 +323,11 @@ export async function renderPage(path) {
 
   // SUBMIT
   if (routePath === "/submit") {
+    setSeoMeta({
+      title: "Добавить трек — Ритмория",
+      description: "Добавь трек на Ритморию и отправь его в музыкальную очередь платформы.",
+      canonical: "https://ritmoria.com/submit"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/submit.html",
@@ -287,6 +348,11 @@ export async function renderPage(path) {
 
   // QUEUE
   if (routePath === "/queue") {
+    setSeoMeta({
+      title: "Очередь треков — Ритмория",
+      description: "Очередь треков на Ритмории: оценки, стримовый рейтинг и лучшие работы по мнению судей и слушателей.",
+      canonical: "https://ritmoria.com/queue"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/queue.html",
@@ -300,6 +366,11 @@ export async function renderPage(path) {
 
   // PLAYLISTS
   if (routePath === "/playlists") {
+    setSeoMeta({
+      title: "Плейлисты — Ритмория",
+      description: "Плейлисты Ритмории: сохраняй и слушай любимые треки артистов платформы.",
+      canonical: "https://ritmoria.com/playlists"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/playlists.html",
@@ -313,6 +384,11 @@ export async function renderPage(path) {
 
   // DISCOVER
   if (routePath === "/discover") {
+    setSeoMeta({
+      title: "Дискавер — Ритмория",
+      description: "Находи новых артистов, треки и звучание в дискавере Ритмории.",
+      canonical: "https://ritmoria.com/discover"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/discover.html",
@@ -326,6 +402,11 @@ export async function renderPage(path) {
 
   // OPENS
   if (routePath === "/opens") {
+    setSeoMeta({
+      title: "Опены — Ритмория",
+      description: "Открытые коллаборации и опены на Ритмории для артистов и музыкантов.",
+      canonical: "https://ritmoria.com/opens"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/opens.html",
@@ -339,6 +420,11 @@ export async function renderPage(path) {
 
   // TRACK
   if (routePath.startsWith("/track")) {
+    setSeoMeta({
+      title: "Трек — Ритмория",
+      description: "Страница трека на Ритмории: слушай, оценивай и обсуждай музыку артистов платформы.",
+      canonical: `https://ritmoria.com${routePath}${routeSearch || ""}`
+    });
     addPageStyles(["/styles/track.css"]);
 
     const html = await loadPage("/html/track.html");
@@ -372,6 +458,11 @@ export async function renderPage(path) {
 
   // JUDGE
   if (routePath.startsWith("/judge")) {
+    setSeoMeta({
+      title: "Оценка трека — Ритмория",
+      description: "Судейская страница оценки трека на Ритмории.",
+      canonical: `https://ritmoria.com${routePath}${routeSearch || ""}`
+    });
     addPageStyles(["/styles/judge.css"]);
 
     const html = await loadPage("/html/judge.html");
@@ -397,6 +488,11 @@ export async function renderPage(path) {
 
   // ADMIN
   if (routePath === "/admin") {
+    setSeoMeta({
+      title: "Админ-панель — Ритмория",
+      description: "Административная панель Ритмории.",
+      canonical: "https://ritmoria.com/admin"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/admin.html",
@@ -417,6 +513,11 @@ export async function renderPage(path) {
 
   // LOGIN
   if (routePath === "/login" || routePath === "/login.html" || routePath === "/html/login.html") {
+    setSeoMeta({
+      title: "Вход — Ритмория",
+      description: "Вход в аккаунт Ритмории.",
+      canonical: "https://ritmoria.com/login"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/login.html",
@@ -430,6 +531,11 @@ export async function renderPage(path) {
 
   // REGISTER
   if (routePath === "/register" || routePath === "/register.html" || routePath === "/html/register.html") {
+    setSeoMeta({
+      title: "Регистрация — Ритмория",
+      description: "Создай аккаунт на Ритмории и загружай музыку, посты и опены.",
+      canonical: "https://ritmoria.com/register"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/register.html",
@@ -443,6 +549,11 @@ export async function renderPage(path) {
 
   // SETTINGS
   if (routePath === "/settings") {
+  setSeoMeta({
+    title: "Настройки — Ритмория",
+    description: "Настройки аккаунта на Ритмории.",
+    canonical: "https://ritmoria.com/settings"
+  });
   const ok = await renderSimplePage({
     app,
     htmlUrl: "/html/settings.html",
@@ -466,6 +577,11 @@ export async function renderPage(path) {
 
   // MESSAGES
   if (routePath === "/messages") {
+    setSeoMeta({
+      title: "Сообщения — Ритмория",
+      description: "Личные сообщения и диалоги на Ритмории.",
+      canonical: "https://ritmoria.com/messages"
+    });
     const ok = await renderSimplePage({
       app,
       htmlUrl: "/html/messages.html",
@@ -490,6 +606,11 @@ export async function renderPage(path) {
     const [tag, slug] = segments;
 
     if (!isReservedSecondLevelRoute(tag)) {
+      setSeoMeta({
+        title: "Трек артиста — Ритмория",
+        description: "Профильная страница трека на Ритмории.",
+        canonical: `https://ritmoria.com${routePath}`
+      });
       addPageStyles(["/styles/profile-track-page.css"]);
 
       const html = await loadPage("/html/profile-tracks.html");
@@ -519,6 +640,16 @@ export async function renderPage(path) {
 
   // PROFILE
   if (isProfileLikePath(routePath)) {
+    const profileTag = !routePath.startsWith("/profile")
+      ? routePath.replace("/", "")
+      : (new URLSearchParams(routeSearch).get("tag") || "");
+    setSeoMeta({
+      title: profileTag ? `@${profileTag} — профиль на Ритмории` : "Профиль — Ритмория",
+      description: profileTag
+        ? `Профиль @${profileTag} на Ритмории: треки, посты и активность артиста.`
+        : "Профиль пользователя на Ритмории.",
+      canonical: profileTag ? `https://ritmoria.com/${profileTag}` : `https://ritmoria.com${routePath}${routeSearch || ""}`
+    });
     app.style.opacity = "0";
     const stylesPromise = addPageStyles([
   "/styles/profile.css",
@@ -555,6 +686,11 @@ if (!routePath.startsWith("/profile")) {
     return;
   }
 
+  setSeoMeta({
+    title: "Страница не найдена — Ритмория",
+    description: "Такой страницы на Ритмории сейчас нет.",
+    canonical: `https://ritmoria.com${routePath}${routeSearch || ""}`
+  });
   app.innerHTML = `<h1 style="color:white; padding:40px;">404</h1>`;
   finishRender(app);
 
