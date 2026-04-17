@@ -1773,9 +1773,15 @@ async function saveClosedQueueTopTracksSnapshot() {
     return false;
   }
 
+  await replaceHomeTopTracksSnapshot(snapshotRes.rows, "track_id");
+
+  return true;
+}
+
+async function replaceHomeTopTracksSnapshot(rows = [], idField = "track_id") {
   await pool.query("DELETE FROM home_stream_top_tracks");
 
-  for (const [index, row] of snapshotRes.rows.entries()) {
+  for (const [index, row] of rows.entries()) {
     await pool.query(
       `
       INSERT INTO home_stream_top_tracks (
@@ -1798,7 +1804,7 @@ async function saveClosedQueueTopTracksSnapshot() {
       `,
       [
         index + 1,
-        Number(row.track_id) || null,
+        Number(row[idField]) || null,
         String(row.title || "Без названия"),
         row.artist || "",
         row.cover || "",
@@ -1814,8 +1820,6 @@ async function saveClosedQueueTopTracksSnapshot() {
       ]
     );
   }
-
-  return true;
 }
 
 async function getHomeTopTracksSnapshot() {
@@ -1914,47 +1918,7 @@ async function getHomeTopTracksSnapshot() {
   );
 
   if (liveRes.rows.length) {
-    await pool.query("DELETE FROM home_stream_top_tracks");
-
-    for (const [index, row] of liveRes.rows.entries()) {
-      await pool.query(
-        `
-        INSERT INTO home_stream_top_tracks (
-          position,
-          track_id,
-          title,
-          artist,
-          cover,
-          duration,
-          username,
-          username_tag,
-          avatar,
-          user_score,
-          judge_score,
-          total_score,
-          user_votes_count,
-          judge_votes_count
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-        `,
-        [
-          index + 1,
-          Number(row.id) || null,
-          String(row.title || "Без названия"),
-          row.artist || "",
-          row.cover || "",
-          Number(row.duration || 0) || 0,
-          row.username || "",
-          row.username_tag || "",
-          row.avatar || "",
-          Number(row.user_score || 0) || 0,
-          Number(row.judge_score || 0) || 0,
-          Number(row.total_score || 0) || 0,
-          Number(row.user_votes_count || 0) || 0,
-          Number(row.judge_votes_count || 0) || 0
-        ]
-      );
-    }
+    await replaceHomeTopTracksSnapshot(liveRes.rows, "id");
   }
 
   return liveRes.rows;
@@ -6050,6 +6014,13 @@ app.get("/api/tracks/queue", async (req, res) => {
     }
 
     const result = await pool.query(query);
+
+    if (state === "closed" && result.rows.length) {
+      const judgeRatedRows = result.rows.filter((row) => Number(row.judge_score || 0) > 0);
+      if (judgeRatedRows.length) {
+        await replaceHomeTopTracksSnapshot(judgeRatedRows.slice(0, 10), "id");
+      }
+    }
 
     res.json({
       state,
