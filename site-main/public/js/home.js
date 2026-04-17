@@ -505,38 +505,83 @@ async function refreshHomeTracksOnly() {
   if (!root) return;
 
   const data = await loadHomePageData();
+  renderHomeNews(data.news || []);
   renderHomeTopTracks(data.topTracks || []);
   renderHomeSpotlightTracks(data.spotlightTracks || []);
+  renderHomePosts(data.recommendedPosts || []);
+  renderHomeArtists(data.topArtists || []);
   bindHomeInteractions({
     topTracks: Array.isArray(data.topTracks) ? data.topTracks : []
   });
 }
 
 function ensureHomeAutoRefresh() {
-  if (window.__homeTrackRefreshInterval) {
-    window.clearInterval(window.__homeTrackRefreshInterval);
+  const REFRESH_MS = 5 * 60 * 1000;
+
+  if (window.__homeTrackRefreshTimeout) {
+    window.clearTimeout(window.__homeTrackRefreshTimeout);
   }
 
-  window.__homeTrackRefreshInterval = window.setInterval(async () => {
+  const scheduleNextRefresh = () => {
+    window.__homeTrackRefreshTimeout = window.setTimeout(runRefresh, REFRESH_MS);
+  };
+
+  const runRefresh = async () => {
     if (!document.querySelector(".home-page")) {
-      window.clearInterval(window.__homeTrackRefreshInterval);
-      window.__homeTrackRefreshInterval = null;
+      if (window.__homeTrackRefreshTimeout) {
+        window.clearTimeout(window.__homeTrackRefreshTimeout);
+      }
+      window.__homeTrackRefreshTimeout = null;
       return;
     }
 
     try {
       await refreshHomeTracksOnly();
+      window.__homeLastRefreshAt = Date.now();
     } catch (err) {
       console.error("home track refresh error:", err);
     }
-  }, 5 * 60 * 1000);
+
+    scheduleNextRefresh();
+  };
+
+  scheduleNextRefresh();
+
+  if (!window.__homeVisibilityRefreshBound) {
+    window.__homeVisibilityRefreshBound = true;
+
+    const refreshOnReturn = async () => {
+      if (!document.querySelector(".home-page")) return;
+
+      const lastRefreshAt = Number(window.__homeLastRefreshAt || 0);
+      if (Date.now() - lastRefreshAt < REFRESH_MS) return;
+
+      try {
+        await refreshHomeTracksOnly();
+        window.__homeLastRefreshAt = Date.now();
+      } catch (err) {
+        console.error("home return refresh error:", err);
+      }
+    };
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        refreshOnReturn();
+      }
+    });
+
+    window.addEventListener("focus", refreshOnReturn);
+  }
 }
 
 async function loadHomePageData() {
-  const res = await fetch("/api/home", {
-    headers: localStorage.getItem("token")
-      ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
-      : {}
+  const headers = localStorage.getItem("token")
+    ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    : {};
+
+  const res = await fetch(`/api/home?_ts=${Date.now()}`, {
+    cache: "no-store",
+    headers
   });
 
   if (!res.ok) {
@@ -587,6 +632,7 @@ window.initHomePage = async function initHomePage() {
     bindHomeInteractions({
       topTracks: Array.isArray(data.topTracks) ? data.topTracks : []
     });
+    window.__homeLastRefreshAt = Date.now();
     ensureHomeAutoRefresh();
   } catch (err) {
     console.error("initHomePage error:", err);
