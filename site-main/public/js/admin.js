@@ -2,6 +2,10 @@ let adminAllUsers = [];
 let adminSearchBound = false;
 let adminNewsBound = false;
 let adminNewsPreviewUrl = null;
+let adminStats = {
+  total_users: 0,
+  online_users: 0
+};
 
 function denyAccess(text) {
   const app = document.getElementById("app");
@@ -64,43 +68,78 @@ function renderUsers(users) {
   if (!container) return;
 
   if (!users.length) {
-    container.innerHTML = `<div style="opacity:0.6; color:white;">Ничего не найдено</div>`;
+    container.innerHTML = `<div class="admin-empty-state">Ничего не найдено</div>`;
     return;
   }
 
   container.innerHTML = users.map((u) => `
-    <div class="user-row">
+    <div class="user-row ${u.is_banned ? "is-banned" : ""}">
       <div class="user-info">
-        <div class="user-name">
-          ${escapeAdminHtml(u.username || "Без имени")}
+        <div class="user-name-row">
+          <button
+            type="button"
+            class="user-name-link"
+            data-profile-tag="${escapeAdminHtml(String(u.username_tag || "").trim())}"
+            title="Открыть профиль"
+          >
+            ${escapeAdminHtml(u.username || "Без имени")}
+          </button>
           ${u.is_verified ? '<span class="admin-verified-badge" title="Подтвержденный профиль"><i class="fa-solid fa-check"></i></span>' : ""}
+          <span class="admin-user-status ${u.is_online ? "is-online" : "is-offline"}">
+            <span class="admin-user-status-dot"></span>
+            ${u.is_online ? "онлайн" : "не в сети"}
+          </span>
         </div>
-        <div class="user-tag">@${escapeAdminHtml(u.username_tag || "")}</div>
+        <div class="user-meta-row">
+          <div class="user-tag">@${escapeAdminHtml(u.username_tag || "")}</div>
+          <div class="admin-user-meta">ID ${Number(u.id) || 0}</div>
+          <div class="admin-user-meta">${u.created_at ? `Регистрация: ${escapeAdminHtml(formatAdminDate(u.created_at))}` : ""}</div>
+          <div class="admin-user-meta">${u.last_seen_at ? `Был в сети: ${escapeAdminHtml(formatAdminDate(u.last_seen_at))}` : "Ещё не появлялся онлайн"}</div>
+          ${u.is_banned ? '<div class="admin-user-badge admin-user-badge-danger">Заблокирован</div>' : ""}
+        </div>
       </div>
 
       <div class="user-actions">
-  <select class="role-select" data-user-id="${u.id}">
-    <option value="user" ${u.role === "user" ? "selected" : ""}>user</option>
-    <option value="judge" ${u.role === "judge" ? "selected" : ""}>judge</option>
-    <option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option>
-  </select>
+        <select class="role-select" data-user-id="${u.id}">
+          <option value="user" ${u.role === "user" ? "selected" : ""}>user</option>
+          <option value="judge" ${u.role === "judge" ? "selected" : ""}>judge</option>
+          <option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option>
+        </select>
 
-  <button type="button" class="verify-btn ${u.is_verified ? "active" : ""}" data-user-id="${u.id}">
-    ${u.is_verified ? "Снять галочку" : "Дать галочку"}
-  </button>
+        <button type="button" class="verify-btn ${u.is_verified ? "active" : ""}" data-user-id="${u.id}">
+          ${u.is_verified ? "Снять галочку" : "Дать галочку"}
+        </button>
 
-  <div class="xp-controls">
-    <input type="number" min="1" placeholder="XP" class="xp-input" data-user-id="${u.id}">
-    <button type="button" class="xp-btn add" data-user-id="${u.id}">+</button>
-    <button type="button" class="xp-btn remove" data-user-id="${u.id}">−</button>
-  </div>
-</div>
+        <button
+          type="button"
+          class="ban-btn ${u.is_banned ? "active" : ""}"
+          data-user-id="${u.id}"
+          data-banned="${u.is_banned ? "1" : "0"}"
+        >
+          ${u.is_banned ? "Разблокировать" : "Заблокировать"}
+        </button>
+
+        <div class="xp-controls">
+          <input type="number" min="1" placeholder="XP" class="xp-input" data-user-id="${u.id}">
+          <button type="button" class="xp-btn add" data-user-id="${u.id}">+</button>
+          <button type="button" class="xp-btn remove" data-user-id="${u.id}">−</button>
+        </div>
+      </div>
     </div>
   `).join("");
 
   bindRoleSelects();
   bindVerifyButtons();
+  bindBanButtons();
+  bindProfileLinks();
   bindXPControls();
+}
+
+function renderAdminStats() {
+  const totalEl = document.getElementById("adminTotalUsers");
+  const onlineEl = document.getElementById("adminOnlineUsers");
+  if (totalEl) totalEl.textContent = String(Number(adminStats.total_users || 0));
+  if (onlineEl) onlineEl.textContent = String(Number(adminStats.online_users || 0));
 }
 
 function formatAdminDate(value) {
@@ -185,9 +224,14 @@ async function loadUsers() {
       return;
     }
 
-    const users = await res.json();
+    const payload = await res.json();
 
-    adminAllUsers = Array.isArray(users) ? users : [];
+    adminAllUsers = Array.isArray(payload?.users) ? payload.users : [];
+    adminStats = {
+      total_users: Number(payload?.stats?.total_users || adminAllUsers.length || 0),
+      online_users: Number(payload?.stats?.online_users || 0)
+    };
+    renderAdminStats();
     renderUsers(adminAllUsers);
   } catch (err) {
     console.error("Ошибка loadUsers:", err);
@@ -425,6 +469,80 @@ function bindVerifyButtons() {
   });
 }
 
+function openAdminProfile(tag) {
+  const safeTag = String(tag || "").trim().replace(/^@+/, "");
+  if (!safeTag) return;
+
+  if (typeof window.navigate === "function") {
+    window.navigate(`/${safeTag}`);
+  } else {
+    window.location.href = `/${safeTag}`;
+  }
+}
+
+function bindProfileLinks() {
+  document.querySelectorAll(".user-name-link").forEach((button) => {
+    if (button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+
+    button.addEventListener("click", () => {
+      openAdminProfile(button.dataset.profileTag || "");
+    });
+  });
+}
+
+async function toggleBan(userId, button) {
+  const user = adminAllUsers.find((item) => Number(item.id) === Number(userId));
+  if (!user) return;
+
+  const nextValue = !user.is_banned;
+
+  if (button) {
+    button.disabled = true;
+  }
+
+  try {
+    const res = await fetch(`/api/users/${userId}/ban`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token")
+      },
+      body: JSON.stringify({ is_banned: nextValue })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      alert(data.error || "Не удалось изменить блокировку");
+      return;
+    }
+
+    user.is_banned = Boolean(data.is_banned);
+    renderUsers(adminAllUsers);
+  } catch (err) {
+    console.error("toggleBan error:", err);
+    alert("Ошибка блокировки");
+  } finally {
+    if (button) {
+      button.disabled = false;
+    }
+  }
+}
+
+function bindBanButtons() {
+  document.querySelectorAll(".ban-btn").forEach((button) => {
+    if (button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+
+    button.addEventListener("click", () => {
+      const userId = Number(button.dataset.userId);
+      if (!userId) return;
+      toggleBan(userId, button);
+    });
+  });
+}
+
 function initAdminSearch() {
   const input = document.getElementById("adminSearch");
   const results = document.getElementById("adminSearchResults");
@@ -442,7 +560,8 @@ function initAdminSearch() {
     }
 
     const filtered = adminAllUsers.filter((u) =>
-      (u.username_tag || "").toLowerCase().includes(q)
+      (u.username_tag || "").toLowerCase().includes(q) ||
+      (u.username || "").toLowerCase().includes(q)
     );
 
     results.innerHTML = filtered.map((u) => `
@@ -477,7 +596,7 @@ function selectUser(tag) {
 
   if (input) input.value = tag;
 
-  const filtered = adminAllUsers.filter((u) => u.username_tag === tag);
+  const filtered = adminAllUsers.filter((u) => String(u.username_tag || "").toLowerCase() === String(tag || "").toLowerCase());
   renderUsers(filtered);
 
   if (results) {
@@ -492,9 +611,11 @@ window.initAdminPage = async function () {
   if (!ok) return;
 
   adminAllUsers = [];
+  adminStats = { total_users: 0, online_users: 0 };
   adminSearchBound = false;
   adminNewsBound = false;
   resetAdminNewsMediaPreview();
+  renderAdminStats();
 
   await loadUsers();
   await loadAdminNews();
@@ -533,18 +654,15 @@ if (!amount || amount <= 0) {
           })
         });
 
-        const data = await res.json();
+      const data = await res.json();
 
-if (!res.ok) {
-  alert(data.error || "Ошибка XP");
-  return;
-}
-
-input.value = "";
-alert(`Готово. Теперь XP: ${data.newXP}`);
+        if (!res.ok) {
+          alert(data.error || "Ошибка XP");
+          return;
+        }
 
         input.value = "";
-        alert("Готово 🔥");
+        alert(`Готово. Теперь XP: ${data.newXP}`);
 
       }catch(e){
         console.error(e);

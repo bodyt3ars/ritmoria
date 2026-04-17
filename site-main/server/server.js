@@ -52,9 +52,9 @@ function auth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    
+
     req.user = decoded;
-    next();
+    touchUserLastSeen(decoded.id).finally(() => next());
   } catch (err) {
     return res.status(401).json({ error: "Неверный токен" });
   }
@@ -689,6 +689,7 @@ async function ensureSocialAuthSchema() {
       ADD COLUMN IF NOT EXISTS username_tag varchar(50),
       ADD COLUMN IF NOT EXISTS telegram_id text,
       ADD COLUMN IF NOT EXISTS is_verified boolean DEFAULT false,
+      ADD COLUMN IF NOT EXISTS last_seen_at timestamp without time zone,
       ALTER COLUMN email DROP NOT NULL,
       ALTER COLUMN password DROP NOT NULL;
 
@@ -713,6 +714,9 @@ async function ensureSocialAuthSchema() {
     CREATE INDEX IF NOT EXISTS idx_users_username_tag_lower
       ON users(LOWER(username_tag))
       WHERE username_tag IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_users_last_seen_at
+      ON users(last_seen_at DESC);
   `);
 }
 
@@ -1258,6 +1262,20 @@ function getOptionalUserIdFromReq(req) {
     return decoded.id;
   } catch {
     return null;
+  }
+}
+
+async function touchUserLastSeen(userId) {
+  const normalizedUserId = Number(userId) || 0;
+  if (!normalizedUserId) return;
+
+  try {
+    await pool.query(
+      "UPDATE users SET last_seen_at = now() WHERE id = $1",
+      [normalizedUserId]
+    );
+  } catch (err) {
+    console.error("LAST SEEN UPDATE ERROR:", err);
   }
 }
 
@@ -2610,6 +2628,8 @@ async function getUserFromToken(req) {
       "SELECT id, role, is_banned FROM users WHERE id = $1",
       [decoded.id]
     );
+
+    touchUserLastSeen(decoded.id);
 
     return result.rows[0];
   } catch {
@@ -5378,17 +5398,88 @@ app.get("/api/users", async (req, res) => {
     }
 
     const users = await pool.query(`
-      SELECT id, username, username_tag, role, COALESCE(is_verified, false) AS is_verified
+      SELECT
+        id,
+        username,
+        username_tag,
+        role,
+        COALESCE(is_verified, false) AS is_verified,
+        COALESCE(is_banned, false) AS is_banned,
+        created_at,
+        last_seen_at,
+        CASE
+          WHEN last_seen_at IS NOT NULL AND last_seen_at >= now() - interval '5 minutes'
+            THEN true
+          ELSE false
+        END AS is_online
       FROM users
-      ORDER BY id ASC
-    `)
+      ORDER BY created_at DESC NULLS LAST, id DESC
+    `);
 
-    res.json(users.rows)
+    const statsRes = await pool.query(`
+      SELECT
+        COUNT(*)::int AS total_users,
+        COUNT(*) FILTER (
+          WHERE last_seen_at IS NOT NULL
+            AND last_seen_at >= now() - interval '5 minutes'
+        )::int AS online_users
+      FROM users
+    `);
+
+    res.json({
+      users: users.rows,
+      stats: {
+        total_users: Number(statsRes.rows[0]?.total_users || 0),
+        online_users: Number(statsRes.rows[0]?.online_users || 0)
+      }
+    });
 
   } catch (err) {
     res.status(401).json({ error: "Unauthorized" })
   }
-})
+});
+
+app.put("/api/users/:id/ban", async (req, res) => {
+  try {
+    const userId = getUserIdFromToken(req);
+    if (!await isAdmin(userId)) {
+      return res.status(403).json({ error: "Нет доступа" });
+    }
+
+    const targetId = Number(req.params.id);
+    const isBanned = Boolean(req.body?.is_banned);
+
+    if (!targetId) {
+      return res.status(400).json({ error: "Некорректный пользователь" });
+    }
+
+    if (targetId === Number(userId)) {
+      return res.status(400).json({ error: "Нельзя заблокировать самого себя" });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET is_banned = $1
+      WHERE id = $2
+      RETURNING id, COALESCE(is_banned, false) AS is_banned
+      `,
+      [isBanned, targetId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: "Пользователь не найден" });
+    }
+
+    res.json({
+      success: true,
+      is_banned: Boolean(result.rows[0].is_banned)
+    });
+  } catch (err) {
+    console.error("BAN USER ERROR:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
 
 app.get("/archived-posts", async (req,res)=>{
   try{

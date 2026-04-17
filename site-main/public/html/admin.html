@@ -1,12 +1,34 @@
 <div class="admin-page">
   <div class="admin-container">
-
-    <h1 class="admin-title">Админ панель</h1>
-
-    <div class="admin-search">
-      <input id="adminSearch" placeholder="Поиск по @username_tag...">
-      <div id="adminSearchResults"></div>
+    <div class="admin-hero">
+      <div>
+        <h1 class="admin-title">Админ панель</h1>
+        <p class="admin-subtitle">Пользователи, онлайн, роли, блокировки и контент главной в одном месте.</p>
+      </div>
     </div>
+
+    <section class="admin-stats-grid">
+      <div class="admin-stat-card">
+        <div class="admin-stat-label">Зарегистрировано</div>
+        <div id="adminTotalUsers" class="admin-stat-value">0</div>
+      </div>
+      <div class="admin-stat-card admin-stat-card-online">
+        <div class="admin-stat-label">Сейчас онлайн</div>
+        <div id="adminOnlineUsers" class="admin-stat-value">0</div>
+      </div>
+    </section>
+
+    <section class="admin-users-panel">
+      <div class="admin-users-panel-head">
+        <h2 class="admin-section-title">Пользователи</h2>
+        <div class="admin-search">
+          <input id="adminSearch" placeholder="Поиск по нику или @username_tag...">
+          <div id="adminSearchResults"></div>
+        </div>
+      </div>
+
+      <div id="usersList" class="users-list"></div>
+    </section>
 
     <section class="admin-news-panel">
       <h2 class="admin-section-title">Новости на главной</h2>
@@ -25,8 +47,6 @@
 
       <div id="adminNewsList" class="admin-news-list"></div>
     </section>
-
-    <div id="usersList" class="users-list"></div>
 
   </div>
 </div>
