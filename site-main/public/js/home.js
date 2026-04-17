@@ -128,9 +128,15 @@ function renderHomeTopTracks(tracks = []) {
         </div>
 
         <div class="home-track-card-stats">
-          <span><i class="fa-solid fa-scale-balanced"></i>${Number(track.judge_score || 0).toFixed(1)}</span>
-          <span><i class="fa-solid fa-gavel"></i>${Number(track.judge_votes_count || 0)}</span>
-          <span><i class="fa-solid fa-user-check"></i>${Number(track.user_votes_count || 0)}</span>
+          <span title="Судейская оценка">
+            <i class="fa-solid fa-scale-balanced" title="Судейская оценка"></i>${Number(track.judge_score || 0).toFixed(1)}
+          </span>
+          <span title="Общая оценка">
+            <i class="fa-solid fa-star" title="Общая оценка"></i>${Number(track.total_score || 0).toFixed(1)}
+          </span>
+          <span title="Пользовательская оценка">
+            <i class="fa-solid fa-user-check" title="Пользовательская оценка"></i>${Number(track.user_score || 0).toFixed(1)}
+          </span>
           <span>${formatHomeDuration(track.duration || 0)}</span>
         </div>
       </div>
