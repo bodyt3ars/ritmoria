@@ -41,6 +41,7 @@ async function handleProfileUI() {
     if (!res.ok) return;
 
     const me = await res.json();
+    window.currentViewer = me;
 
     const isMy =
       !tag || tag.toLowerCase() === (me.username_tag || "").toLowerCase();

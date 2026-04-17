@@ -1,5 +1,9 @@
 window.currentUser = window.currentUser || {};
 
+function canModerateProfileTracks() {
+  return !window.currentProfileIsMine && String(window.currentViewer?.role || "").toLowerCase() === "admin";
+}
+
 let currentTags = [];
 
 let trackListenState = {
@@ -257,6 +261,7 @@ function renderTrack(track, options = {}) {
   const isMention = !!options.isMention;
   const isReposted = !!track.reposted;
   const showRepostButton = !window.currentProfileIsMine && !isMy;
+  const canModerate = canModerateProfileTracks();
   const repostMeta = isRepost && track.reposted_at
     ? `
       <div class="track-repost-meta">
@@ -313,27 +318,29 @@ function renderTrack(track, options = {}) {
               ${track.genre ? `<span class="genre-chip">#${escapeTrackHtml(track.genre)}</span>` : ""}
             </div>
 
-            ${isMy ? `
+            ${(isMy || canModerate) ? `
               <div class="track-menu">
                 <button class="dots-btn" type="button">
                   <i class="fa-solid fa-ellipsis"></i>
                 </button>
 
                 <div class="dropdown profile-hidden">
-                  <div onclick="editTrack(${track.id})">
-                    <i class="fa-solid fa-pen"></i>
-                    <span>Редактировать</span>
-                  </div>
+                  ${isMy ? `
+                    <div onclick="editTrack(${track.id})">
+                      <i class="fa-solid fa-pen"></i>
+                      <span>Редактировать</span>
+                    </div>
 
-                  <div onclick="pinTrack(${track.id})">
-                    <i class="fa-solid fa-thumbtack"></i>
-                    <span>Закрепить</span>
-                  </div>
+                    <div onclick="pinTrack(${track.id})">
+                      <i class="fa-solid fa-thumbtack"></i>
+                      <span>Закрепить</span>
+                    </div>
 
-                  <div onclick="archiveTrack(${track.id})">
-                    <i class="fa-solid fa-box-archive"></i>
-                    <span>Архив</span>
-                  </div>
+                    <div onclick="archiveTrack(${track.id})">
+                      <i class="fa-solid fa-box-archive"></i>
+                      <span>Архив</span>
+                    </div>
+                  ` : ""}
 
                   <div onclick="deleteTrack(${track.id})" class="danger">
                     <i class="fa-solid fa-trash"></i>
@@ -899,18 +906,37 @@ function editTrack(id) {
 }
 
 async function deleteTrack(id) {
-  const ok = confirm("Удалить трек навсегда?");
-  if (!ok) return;
+  const track = getAllKnownTracks().find((item) => Number(item.id) === Number(id));
+  const isAdminModeration = canModerateProfileTracks() && Number(track?.user_id || 0) !== Number(window.currentViewer?.id || 0);
+  let reason = "";
+
+  if (isAdminModeration) {
+    reason = String(prompt("Укажи причину удаления трека. Она придёт пользователю уведомлением:", "") || "").trim();
+    if (!reason) {
+      alert("Нужно указать причину удаления.");
+      return;
+    }
+  } else {
+    const ok = confirm("Удалить трек навсегда?");
+    if (!ok) return;
+  }
 
   const res = await fetch(`/delete-track/${id}`, {
     method: "DELETE",
     headers: {
+      "Content-Type": "application/json",
       Authorization: "Bearer " + localStorage.getItem("token")
-    }
+    },
+    body: JSON.stringify(isAdminModeration ? { reason } : {})
   });
 
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert("Ошибка удаления");
+    if (data?.error === "delete_reason_required") {
+      alert("Нужно указать причину удаления.");
+    } else {
+      alert("Ошибка удаления");
+    }
     return;
   }
 

@@ -2350,7 +2350,8 @@ async function createNotification({
   entityType = null,
   entityId = null,
   text,
-  metadata = {}
+  metadata = {},
+  force = false
 } = {}) {
   const recipientId = Number(userId);
   const senderId = actorId ? Number(actorId) : null;
@@ -2367,13 +2368,15 @@ async function createNotification({
     return null;
   }
 
-  const recipientSettings = await pool.query(
-    "SELECT COALESCE(notifications_enabled, true) AS notifications_enabled FROM users WHERE id = $1 LIMIT 1",
-    [recipientId]
-  );
+  if (!force) {
+    const recipientSettings = await pool.query(
+      "SELECT COALESCE(notifications_enabled, true) AS notifications_enabled FROM users WHERE id = $1 LIMIT 1",
+      [recipientId]
+    );
 
-  if (!recipientSettings.rows.length || recipientSettings.rows[0].notifications_enabled === false) {
-    return null;
+    if (!recipientSettings.rows.length || recipientSettings.rows[0].notifications_enabled === false) {
+      return null;
+    }
   }
 
   const result = await pool.query(
@@ -4974,17 +4977,47 @@ try{
 
 const userId = getUserIdFromToken(req)
 const postId = req.params.id
+const reason = String(req.body?.reason || req.query?.reason || "").trim()
+
+const requesterRes = await pool.query(
+`SELECT id, role, username, username_tag
+ FROM users
+ WHERE id = $1
+ LIMIT 1`,
+[userId]
+)
+
+if(requesterRes.rows.length === 0){
+return res.status(401).json({error:"Unauthorized"})
+}
+
+const requester = requesterRes.rows[0]
 
 const result = await pool.query(
-"SELECT media_url FROM posts WHERE id=$1 AND user_id=$2",
-[postId,userId]
+`SELECT id, user_id, media_url, content
+ FROM posts
+ WHERE id=$1
+ LIMIT 1`,
+[postId]
 )
 
 if(result.rows.length === 0){
 return res.status(404).json({error:"Post not found"})
 }
 
-const mediaUrl = result.rows[0].media_url
+const post = result.rows[0]
+const isOwner = Number(post.user_id || 0) === Number(userId)
+const isAdmin = String(requester.role || "") === "admin"
+
+if(!isOwner && !isAdmin){
+return res.status(403).json({error:"forbidden"})
+}
+
+if(!isOwner && isAdmin && !reason){
+return res.status(400).json({error:"delete_reason_required"})
+}
+
+const mediaUrl = post.media_url
 
 if(mediaUrl){
 
@@ -5005,9 +5038,26 @@ console.log("File deleted")
 }
 
 await pool.query(
-"DELETE FROM posts WHERE id=$1 AND user_id=$2",
-[postId,userId]
+"DELETE FROM posts WHERE id=$1",
+[postId]
 )
+
+if(!isOwner && isAdmin && Number(post.user_id || 0) > 0){
+await createNotification({
+userId: Number(post.user_id),
+actorId: userId,
+type: "admin_post_deleted",
+entityType: "post",
+entityId: Number(postId),
+text: `${requester.username || requester.username_tag || "Администратор"} удалил твою публикацию. Причина: ${reason}`,
+metadata: {
+postId: Number(postId),
+reason,
+moderation: true
+},
+force: true
+})
+}
 
 res.json({success:true})
 
@@ -5558,11 +5608,32 @@ app.delete("/delete-track/:id", async (req, res) => {
   try {
     const userId = getUserIdFromToken(req);
     const trackId = req.params.id;
+    const reason = String(req.body?.reason || req.query?.reason || "").trim();
 
-    // проверка что это ТВОЙ трек
+    const requesterRes = await pool.query(
+      `
+      SELECT id, role, username, username_tag
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (requesterRes.rows.length === 0) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const requester = requesterRes.rows[0];
+
     const check = await pool.query(
-      "SELECT audio, cover FROM user_tracks WHERE id = $1 AND user_id = $2",
-      [trackId, userId]
+      `
+      SELECT id, user_id, audio, cover, title
+      FROM user_tracks
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [trackId]
     );
 
     if (check.rows.length === 0) {
@@ -5570,6 +5641,16 @@ app.delete("/delete-track/:id", async (req, res) => {
     }
 
     const track = check.rows[0];
+    const isOwner = Number(track.user_id || 0) === Number(userId);
+    const isAdmin = String(requester.role || "") === "admin";
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "forbidden" });
+    }
+
+    if (!isOwner && isAdmin && !reason) {
+      return res.status(400).json({ error: "delete_reason_required" });
+    }
 
     // удалить файлы
     if (track.audio) {
@@ -5584,9 +5665,26 @@ app.delete("/delete-track/:id", async (req, res) => {
 
     // удалить из БД
     await pool.query(
-      "DELETE FROM user_tracks WHERE id = $1 AND user_id = $2",
-      [trackId, userId]
+      "DELETE FROM user_tracks WHERE id = $1",
+      [trackId]
     );
+
+    if (!isOwner && isAdmin && Number(track.user_id || 0) > 0) {
+      await createNotification({
+        userId: Number(track.user_id),
+        actorId: userId,
+        type: "admin_track_deleted",
+        entityType: "track",
+        entityId: Number(trackId),
+        text: `${requester.username || requester.username_tag || "Администратор"} удалил твой трек "${track.title || "Без названия"}". Причина: ${reason}`,
+        metadata: {
+          trackId: Number(trackId),
+          reason,
+          moderation: true
+        },
+        force: true
+      });
+    }
 
     res.json({ success: true });
 

@@ -18,6 +18,10 @@ function isOwnProfilePage() {
   return !!window.currentProfileIsMine;
 }
 
+function canModerateProfilePosts() {
+  return !isOwnProfilePage() && String(window.currentViewer?.role || "").toLowerCase() === "admin";
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -168,6 +172,7 @@ function renderPostCard(post, isMyProfile) {
   const isSaved = isPostSaved(post.id);
   const isReposted = !!post.reposted;
   const showRepostButton = !isOwnProfilePage() && Number(post.user_id || 0) !== Number(window.currentUser?.id || 0);
+  const canModerate = canModerateProfilePosts();
   const repostMeta = post.reposted_at
     ? `
       <div class="post-repost-meta">
@@ -205,14 +210,16 @@ function renderPostCard(post, isMyProfile) {
             <div class="post-date">${formatPostDate(post.created_at)}</div>
           </div>
         </div>
-        ${isMyProfile ? `
+        ${(isMyProfile || canModerate) ? `
           <div class="post-menu-container">
             <button class="post-menu-btn" onclick="togglePostMenu(${post.id})"><i class="fa-solid fa-ellipsis"></i></button>
             <div id="postMenu-${post.id}" class="post-menu profile-hidden">
               <button class="danger" onclick="deletePost(${post.id})"><i class="fa-solid fa-trash"></i>Удалить</button>
-              <button onclick="editPost(${post.id})"><i class="fa-solid fa-pen"></i>Редактировать</button>
-              <button onclick="archivePost(${post.id})"><i class="fa-solid fa-box-archive"></i>Архив</button>
-              <button onclick="pinPost(${post.id})"><i class="fa-solid fa-thumbtack"></i>Закрепить</button>
+              ${isMyProfile ? `
+                <button onclick="editPost(${post.id})"><i class="fa-solid fa-pen"></i>Редактировать</button>
+                <button onclick="archivePost(${post.id})"><i class="fa-solid fa-box-archive"></i>Архив</button>
+                <button onclick="pinPost(${post.id})"><i class="fa-solid fa-thumbtack"></i>Закрепить</button>
+              ` : ""}
             </div>
           </div>
         ` : ""}
@@ -793,16 +800,37 @@ function togglePostMenu(id) {
 }
 
 async function deletePost(id) {
-  if (!confirm("Удалить публикацию?")) return;
+  const post = getCurrentPostById(id);
+  const isAdminModeration = canModerateProfilePosts() && Number(post?.user_id || 0) !== Number(window.currentViewer?.id || 0);
+  let reason = "";
+
+  if (isAdminModeration) {
+    reason = String(prompt("Укажи причину удаления публикации. Она придёт пользователю уведомлением:", "") || "").trim();
+    if (!reason) {
+      alert("Нужно указать причину удаления.");
+      return;
+    }
+  } else if (!confirm("Удалить публикацию?")) {
+    return;
+  }
 
   try {
     const res = await fetch("/delete-post/" + id, {
       method: "DELETE",
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token")
+      },
+      body: JSON.stringify(isAdminModeration ? { reason } : {})
     });
 
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert("Ошибка удаления");
+      if (data?.error === "delete_reason_required") {
+        alert("Нужно указать причину удаления.");
+      } else {
+        alert("Ошибка удаления");
+      }
       return;
     }
 
