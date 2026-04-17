@@ -271,6 +271,7 @@ window.initHomePage = async function initHomePage() {
     });
   } catch (err) {
     console.error("initHomePage error:", err);
+    renderHomeNews([]);
     renderHomeTopTracks([]);
     renderHomePosts([]);
     renderHomeArtists([]);

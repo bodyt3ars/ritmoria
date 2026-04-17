@@ -5430,7 +5430,7 @@ app.get("/api/home", async (req, res) => {
   try {
     const viewerId = getOptionalUserIdFromReq(req);
 
-    const [newsRes, topTracksRes, postsRes, topArtistsRes] = await Promise.all([
+    const results = await Promise.allSettled([
       pool.query(
         `
         SELECT
@@ -5610,14 +5610,37 @@ app.get("/api/home", async (req, res) => {
       )
     ]);
 
-    const safeTopTracks = Array.isArray(topTracksRes) ? topTracksRes : (topTracksRes?.rows || []);
+    const [newsResult, topTracksResult, postsResult, topArtistsResult] = results;
+
+    if (newsResult.status === "rejected") {
+      console.error("HOME API NEWS ERROR:", newsResult.reason);
+    }
+
+    if (topTracksResult.status === "rejected") {
+      console.error("HOME API TOP TRACKS ERROR:", topTracksResult.reason);
+    }
+
+    if (postsResult.status === "rejected") {
+      console.error("HOME API POSTS ERROR:", postsResult.reason);
+    }
+
+    if (topArtistsResult.status === "rejected") {
+      console.error("HOME API TOP ARTISTS ERROR:", topArtistsResult.reason);
+    }
+
+    const news = newsResult.status === "fulfilled" ? newsResult.value.rows : [];
+    const rawTopTracks = topTracksResult.status === "fulfilled" ? topTracksResult.value : [];
+    const recommendedPosts = postsResult.status === "fulfilled" ? postsResult.value.rows : [];
+    const topArtists = topArtistsResult.status === "fulfilled" ? topArtistsResult.value.rows : [];
+
+    const safeTopTracks = Array.isArray(rawTopTracks) ? rawTopTracks : (rawTopTracks?.rows || []);
     const topTracks = await attachArtistMentionsToTracks(safeTopTracks);
 
     res.json({
-      news: newsRes.rows,
+      news,
       topTracks,
-      recommendedPosts: postsRes.rows,
-      topArtists: topArtistsRes.rows
+      recommendedPosts,
+      topArtists
     });
   } catch (err) {
     console.error("HOME API ERROR:", err);
