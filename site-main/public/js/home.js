@@ -50,20 +50,22 @@ function formatHomeTrackArtists(track) {
 }
 
 function renderHomeTrackArtistLinks(track) {
+  const profileTag = String(track.username_tag || track.username || "").trim().replace(/^@+/, "");
+
   if (Array.isArray(track.artist_mentions) && track.artist_mentions.length) {
-    if (track.username_tag) {
+    if (profileTag) {
       return `
-        <a href="/${encodeURIComponent(track.username_tag)}" class="home-track-card-artist-link" data-home-profile-link="${homeEscapeHtml(track.username_tag)}">
-          ${homeEscapeHtml(track.username || track.username_tag)}
+        <a href="/${encodeURIComponent(profileTag)}" class="home-track-card-artist-link" data-home-profile-link="${homeEscapeHtml(profileTag)}">
+          ${homeEscapeHtml(track.username || track.username_tag || profileTag)}
         </a>
       `;
     }
   }
 
-  if (track.username_tag) {
+  if (profileTag) {
     return `
-      <a href="/${encodeURIComponent(track.username_tag)}" class="home-track-card-artist-link" data-home-profile-link="${homeEscapeHtml(track.username_tag)}">
-        ${homeEscapeHtml(track.username || track.username_tag)}
+      <a href="/${encodeURIComponent(profileTag)}" class="home-track-card-artist-link" data-home-profile-link="${homeEscapeHtml(profileTag)}">
+        ${homeEscapeHtml(track.username || track.username_tag || profileTag)}
       </a>
     `;
   }

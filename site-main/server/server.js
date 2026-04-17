@@ -3938,6 +3938,7 @@ app.get("/api/profile", async (req, res) => {
           FROM users
           LEFT JOIN music_collectives mc ON mc.id = users.collective_id
           WHERE LOWER(users.username_tag) = LOWER($1)
+             OR LOWER(users.username) = LOWER($1)
           `,
           [tag]
         );
