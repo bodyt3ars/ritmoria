@@ -1733,17 +1733,19 @@ async function saveClosedQueueTopTracksSnapshot() {
         WHERE track_id = t.id AND type = 'judge'
       ), 0) AS judge_score,
       (
-        COALESCE((
-          SELECT AVG(score)
-          FROM track_ratings
-          WHERE track_id = t.id AND type = 'user'
-        ), 0)
-        +
-        COALESCE((
-          SELECT AVG(score)
-          FROM track_ratings
-          WHERE track_id = t.id AND type = 'judge'
-        ), 0)
+        (
+          COALESCE((
+            SELECT AVG(score)
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'user'
+          ), 0)
+          +
+          COALESCE((
+            SELECT AVG(score)
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'judge'
+          ), 0)
+        ) / 2.0
       )::numeric(10,1) AS total_score,
       COALESCE((
         SELECT COUNT(*)::int
@@ -5844,17 +5846,19 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_score,
 
           (
-            COALESCE((
-              SELECT AVG(score)
-              FROM track_ratings
-              WHERE track_id = t.id AND type = 'user'
-            ),0)
-            +
-            COALESCE((
-              SELECT AVG(score)
-              FROM track_ratings
-              WHERE track_id = t.id AND type = 'judge'
-            ),0)
+            (
+              COALESCE((
+                SELECT AVG(score)
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'user'
+              ),0)
+              +
+              COALESCE((
+                SELECT AVG(score)
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'judge'
+              ),0)
+            ) / 2.0
           ) as total_score
 
         FROM tracks t

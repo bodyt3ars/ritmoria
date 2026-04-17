@@ -2,6 +2,8 @@ let queueList = null;
 let queueCurrentUser = null;
 let queueReloadInterval = null;
 let queueStateInterval = null;
+let queueCurrentState = "open";
+let queueRatingView = "total";
 
 function escapeQueueHtml(value) {
   return String(value ?? "")
@@ -61,6 +63,65 @@ function canRateQueueTrack(track) {
   return Number(track.user_id || 0) !== Number(queueCurrentUser.id || 0);
 }
 
+function getQueueScoreValue(track, view = queueRatingView) {
+  if (!track) return 0;
+
+  if (view === "judge") {
+    return Number(track.judge_score || 0);
+  }
+
+  if (view === "user") {
+    return Number(track.user_score || 0);
+  }
+
+  return Number(track.total_score || 0);
+}
+
+function getQueueScoreLabel(view = queueRatingView) {
+  if (view === "judge") return "Судьи";
+  if (view === "user") return "Пользователи";
+  return "Общее";
+}
+
+function getQueueTrackTimestamp(track) {
+  const rawValue = track?.createdAt || track?.created_at;
+  const timestamp = new Date(rawValue || 0).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function sortQueueTracks(tracks = [], state = queueCurrentState) {
+  if (state !== "closed") {
+    return [...tracks].sort((a, b) => getQueueTrackTimestamp(a) - getQueueTrackTimestamp(b));
+  }
+
+  return [...tracks].sort((a, b) => {
+    const scoreDiff = getQueueScoreValue(b) - getQueueScoreValue(a);
+    if (scoreDiff !== 0) return scoreDiff;
+
+    const judgeDiff = Number(b.judge_score || 0) - Number(a.judge_score || 0);
+    if (judgeDiff !== 0) return judgeDiff;
+
+    const userDiff = Number(b.user_score || 0) - Number(a.user_score || 0);
+    if (userDiff !== 0) return userDiff;
+
+    return getQueueTrackTimestamp(a) - getQueueTrackTimestamp(b);
+  });
+}
+
+function renderQueueRatingControls(state = queueCurrentState) {
+  const controls = document.getElementById("queueRatingControls");
+  if (!controls) return;
+
+  const isClosed = state === "closed";
+  controls.classList.toggle("queue-hidden", !isClosed);
+
+  const tabs = controls.querySelectorAll("[data-rating-view]");
+  tabs.forEach((tab) => {
+    const isActive = tab.dataset.ratingView === queueRatingView;
+    tab.classList.toggle("is-active", isActive);
+  });
+}
+
 async function loadQueue() {
   if (!queueList) {
     queueList = document.getElementById("queueList");
@@ -73,7 +134,11 @@ async function loadQueue() {
     const data = await res.json();
 
     const state = data.state;
-    const tracks = Array.isArray(data.tracks) ? data.tracks : [];
+    queueCurrentState = state || "open";
+
+    renderQueueRatingControls(queueCurrentState);
+
+    const tracks = sortQueueTracks(Array.isArray(data.tracks) ? data.tracks : [], queueCurrentState);
 
     queueList.innerHTML = "";
 
@@ -127,7 +192,12 @@ async function loadQueue() {
 
               ${
                 state === "closed"
-                  ? `<div class="queue-track-score">🔥 ${Number(track.total_score || 0).toFixed(1)}</div>`
+                  ? `
+                    <div class="queue-track-score" aria-label="${escapeQueueHtml(getQueueScoreLabel())} оценка">
+                      <span class="queue-track-score-label">${escapeQueueHtml(getQueueScoreLabel())}</span>
+                      <span class="queue-track-score-value">${getQueueScoreValue(track).toFixed(1)}</span>
+                    </div>
+                  `
                   : ""
               }
             </div>
@@ -264,6 +334,8 @@ async function loadQueueState() {
   try {
     const res = await fetch("/api/queue/state");
     const data = await res.json();
+    queueCurrentState = data.state || "open";
+    renderQueueRatingControls(queueCurrentState);
 
     const el = document.getElementById("queueStatusText");
     if (!el) return;
@@ -291,6 +363,23 @@ async function loadQueueState() {
 
 window.initQueuePage = async function () {
   queueList = document.getElementById("queueList");
+
+  const ratingControls = document.getElementById("queueRatingControls");
+  if (ratingControls && !ratingControls.dataset.bound) {
+    ratingControls.addEventListener("click", async (event) => {
+      const tab = event.target.closest("[data-rating-view]");
+      if (!tab) return;
+
+      const nextView = tab.dataset.ratingView;
+      if (!nextView || nextView === queueRatingView) return;
+
+      queueRatingView = nextView;
+      renderQueueRatingControls(queueCurrentState);
+      await loadQueue();
+    });
+
+    ratingControls.dataset.bound = "true";
+  }
 
   await loadQueueCurrentUser();
   await initAdminControls();
