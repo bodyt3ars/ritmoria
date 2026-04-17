@@ -51,11 +51,13 @@ function formatHomeTrackArtists(track) {
 
 function renderHomeTrackArtistLinks(track) {
   if (Array.isArray(track.artist_mentions) && track.artist_mentions.length) {
-    return track.artist_mentions.map((item) => `
-      <a href="/${encodeURIComponent(item.username_tag || "")}" class="home-track-card-artist-link" data-home-profile-link="${homeEscapeHtml(item.username_tag || "")}">
-        ${homeEscapeHtml(item.username || `@${item.username_tag || ""}`)}
-      </a>
-    `).join('<span class="home-track-artist-separator">, </span>');
+    if (track.username_tag) {
+      return `
+        <a href="/${encodeURIComponent(track.username_tag)}" class="home-track-card-artist-link" data-home-profile-link="${homeEscapeHtml(track.username_tag)}">
+          ${homeEscapeHtml(track.username || track.username_tag)}
+        </a>
+      `;
+    }
   }
 
   if (track.username_tag) {
