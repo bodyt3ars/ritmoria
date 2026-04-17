@@ -5610,7 +5610,8 @@ app.get("/api/home", async (req, res) => {
       )
     ]);
 
-    const topTracks = await attachArtistMentionsToTracks(topTracksRes.rows);
+    const safeTopTracks = Array.isArray(topTracksRes) ? topTracksRes : (topTracksRes?.rows || []);
+    const topTracks = await attachArtistMentionsToTracks(safeTopTracks);
 
     res.json({
       news: newsRes.rows,
