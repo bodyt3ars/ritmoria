@@ -5985,7 +5985,7 @@ app.get("/api/tracks/queue", async (req, res) => {
 
         FROM tracks t
 
-        ORDER BY total_score DESC
+        ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
       `;
 
     }else{
@@ -6016,7 +6016,22 @@ app.get("/api/tracks/queue", async (req, res) => {
     const result = await pool.query(query);
 
     if (state === "closed" && result.rows.length) {
-      const judgeRatedRows = result.rows.filter((row) => Number(row.judge_score || 0) > 0);
+      const judgeRatedRows = result.rows
+        .filter((row) => Number(row.judge_score || 0) > 0)
+        .sort((a, b) => {
+          const judgeDiff = Number(b.judge_score || 0) - Number(a.judge_score || 0);
+          if (judgeDiff !== 0) return judgeDiff;
+
+          const totalDiff = Number(b.total_score || 0) - Number(a.total_score || 0);
+          if (totalDiff !== 0) return totalDiff;
+
+          const userDiff = Number(b.user_score || 0) - Number(a.user_score || 0);
+          if (userDiff !== 0) return userDiff;
+
+          const aTime = new Date(a.createdAt || a.created_at || 0).getTime();
+          const bTime = new Date(b.createdAt || b.created_at || 0).getTime();
+          return aTime - bTime;
+        });
       if (judgeRatedRows.length) {
         await replaceHomeTopTracksSnapshot(judgeRatedRows.slice(0, 10), "id");
       }
