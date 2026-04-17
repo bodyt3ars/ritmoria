@@ -74,6 +74,74 @@ function renderHomeTrackArtistLinks(track) {
   return `<span class="home-track-card-artist-link">${homeEscapeHtml(formatHomeTrackArtists(track))}</span>`;
 }
 
+function normalizeHomePlayableTrack(track, context = "home") {
+  if (!track) return null;
+
+  const audioSrc = track.audioSrc
+    || (track.audio ? `/${String(track.audio).replace(/^\/+/, "")}` : "");
+  const soundcloud = String(track.soundcloud || "").trim();
+
+  if (!audioSrc && !soundcloud) return null;
+
+  return {
+    id: Number(track.id) || 0,
+    title: String(track.title || "Без названия"),
+    artist: String(track.artist || formatHomeTrackArtists(track) || "Неизвестный артист"),
+    artist_mentions: Array.isArray(track.artist_mentions) ? track.artist_mentions : [],
+    cover: track.cover || "/images/default-cover.jpg",
+    audioSrc,
+    soundcloud,
+    slug: String(track.slug || "").trim(),
+    username_tag: String(track.username_tag || "").trim(),
+    profile_source_tag: String(track.username_tag || "").trim(),
+    play_context: context,
+    duration: Number(track.duration || 0) || 0
+  };
+}
+
+function isSameHomeTrack(a, b) {
+  if (!a || !b) return false;
+  if (a.id && b.id && Number(a.id) === Number(b.id)) return true;
+  if (a.audioSrc && b.audioSrc && a.audioSrc === b.audioSrc) return true;
+  if (a.soundcloud && b.soundcloud && a.soundcloud === b.soundcloud) return true;
+  return false;
+}
+
+function getHomeCurrentTrack() {
+  return window.getGlobalPlayerState?.().track || null;
+}
+
+function getHomePlayIcon(isPlaying) {
+  return `<i class="fa-solid fa-${isPlaying ? "pause" : "play"}"></i>`;
+}
+
+function buildHomePreviewButton(track, dataAttribute, className = "") {
+  const playable = normalizeHomePlayableTrack(track);
+  if (!playable) return "";
+
+  const playerState = window.getGlobalPlayerState?.();
+  const currentTrack = playerState?.track || null;
+  const isPlaying = isSameHomeTrack(playable, currentTrack) && !!playerState?.isPlaying;
+  const baseClass = dataAttribute === "data-home-spotlight-preview"
+    ? "home-spotlight-play"
+    : "home-track-preview-btn";
+  const classes = [baseClass, className, isPlaying ? "is-playing" : ""]
+    .filter(Boolean)
+    .join(" ");
+
+  return `
+    <button
+      type="button"
+      class="${classes}"
+      ${dataAttribute}="${homeEscapeHtml(JSON.stringify(playable))}"
+      aria-label="${isPlaying ? "Пауза" : "Слушать"} ${homeEscapeHtml(playable.title)}"
+      title="${isPlaying ? "Пауза" : "Слушать"}"
+    >
+      ${getHomePlayIcon(isPlaying)}
+    </button>
+  `;
+}
+
 function renderHomeNews(news = []) {
   const container = document.getElementById("homeNewsList");
   const block = document.getElementById("homeNewsBlock");
@@ -119,9 +187,12 @@ function renderHomeTopTracks(tracks = []) {
 
   container.innerHTML = tracks.map((track, index) => `
     <article class="home-track-card" data-track-id="${Number(track.id)}">
-      <button type="button" class="home-track-cover-btn" data-home-track-open="/track/${Number(track.id)}" aria-label="Открыть ${homeEscapeHtml(track.title || "трек")}">
-        <img src="${homeEscapeHtml(track.cover || "/images/default-cover.jpg")}" alt="${homeEscapeHtml(track.title || "Track cover")}">
-      </button>
+      <div class="home-track-cover-shell">
+        <button type="button" class="home-track-cover-btn" data-home-track-open="/track/${Number(track.id)}" aria-label="Открыть ${homeEscapeHtml(track.title || "трек")}">
+          <img src="${homeEscapeHtml(track.cover || "/images/default-cover.jpg")}" alt="${homeEscapeHtml(track.title || "Track cover")}">
+        </button>
+        ${buildHomePreviewButton(track, "data-home-track-preview")}
+      </div>
 
       <div class="home-track-card-body">
         <div class="home-track-rank">#${index + 1}</div>
@@ -152,6 +223,9 @@ function renderHomeTopTracks(tracks = []) {
 function renderHomeSpotlightTracks(tracks = []) {
   const container = document.getElementById("homeSpotlightTracks");
   if (!container) return;
+  const playerState = window.getGlobalPlayerState?.();
+  const currentTrack = playerState?.track || null;
+  const isPlayerPlaying = !!playerState?.isPlaying;
 
   if (!Array.isArray(tracks) || !tracks.length) {
     container.innerHTML = `<div class="home-loading-card">Подборка треков скоро появится.</div>`;
@@ -160,14 +234,20 @@ function renderHomeSpotlightTracks(tracks = []) {
 
   container.innerHTML = tracks.map((track) => `
     <article class="home-spotlight-item">
-      <button
-        type="button"
-        class="home-spotlight-cover"
-        data-home-spotlight-open="/${encodeURIComponent(track.username_tag || "")}/${encodeURIComponent(track.slug || "")}"
-        aria-label="Открыть ${homeEscapeHtml(track.title || "трек")}"
+      <div
+        class="home-spotlight-cover ${isSameHomeTrack(normalizeHomePlayableTrack(track), currentTrack) && isPlayerPlaying ? "is-playing" : ""}"
       >
-        <img src="${homeEscapeHtml(track.cover || "/images/default-cover.jpg")}" alt="${homeEscapeHtml(track.title || "Track cover")}">
-      </button>
+        <button
+          type="button"
+          class="home-spotlight-cover-hit"
+          data-home-spotlight-open="/${encodeURIComponent(track.username_tag || "")}/${encodeURIComponent(track.slug || "")}"
+          aria-label="Открыть ${homeEscapeHtml(track.title || "трек")}"
+        >
+          <img src="${homeEscapeHtml(track.cover || "/images/default-cover.jpg")}" alt="${homeEscapeHtml(track.title || "Track cover")}">
+          <span class="home-spotlight-glow" aria-hidden="true"></span>
+        </button>
+        ${buildHomePreviewButton(track, "data-home-spotlight-preview")}
+      </div>
       <button
         type="button"
         class="home-spotlight-copy"
@@ -221,6 +301,114 @@ function renderHomeArtists(artists = []) {
       <div class="home-artist-status home-artist-status-online"></div>
     </a>
   `).join("");
+}
+
+function syncHomePlaybackUi() {
+  const playerState = window.getGlobalPlayerState?.();
+  const currentTrack = playerState?.track || null;
+  const playerIsPlaying = !!playerState?.isPlaying;
+
+  document.querySelectorAll("[data-home-track-preview], [data-home-spotlight-preview]").forEach((button) => {
+    const raw = button.dataset.homeTrackPreview || button.dataset.homeSpotlightPreview;
+    if (!raw) return;
+
+    let track = null;
+    try {
+      track = JSON.parse(raw);
+    } catch {
+      track = null;
+    }
+
+    const isPlaying = !!track && isSameHomeTrack(track, currentTrack) && playerIsPlaying;
+    button.classList.toggle("is-playing", isPlaying);
+    button.innerHTML = getHomePlayIcon(isPlaying);
+    button.setAttribute("title", isPlaying ? "Пауза" : "Слушать");
+    button.setAttribute("aria-label", `${isPlaying ? "Пауза" : "Слушать"} ${track?.title || "трек"}`);
+
+    const spotlightCover = button.closest(".home-spotlight-cover");
+    spotlightCover?.classList.toggle("is-playing", isPlaying);
+  });
+}
+
+function bindHomePreviewButtons(selector, datasetName) {
+  document.querySelectorAll(selector).forEach((button) => {
+    if (button.dataset.previewBound === "1") return;
+    button.dataset.previewBound = "1";
+
+    button.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      let track = null;
+      try {
+        track = JSON.parse(button.dataset[datasetName] || "null");
+      } catch {
+        track = null;
+      }
+
+      if (!track) return;
+
+      const playerState = window.getGlobalPlayerState?.();
+      const currentTrack = playerState?.track || null;
+      const isCurrent = isSameHomeTrack(track, currentTrack);
+      const isPlaying = !!playerState?.isPlaying;
+
+      if (isCurrent && isPlaying) {
+        const audio = document.getElementById("global-audio");
+        if (playerState.mode === "audio" && audio) {
+          audio.pause();
+        } else if (typeof window.toggleGlobalPlayerPlayback === "function") {
+          window.toggleGlobalPlayerPlayback();
+        }
+      } else if (isCurrent && !isPlaying) {
+        if (typeof window.toggleGlobalPlayerPlayback === "function") {
+          window.toggleGlobalPlayerPlayback();
+        } else if (typeof window.playTrackGlobal === "function") {
+          window.playTrackGlobal(track);
+        }
+      } else if (typeof window.playTrackGlobal === "function") {
+        window.playTrackGlobal(track);
+      }
+
+      window.setTimeout(syncHomePlaybackUi, 40);
+    });
+  });
+}
+
+function bindHomeSpotlightCarousel() {
+  const row = document.getElementById("homeSpotlightTracks");
+  const prevBtn = document.getElementById("homeSpotlightPrev");
+  const nextBtn = document.getElementById("homeSpotlightNext");
+
+  if (!row || !prevBtn || !nextBtn) return;
+
+  if (row.dataset.carouselBound !== "1") {
+    row.dataset.carouselBound = "1";
+
+    const updateArrows = () => {
+      const maxScroll = Math.max(0, row.scrollWidth - row.clientWidth);
+      prevBtn.disabled = row.scrollLeft <= 6;
+      nextBtn.disabled = row.scrollLeft >= maxScroll - 6;
+    };
+
+    const scrollByPage = (direction) => {
+      const firstItem = row.querySelector(".home-spotlight-item");
+      const itemWidth = firstItem ? firstItem.getBoundingClientRect().width + 14 : 140;
+      row.scrollBy({
+        left: direction * itemWidth * 3,
+        behavior: "smooth"
+      });
+      window.setTimeout(updateArrows, 260);
+    };
+
+    prevBtn.addEventListener("click", () => scrollByPage(-1));
+    nextBtn.addEventListener("click", () => scrollByPage(1));
+    row.addEventListener("scroll", updateArrows, { passive: true });
+    window.addEventListener("resize", updateArrows);
+    row._updateHomeSpotlightArrows = updateArrows;
+  }
+
+  row._updateHomeSpotlightArrows?.();
 }
 
 function bindHomeInteractions(homeData) {
@@ -291,6 +479,57 @@ function bindHomeInteractions(homeData) {
       if (href) navigate(href);
     });
   });
+
+  bindHomePreviewButtons("[data-home-track-preview]", "homeTrackPreview");
+  bindHomePreviewButtons("[data-home-spotlight-preview]", "homeSpotlightPreview");
+  bindHomeSpotlightCarousel();
+  syncHomePlaybackUi();
+
+  if (!window.__homePlaybackUiBound) {
+    window.__homePlaybackUiBound = true;
+    [
+      "ritmoria:global-player-track-change",
+      "ritmoria:global-player-play",
+      "ritmoria:global-player-pause",
+      "ritmoria:global-player-stopped"
+    ].forEach((eventName) => {
+      window.addEventListener(eventName, () => {
+        syncHomePlaybackUi();
+      });
+    });
+  }
+}
+
+async function refreshHomeTracksOnly() {
+  const root = document.querySelector(".home-page");
+  if (!root) return;
+
+  const data = await loadHomePageData();
+  renderHomeTopTracks(data.topTracks || []);
+  renderHomeSpotlightTracks(data.spotlightTracks || []);
+  bindHomeInteractions({
+    topTracks: Array.isArray(data.topTracks) ? data.topTracks : []
+  });
+}
+
+function ensureHomeAutoRefresh() {
+  if (window.__homeTrackRefreshInterval) {
+    window.clearInterval(window.__homeTrackRefreshInterval);
+  }
+
+  window.__homeTrackRefreshInterval = window.setInterval(async () => {
+    if (!document.querySelector(".home-page")) {
+      window.clearInterval(window.__homeTrackRefreshInterval);
+      window.__homeTrackRefreshInterval = null;
+      return;
+    }
+
+    try {
+      await refreshHomeTracksOnly();
+    } catch (err) {
+      console.error("home track refresh error:", err);
+    }
+  }, 5 * 60 * 1000);
 }
 
 async function loadHomePageData() {
@@ -348,6 +587,7 @@ window.initHomePage = async function initHomePage() {
     bindHomeInteractions({
       topTracks: Array.isArray(data.topTracks) ? data.topTracks : []
     });
+    ensureHomeAutoRefresh();
   } catch (err) {
     console.error("initHomePage error:", err);
     renderHomeNews([]);

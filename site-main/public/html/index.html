@@ -22,8 +22,28 @@
         <div class="home-feed-header home-feed-header-compact">
           <h2 class="home-feed-title">Открывай треки</h2>
         </div>
-        <div id="homeSpotlightTracks" class="home-spotlight-row">
-          <div class="home-loading-card">Загрузка подборки...</div>
+        <div class="home-spotlight-shell">
+          <button
+            type="button"
+            class="home-spotlight-arrow home-spotlight-arrow-prev"
+            id="homeSpotlightPrev"
+            aria-label="Показать предыдущие треки"
+          >
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+
+          <div id="homeSpotlightTracks" class="home-spotlight-row">
+            <div class="home-loading-card">Загрузка подборки...</div>
+          </div>
+
+          <button
+            type="button"
+            class="home-spotlight-arrow home-spotlight-arrow-next"
+            id="homeSpotlightNext"
+            aria-label="Показать следующие треки"
+          >
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
         </div>
       </section>
 

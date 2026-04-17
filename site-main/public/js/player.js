@@ -2592,6 +2592,30 @@
     }
   };
 
+  window.toggleGlobalPlayerPlayback = function () {
+    ensurePlayerMarkup();
+
+    if (currentMode === "audio" && audioEl) {
+      if (audioEl.paused) {
+        audioEl.play().catch(() => {});
+      } else {
+        audioEl.pause();
+      }
+      return;
+    }
+
+    if (currentMode === "soundcloud" && scWidgetInstance) {
+      const isPlaying =
+        document.getElementById("global-player")?.dataset.playing === "1";
+
+      if (isPlaying) {
+        scWidgetInstance.pause();
+      } else {
+        scWidgetInstance.play();
+      }
+    }
+  };
+
   window.suspendGlobalPlayerForEmbedded = function (source = "") {
     ensurePlayerMarkup();
 

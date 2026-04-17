@@ -1669,6 +1669,8 @@ async function ensureHomeNewsSchema() {
         title varchar(255) NOT NULL,
         artist text,
         cover text,
+        audio text,
+        soundcloud text,
         duration integer,
         username varchar(255),
         username_tag varchar(80),
@@ -1680,6 +1682,12 @@ async function ensureHomeNewsSchema() {
         judge_votes_count integer DEFAULT 0,
         snapshot_at timestamp without time zone NOT NULL DEFAULT now()
       );
+
+      ALTER TABLE home_stream_top_tracks
+        ADD COLUMN IF NOT EXISTS audio text;
+
+      ALTER TABLE home_stream_top_tracks
+        ADD COLUMN IF NOT EXISTS soundcloud text;
 
       CREATE INDEX IF NOT EXISTS idx_home_stream_top_tracks_position
         ON home_stream_top_tracks(position);
@@ -1745,6 +1753,8 @@ async function saveClosedQueueTopTracksSnapshot() {
       t.title,
       t.artist,
       t.cover,
+      t.audio,
+      t.soundcloud,
       t.duration,
       COALESCE(u.username, u.username_tag, 'Артист') AS username,
       u.username_tag,
@@ -1896,6 +1906,8 @@ async function replaceHomeTopTracksSnapshot(rows = [], idField = "track_id") {
         title,
         artist,
         cover,
+        audio,
+        soundcloud,
         duration,
         username,
         username_tag,
@@ -1906,7 +1918,7 @@ async function replaceHomeTopTracksSnapshot(rows = [], idField = "track_id") {
         user_votes_count,
         judge_votes_count
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       `,
       [
         index + 1,
@@ -1914,6 +1926,8 @@ async function replaceHomeTopTracksSnapshot(rows = [], idField = "track_id") {
         String(row.title || "Без названия"),
         row.artist || "",
         row.cover || "",
+        row.audio || "",
+        row.soundcloud || "",
         Number(row.duration || 0) || 0,
         row.username || "",
         row.username_tag || "",
@@ -1936,6 +1950,8 @@ async function getHomeTopTracksSnapshot() {
       title,
       artist,
       cover,
+      audio,
+      soundcloud,
       duration,
       username,
       username_tag,
@@ -1971,6 +1987,8 @@ async function getHomeTopTracksSnapshot() {
       t.title,
       t.artist,
       t.cover,
+      t.audio,
+      t.soundcloud,
       t.duration,
       COALESCE(u.username, u.username_tag, 'Артист') AS username,
       u.username_tag,
@@ -5950,6 +5968,8 @@ app.get("/api/home", async (req, res) => {
             t.title,
             t.artist,
             t.cover,
+            t.audio,
+            t.soundcloud,
             t.duration,
             t.created_at,
             t.user_id,
