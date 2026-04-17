@@ -65,7 +65,12 @@ function renderHomeTrackArtistLinks(track) {
   if (Array.isArray(track.artist_mentions) && track.artist_mentions.length) {
     if (profileTag) {
       return `
-        <button type="button" class="home-track-card-artist-link" onclick="openHomeProfile(event, '${homeEscapeHtml(profileTag)}')">
+        <button
+          type="button"
+          class="home-track-card-artist-link"
+          data-home-profile-link="${homeEscapeHtml(profileTag)}"
+          onclick="openHomeProfile(event, '${homeEscapeHtml(profileTag)}')"
+        >
           ${homeEscapeHtml(track.username || track.username_tag || profileTag)}
         </button>
       `;
@@ -74,7 +79,12 @@ function renderHomeTrackArtistLinks(track) {
 
   if (profileTag) {
     return `
-      <button type="button" class="home-track-card-artist-link" onclick="openHomeProfile(event, '${homeEscapeHtml(profileTag)}')">
+      <button
+        type="button"
+        class="home-track-card-artist-link"
+        data-home-profile-link="${homeEscapeHtml(profileTag)}"
+        onclick="openHomeProfile(event, '${homeEscapeHtml(profileTag)}')"
+      >
         ${homeEscapeHtml(track.username || track.username_tag || profileTag)}
       </button>
     `;

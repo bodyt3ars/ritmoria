@@ -461,6 +461,8 @@
 .home-page .home-track-card-artist-link {
   display: inline-flex;
   align-items: center;
+  position: relative;
+  z-index: 2;
   padding: 0;
   border: 0;
   background: none;
@@ -469,6 +471,7 @@
   font-weight: 600;
   cursor: pointer;
   font: inherit;
+  pointer-events: auto;
 }
 
 .home-page .home-track-card-artist-link:hover {
