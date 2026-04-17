@@ -52,32 +52,35 @@ function formatHomeTrackArtists(track) {
 function renderHomeTrackArtistLinks(track) {
   const profileTag = String(track.username_tag || track.username || "").trim().replace(/^@+/, "");
   const profileHref = `/${encodeURIComponent(profileTag)}`;
+  const profileLabel = homeEscapeHtml(track.username || track.username_tag || profileTag);
 
   if (Array.isArray(track.artist_mentions) && track.artist_mentions.length) {
     if (profileTag) {
       return `
-        <a
-          href="${profileHref}"
-          class="home-track-card-artist-link"
+        <button
+          type="button"
+          class="home-track-card-artist-button"
           data-home-profile-link="${homeEscapeHtml(profileTag)}"
-          onclick="event.preventDefault(); event.stopPropagation(); window.location.href='${profileHref}';"
+          onclick="event.preventDefault(); event.stopPropagation(); window.location.assign('${profileHref}');"
+          onmousedown="event.stopPropagation();"
         >
-          ${homeEscapeHtml(track.username || track.username_tag || profileTag)}
-        </a>
+          <span class="home-track-card-artist-link">${profileLabel}</span>
+        </button>
       `;
     }
   }
 
   if (profileTag) {
     return `
-      <a
-        href="${profileHref}"
-        class="home-track-card-artist-link"
+      <button
+        type="button"
+        class="home-track-card-artist-button"
         data-home-profile-link="${homeEscapeHtml(profileTag)}"
-        onclick="event.preventDefault(); event.stopPropagation(); window.location.href='${profileHref}';"
+        onclick="event.preventDefault(); event.stopPropagation(); window.location.assign('${profileHref}');"
+        onmousedown="event.stopPropagation();"
       >
-        ${homeEscapeHtml(track.username || track.username_tag || profileTag)}
-      </a>
+        <span class="home-track-card-artist-link">${profileLabel}</span>
+      </button>
     `;
   }
 

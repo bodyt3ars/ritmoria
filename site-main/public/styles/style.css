@@ -456,6 +456,22 @@
   display: flex;
   flex-wrap: wrap;
   margin-bottom: 12px;
+  position: relative;
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.home-page .home-track-card-artist-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
 }
 
 .home-page .home-track-card-artist-link {
