@@ -11,6 +11,12 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
+const ASSET_VERSION = "20260417-2";
+
+function withAssetVersion(url) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${ASSET_VERSION}`;
+}
 
 async function loadPage(url) {
   try {
@@ -41,7 +47,7 @@ function loadScriptOnce(src) {
 
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = src;
+    script.src = withAssetVersion(src);
     script.async = true;
 
     script.onload = () => {
@@ -69,7 +75,7 @@ async function addPageStyles(styles = []) {
     return new Promise((resolve, reject) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = href;
+      link.href = withAssetVersion(href);
       link.dataset.pageStyle = "true";
 
       link.onload = () => resolve(link);
