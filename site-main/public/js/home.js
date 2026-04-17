@@ -149,6 +149,37 @@ function renderHomeTopTracks(tracks = []) {
   `).join("");
 }
 
+function renderHomeSpotlightTracks(tracks = []) {
+  const container = document.getElementById("homeSpotlightTracks");
+  if (!container) return;
+
+  if (!Array.isArray(tracks) || !tracks.length) {
+    container.innerHTML = `<div class="home-loading-card">Подборка треков скоро появится.</div>`;
+    return;
+  }
+
+  container.innerHTML = tracks.map((track) => `
+    <article class="home-spotlight-item">
+      <button
+        type="button"
+        class="home-spotlight-cover"
+        data-home-spotlight-open="/${encodeURIComponent(track.username_tag || "")}/${encodeURIComponent(track.slug || "")}"
+        aria-label="Открыть ${homeEscapeHtml(track.title || "трек")}"
+      >
+        <img src="${homeEscapeHtml(track.cover || "/images/default-cover.jpg")}" alt="${homeEscapeHtml(track.title || "Track cover")}">
+      </button>
+      <button
+        type="button"
+        class="home-spotlight-copy"
+        data-home-spotlight-open="/${encodeURIComponent(track.username_tag || "")}/${encodeURIComponent(track.slug || "")}"
+      >
+        <span class="home-spotlight-title">${homeEscapeHtml(track.title || "Без названия")}</span>
+        <span class="home-spotlight-artist">${homeEscapeHtml(track.username || track.username_tag || "Артист")}</span>
+      </button>
+    </article>
+  `).join("");
+}
+
 function renderHomePosts(posts = []) {
   const container = document.getElementById("homeFeedPosts");
   if (!container) return;
@@ -249,6 +280,17 @@ function bindHomeInteractions(homeData) {
       if (href) navigate(href);
     });
   });
+
+  document.querySelectorAll("[data-home-spotlight-open]").forEach((button) => {
+    if (button.dataset.openBound === "1") return;
+    button.dataset.openBound = "1";
+    button.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const href = button.dataset.homeSpotlightOpen;
+      if (href) navigate(href);
+    });
+  });
 }
 
 async function loadHomePageData() {
@@ -286,6 +328,12 @@ window.initHomePage = async function initHomePage() {
     }
 
     try {
+      renderHomeSpotlightTracks(data.spotlightTracks || []);
+    } catch (err) {
+      console.error("renderHomeSpotlightTracks error:", err);
+    }
+
+    try {
       renderHomePosts(data.recommendedPosts || []);
     } catch (err) {
       console.error("renderHomePosts error:", err);
@@ -304,6 +352,7 @@ window.initHomePage = async function initHomePage() {
     console.error("initHomePage error:", err);
     renderHomeNews([]);
     renderHomeTopTracks([]);
+    renderHomeSpotlightTracks([]);
     renderHomePosts([]);
     renderHomeArtists([]);
   }

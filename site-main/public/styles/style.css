@@ -43,6 +43,10 @@
   margin-bottom: 18px;
 }
 
+.home-page .home-feed-header-compact {
+  margin-bottom: 12px;
+}
+
 .home-page .home-news-block {
   margin-bottom: 26px;
   padding: 18px 18px 6px;
@@ -130,6 +134,99 @@
   gap: 18px;
 }
 
+.home-page .home-right-panel .home-side-list {
+  max-height: 1320px;
+  overflow: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+}
+
+.home-page .home-spotlight-block {
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+
+.home-page .home-spotlight-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: none;
+}
+
+.home-page .home-spotlight-row::-webkit-scrollbar {
+  display: none;
+}
+
+.home-page .home-spotlight-item {
+  flex: 0 0 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-page .home-spotlight-cover {
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    linear-gradient(180deg, rgba(44, 28, 46, 0.92), rgba(20, 16, 32, 0.96)),
+    radial-gradient(circle at top left, rgba(255, 110, 182, 0.22), transparent 42%);
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.24),
+    0 0 0 1px rgba(255, 158, 210, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-page .home-spotlight-cover:hover,
+.home-page .home-spotlight-copy:hover {
+  transform: translateY(-2px);
+}
+
+.home-page .home-spotlight-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.home-page .home-spotlight-copy {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: center;
+  color: inherit;
+}
+
+.home-page .home-spotlight-title,
+.home-page .home-spotlight-artist {
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-page .home-spotlight-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff4fa;
+}
+
+.home-page .home-spotlight-artist {
+  margin-top: 2px;
+  font-size: 11px;
+  color: rgba(255, 228, 239, 0.68);
+}
+
 .home-page .home-posts-shell .post-card,
 .home-page .home-posts-shell .post-inline-comments-wrap {
   max-width: none;
@@ -142,6 +239,10 @@
     linear-gradient(180deg, rgba(52, 32, 53, 0.9), rgba(24, 18, 34, 0.94)),
     radial-gradient(circle at top left, rgba(255, 119, 180, 0.1), transparent 42%);
   border: 1px solid rgba(255, 159, 203, 0.14);
+}
+
+.home-page .home-posts-shell {
+  margin-top: 10px;
 }
 
 .home-page .home-posts-shell .video-player {
@@ -866,8 +967,17 @@
   }
 
   .home-page .home-left-panel,
-  .home-page .home-right-panel {
-    width: 100%;
+.home-page .home-right-panel {
+  width: 100%;
+}
+
+  .home-page .home-spotlight-item {
+    flex-basis: 84px;
+  }
+
+  .home-page .home-spotlight-cover {
+    width: 84px;
+    height: 84px;
   }
 }
 

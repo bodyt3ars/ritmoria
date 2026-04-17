@@ -5765,120 +5765,133 @@ app.get("/api/home", async (req, res) => {
       getHomeTopTracksSnapshot(),
       pool.query(
         `
-        SELECT
-          posts.*,
-          COALESCE(users.username, users.username_tag, 'Без имени') AS username,
-          users.avatar,
-          users.username_tag,
-          (
-            SELECT COUNT(*)::int
-            FROM post_views
-            WHERE post_views.post_id = posts.id
-          ) AS views_count,
-          (
-            SELECT COUNT(*)::int
-            FROM post_reactions
-            WHERE post_reactions.post_id = posts.id AND post_reactions.reaction = 'like'
-          ) AS likes_count,
-          (
-            SELECT COUNT(*)::int
-            FROM post_reactions
-            WHERE post_reactions.post_id = posts.id AND post_reactions.reaction = 'dislike'
-          ) AS dislikes_count,
-          (
-            SELECT COUNT(*)::int
-            FROM post_comments
-            WHERE post_comments.post_id = posts.id
-          ) AS comments_count,
-          (
-            SELECT reaction
-            FROM post_reactions
-            WHERE post_reactions.post_id = posts.id AND post_reactions.user_id = $1
-            LIMIT 1
-          ) AS my_reaction,
-          EXISTS(
-            SELECT 1
-            FROM post_reposts
-            WHERE post_reposts.post_id = posts.id
-              AND post_reposts.user_id = $1
-          ) AS reposted,
-          (
-            CASE
-              WHEN COALESCE(posts.is_pinned, false) THEN 40
-              ELSE 0
-            END
-            +
-            CASE
-              WHEN $1::int IS NOT NULL AND EXISTS(
-                SELECT 1
-                FROM follows f
-                WHERE f.follower_id = $1
-                  AND f.following_id = posts.user_id
-              ) THEN 24
-              ELSE 0
-            END
-            +
-            CASE
-              WHEN $1::int IS NOT NULL AND NOT EXISTS(
-                SELECT 1
+        WITH scored_posts AS (
+          SELECT
+            posts.*,
+            COALESCE(users.username, users.username_tag, 'Без имени') AS username,
+            users.avatar,
+            users.username_tag,
+            (
+              SELECT COUNT(*)::int
+              FROM post_views
+              WHERE post_views.post_id = posts.id
+            ) AS views_count,
+            (
+              SELECT COUNT(*)::int
+              FROM post_reactions
+              WHERE post_reactions.post_id = posts.id AND post_reactions.reaction = 'like'
+            ) AS likes_count,
+            (
+              SELECT COUNT(*)::int
+              FROM post_reactions
+              WHERE post_reactions.post_id = posts.id AND post_reactions.reaction = 'dislike'
+            ) AS dislikes_count,
+            (
+              SELECT COUNT(*)::int
+              FROM post_comments
+              WHERE post_comments.post_id = posts.id
+            ) AS comments_count,
+            (
+              SELECT reaction
+              FROM post_reactions
+              WHERE post_reactions.post_id = posts.id AND post_reactions.user_id = $1
+              LIMIT 1
+            ) AS my_reaction,
+            EXISTS(
+              SELECT 1
+              FROM post_reposts
+              WHERE post_reposts.post_id = posts.id
+                AND post_reposts.user_id = $1
+            ) AS reposted,
+            RANDOM() AS random_seed,
+            (
+              CASE
+                WHEN COALESCE(posts.is_pinned, false) THEN 38
+                ELSE 0
+              END
+              +
+              CASE
+                WHEN $1::int IS NOT NULL AND EXISTS(
+                  SELECT 1
+                  FROM follows f
+                  WHERE f.follower_id = $1
+                    AND f.following_id = posts.user_id
+                ) THEN 18
+                ELSE 0
+              END
+              +
+              CASE
+                WHEN $1::int IS NOT NULL AND NOT EXISTS(
+                  SELECT 1
+                  FROM post_views pv
+                  WHERE pv.post_id = posts.id
+                    AND pv.user_id = $1
+                ) THEN 26
+                ELSE 0
+              END
+              +
+              CASE
+                WHEN posts.user_id = $1 THEN -24
+                ELSE 0
+              END
+              +
+              LEAST(42, COALESCE((
+                SELECT COUNT(*)::int * 6
+                FROM post_reactions pr
+                WHERE pr.post_id = posts.id
+                  AND pr.reaction = 'like'
+              ), 0))
+              -
+              LEAST(16, COALESCE((
+                SELECT COUNT(*)::int * 4
+                FROM post_reactions pr
+                WHERE pr.post_id = posts.id
+                  AND pr.reaction = 'dislike'
+              ), 0))
+              +
+              LEAST(30, COALESCE((
+                SELECT COUNT(*)::int * 7
+                FROM post_comments pc
+                WHERE pc.post_id = posts.id
+              ), 0))
+              +
+              LEAST(24, COALESCE((
+                SELECT COUNT(*)::int * 8
+                FROM post_reposts rep
+                WHERE rep.post_id = posts.id
+              ), 0))
+              +
+              LEAST(18, COALESCE((
+                SELECT FLOOR(COUNT(*)::numeric / 3)::int
                 FROM post_views pv
                 WHERE pv.post_id = posts.id
-                  AND pv.user_id = $1
-              ) THEN 16
-              ELSE 0
-            END
-            +
-            CASE
-              WHEN posts.user_id = $1 THEN -18
-              ELSE 0
-            END
-            +
-            LEAST(36, COALESCE((
-              SELECT COUNT(*)::int * 6
-              FROM post_reactions pr
-              WHERE pr.post_id = posts.id
-                AND pr.reaction = 'like'
-            ), 0))
-            -
-            LEAST(18, COALESCE((
-              SELECT COUNT(*)::int * 4
-              FROM post_reactions pr
-              WHERE pr.post_id = posts.id
-                AND pr.reaction = 'dislike'
-            ), 0))
-            +
-            LEAST(28, COALESCE((
-              SELECT COUNT(*)::int * 7
-              FROM post_comments pc
-              WHERE pc.post_id = posts.id
-            ), 0))
-            +
-            LEAST(24, COALESCE((
-              SELECT COUNT(*)::int * 8
-              FROM post_reposts rep
-              WHERE rep.post_id = posts.id
-            ), 0))
-            +
-            LEAST(14, COALESCE((
-              SELECT FLOOR(COUNT(*)::numeric / 3)::int
-              FROM post_views pv
-              WHERE pv.post_id = posts.id
-            ), 0))
-            +
-            GREATEST(
-              0,
-              18 - FLOOR(EXTRACT(EPOCH FROM (now() - posts.created_at)) / 3600 / 10)::int
-            )
-            +
-            FLOOR(RANDOM() * 15)::int
-          ) AS recommendation_score
-        FROM posts
-        JOIN users ON users.id = posts.user_id
-        WHERE COALESCE(posts.is_archived, false) = false
-        ORDER BY
-          recommendation_score DESC,
-          RANDOM()
-        LIMIT 6
+              ), 0))
+              +
+              GREATEST(
+                0,
+                20 - FLOOR(EXTRACT(EPOCH FROM (now() - posts.created_at)) / 3600 / 9)::int
+              )
+              +
+              FLOOR(RANDOM() * 26)::int
+            ) AS recommendation_score
+          FROM posts
+          JOIN users ON users.id = posts.user_id
+          WHERE COALESCE(posts.is_archived, false) = false
+        ),
+        diversified_posts AS (
+          SELECT
+            scored_posts.*,
+            ROW_NUMBER() OVER (
+              PARTITION BY scored_posts.user_id
+              ORDER BY scored_posts.recommendation_score DESC, scored_posts.random_seed ASC
+            ) AS author_slot
+          FROM scored_posts
+        )
+        SELECT *
+        FROM diversified_posts
+        WHERE author_slot <= 2
+        ORDER BY recommendation_score DESC, random_seed ASC
+        LIMIT 18
         `,
         [viewerId]
       ),
@@ -5910,7 +5923,13 @@ app.get("/api/home", async (req, res) => {
             JOIN user_tracks t ON t.id = tls.track_id
             WHERE t.user_id = u.id
               AND COALESCE(t.is_archived, false) = false
-          ), 0) AS total_listens
+          ), 0) AS total_listens,
+          COALESCE((
+            SELECT COUNT(*)::int
+            FROM user_tracks t
+            WHERE t.user_id = u.id
+              AND COALESCE(t.is_archived, false) = false
+          ), 0) AS tracks_count
         FROM users u
         WHERE EXISTS (
           SELECT 1
@@ -5918,13 +5937,90 @@ app.get("/api/home", async (req, res) => {
           WHERE t.user_id = u.id
             AND COALESCE(t.is_archived, false) = false
         )
-        ORDER BY total_likes DESC, total_listens DESC, u.created_at DESC
-        LIMIT 5
+        ORDER BY total_likes DESC, total_listens DESC, tracks_count DESC, u.created_at DESC
+        LIMIT 20
+        `
+      ),
+      pool.query(
+        `
+        WITH scored_tracks AS (
+          SELECT
+            t.id,
+            t.slug,
+            t.title,
+            t.artist,
+            t.cover,
+            t.duration,
+            t.created_at,
+            t.user_id,
+            COALESCE(u.username, u.username_tag, 'Артист') AS username,
+            u.username_tag,
+            u.avatar,
+            COALESCE((
+              SELECT COUNT(*)::int
+              FROM track_likes tl
+              WHERE tl.track_id = t.id
+            ), 0) AS likes_count,
+            COALESCE((
+              SELECT COUNT(*)::int
+              FROM track_listens tls
+              WHERE tls.track_id = t.id
+            ), 0) AS listens_count,
+            COALESCE((
+              SELECT COUNT(*)::int
+              FROM track_comments tc
+              WHERE tc.track_id = t.id
+            ), 0) AS comments_count,
+            RANDOM() AS random_seed,
+            (
+              LEAST(30, COALESCE((
+                SELECT COUNT(*)::int * 5
+                FROM track_likes tl
+                WHERE tl.track_id = t.id
+              ), 0))
+              +
+              LEAST(24, COALESCE((
+                SELECT FLOOR(COUNT(*)::numeric / 4)::int
+                FROM track_listens tls
+                WHERE tls.track_id = t.id
+              ), 0))
+              +
+              LEAST(18, COALESCE((
+                SELECT COUNT(*)::int * 6
+                FROM track_comments tc
+                WHERE tc.track_id = t.id
+              ), 0))
+              +
+              GREATEST(
+                0,
+                18 - FLOOR(EXTRACT(EPOCH FROM (now() - t.created_at)) / 3600 / 12)::int
+              )
+              +
+              FLOOR(RANDOM() * 28)::int
+            ) AS spotlight_score
+          FROM user_tracks t
+          JOIN users u ON u.id = t.user_id
+          WHERE COALESCE(t.is_archived, false) = false
+        ),
+        diversified_tracks AS (
+          SELECT
+            scored_tracks.*,
+            ROW_NUMBER() OVER (
+              PARTITION BY scored_tracks.user_id
+              ORDER BY scored_tracks.spotlight_score DESC, scored_tracks.random_seed ASC
+            ) AS author_slot
+          FROM scored_tracks
+        )
+        SELECT *
+        FROM diversified_tracks
+        WHERE author_slot = 1
+        ORDER BY spotlight_score DESC, random_seed ASC
+        LIMIT 12
         `
       )
     ]);
 
-    const [newsResult, topTracksResult, postsResult, topArtistsResult] = results;
+    const [newsResult, topTracksResult, postsResult, topArtistsResult, spotlightTracksResult] = results;
 
     if (newsResult.status === "rejected") {
       console.error("HOME API NEWS ERROR:", newsResult.reason);
@@ -5942,19 +6038,26 @@ app.get("/api/home", async (req, res) => {
       console.error("HOME API TOP ARTISTS ERROR:", topArtistsResult.reason);
     }
 
+    if (spotlightTracksResult.status === "rejected") {
+      console.error("HOME API SPOTLIGHT TRACKS ERROR:", spotlightTracksResult.reason);
+    }
+
     const news = newsResult.status === "fulfilled" ? newsResult.value.rows : [];
     const rawTopTracks = topTracksResult.status === "fulfilled" ? topTracksResult.value : [];
     const recommendedPosts = postsResult.status === "fulfilled" ? postsResult.value.rows : [];
     const topArtists = topArtistsResult.status === "fulfilled" ? topArtistsResult.value.rows : [];
+    const rawSpotlightTracks = spotlightTracksResult.status === "fulfilled" ? spotlightTracksResult.value.rows : [];
 
     const safeTopTracks = Array.isArray(rawTopTracks) ? rawTopTracks : (rawTopTracks?.rows || []);
     const topTracks = await attachArtistMentionsToTracks(safeTopTracks);
+    const spotlightTracks = await attachArtistMentionsToTracks(rawSpotlightTracks);
 
     res.json({
       news,
       topTracks,
       recommendedPosts,
-      topArtists
+      topArtists,
+      spotlightTracks
     });
   } catch (err) {
     console.error("HOME API ERROR:", err);
