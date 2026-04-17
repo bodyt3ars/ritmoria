@@ -51,36 +51,23 @@ function formatHomeTrackArtists(track) {
 
 function renderHomeTrackArtistLinks(track) {
   const profileTag = String(track.username_tag || track.username || "").trim().replace(/^@+/, "");
-  const profileHref = `/${encodeURIComponent(profileTag)}`;
   const profileLabel = homeEscapeHtml(track.username || track.username_tag || profileTag);
 
   if (Array.isArray(track.artist_mentions) && track.artist_mentions.length) {
     if (profileTag) {
       return `
-        <button
-          type="button"
-          class="home-track-card-artist-button"
-          data-home-profile-link="${homeEscapeHtml(profileTag)}"
-          onclick="event.preventDefault(); event.stopPropagation(); window.location.assign('${profileHref}');"
-          onmousedown="event.stopPropagation();"
-        >
-          <span class="home-track-card-artist-link">${profileLabel}</span>
-        </button>
+        <span class="home-track-card-artist-link home-track-card-artist-linkable" data-home-artist-tag="${homeEscapeHtml(profileTag)}">
+          ${profileLabel}
+        </span>
       `;
     }
   }
 
   if (profileTag) {
     return `
-      <button
-        type="button"
-        class="home-track-card-artist-button"
-        data-home-profile-link="${homeEscapeHtml(profileTag)}"
-        onclick="event.preventDefault(); event.stopPropagation(); window.location.assign('${profileHref}');"
-        onmousedown="event.stopPropagation();"
-      >
-        <span class="home-track-card-artist-link">${profileLabel}</span>
-      </button>
+      <span class="home-track-card-artist-link home-track-card-artist-linkable" data-home-artist-tag="${homeEscapeHtml(profileTag)}">
+        ${profileLabel}
+      </span>
     `;
   }
 
@@ -209,6 +196,27 @@ function bindHomeInteractions(homeData) {
   if (typeof window.initPostUiBindings === "function") {
     window.initPostUiBindings();
   }
+
+  document.querySelectorAll("[data-home-artist-tag]").forEach((el) => {
+    if (el.dataset.artistBound === "1") return;
+    el.dataset.artistBound = "1";
+
+    const safeTag = String(el.dataset.homeArtistTag || "").trim().replace(/^@+/, "");
+    const targetPath = safeTag ? `/${safeTag}` : "";
+
+    el.onclick = null;
+    if (!targetPath) return;
+
+    el.onclick = (e) => {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+      if (typeof window.navigate === "function") {
+        window.navigate(targetPath);
+      } else {
+        window.location.href = targetPath;
+      }
+    };
+  });
 
   document.querySelectorAll("[data-home-profile-link]").forEach((link) => {
     if (link.dataset.spaBound === "1") return;
