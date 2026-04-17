@@ -1759,9 +1759,19 @@ async function saveClosedQueueTopTracksSnapshot() {
       ), 0) AS judge_votes_count
     FROM tracks t
     LEFT JOIN users u ON u.id = t.user_id
+    WHERE EXISTS (
+      SELECT 1
+      FROM track_ratings tr
+      WHERE tr.track_id = t.id
+        AND tr.type = 'judge'
+    )
     ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
     LIMIT 10
   `);
+
+  if (!snapshotRes.rows.length) {
+    return false;
+  }
 
   await pool.query("DELETE FROM home_stream_top_tracks");
 
@@ -1804,6 +1814,8 @@ async function saveClosedQueueTopTracksSnapshot() {
       ]
     );
   }
+
+  return true;
 }
 
 async function getHomeTopTracksSnapshot() {
@@ -1890,10 +1902,60 @@ async function getHomeTopTracksSnapshot() {
       now() AS snapshot_at
     FROM tracks t
     LEFT JOIN users u ON u.id = t.user_id
+    WHERE EXISTS (
+      SELECT 1
+      FROM track_ratings tr
+      WHERE tr.track_id = t.id
+        AND tr.type = 'judge'
+    )
     ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
     LIMIT 10
     `
   );
+
+  if (liveRes.rows.length) {
+    await pool.query("DELETE FROM home_stream_top_tracks");
+
+    for (const [index, row] of liveRes.rows.entries()) {
+      await pool.query(
+        `
+        INSERT INTO home_stream_top_tracks (
+          position,
+          track_id,
+          title,
+          artist,
+          cover,
+          duration,
+          username,
+          username_tag,
+          avatar,
+          user_score,
+          judge_score,
+          total_score,
+          user_votes_count,
+          judge_votes_count
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        `,
+        [
+          index + 1,
+          Number(row.id) || null,
+          String(row.title || "Без названия"),
+          row.artist || "",
+          row.cover || "",
+          Number(row.duration || 0) || 0,
+          row.username || "",
+          row.username_tag || "",
+          row.avatar || "",
+          Number(row.user_score || 0) || 0,
+          Number(row.judge_score || 0) || 0,
+          Number(row.total_score || 0) || 0,
+          Number(row.user_votes_count || 0) || 0,
+          Number(row.judge_votes_count || 0) || 0
+        ]
+      );
+    }
+  }
 
   return liveRes.rows;
 }
