@@ -1,4 +1,5 @@
 function initJudgePage() {
+  const judgePageRoot = document.querySelector(".judge-page");
   const rateBtn = document.getElementById("rateBtn");
   const resetBtn = document.getElementById("resetBtn");
 
@@ -24,9 +25,9 @@ function initJudgePage() {
   const playerArtist = document.getElementById("playerArtist");
   const judgePlayerRoot = document.querySelector(".judge-custom-player");
 
-  if (!rateBtn || !audio || !playBtn || !volume) return;
-  if (document.body.dataset.judgeInitialized === "true") return;
-  document.body.dataset.judgeInitialized = "true";
+  if (!judgePageRoot || !rateBtn || !audio || !playBtn || !volume) return;
+  if (judgePageRoot.dataset.judgeInitialized === "true") return;
+  judgePageRoot.dataset.judgeInitialized = "true";
 
   let isMP3 = false;
   let scWidget = null;
