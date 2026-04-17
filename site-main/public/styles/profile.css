@@ -175,6 +175,51 @@
   color: #ffeef7;
 }
 
+.profile-place-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-place-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.profile-place-badge.is-first {
+  border-color: rgba(255, 208, 107, 0.24);
+  background: linear-gradient(180deg, rgba(255, 215, 117, 0.18), rgba(92, 61, 16, 0.24));
+}
+
+.profile-place-badge.is-second {
+  border-color: rgba(217, 224, 235, 0.22);
+  background: linear-gradient(180deg, rgba(222, 228, 237, 0.16), rgba(84, 90, 104, 0.24));
+}
+
+.profile-place-badge.is-third {
+  border-color: rgba(226, 163, 119, 0.22);
+  background: linear-gradient(180deg, rgba(214, 143, 96, 0.17), rgba(88, 48, 29, 0.24));
+}
+
+.profile-place-badge-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.profile-place-badge-count {
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff3fa;
+}
+
 .profile-username-edit {
   display: flex;
   align-items: center;

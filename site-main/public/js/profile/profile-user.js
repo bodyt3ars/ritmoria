@@ -205,6 +205,49 @@ function renderUserBadge(user) {
   badge.onclick = collectiveId ? () => openCollectiveModal(collectiveId, badgeName) : null;
 }
 
+function renderProfilePlaceBadges(user) {
+  const container = document.getElementById("profilePlaceBadges");
+  if (!container) return;
+
+  const places = [
+    {
+      count: Number(user?.first_places || 0),
+      icon: "#1",
+      label: "первых мест",
+      className: "is-first"
+    },
+    {
+      count: Number(user?.second_places || 0),
+      icon: "#2",
+      label: "вторых мест",
+      className: "is-second"
+    },
+    {
+      count: Number(user?.third_places || 0),
+      icon: "#3",
+      label: "третьих мест",
+      className: "is-third"
+    }
+  ].filter((item) => item.count > 0);
+
+  container.classList.toggle("profile-hidden", !places.length);
+  if (!places.length) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = places.map((item) => `
+    <div
+      class="profile-place-badge ${item.className}"
+      title="${item.count} ${item.label}"
+      aria-label="${item.count} ${item.label}"
+    >
+      <span class="profile-place-badge-icon" aria-hidden="true">${item.icon}</span>
+      <span class="profile-place-badge-count">${item.count}</span>
+    </div>
+  `).join("");
+}
+
 function closeCollectiveModal() {
   const modal = document.getElementById("collectiveModal");
   if (!modal) return;
@@ -487,6 +530,7 @@ updateRankUI(rankData);
     setText("usernameTag", user.username_tag ? "@" + user.username_tag : "");
     renderVerifiedBadge(user);
     renderUserBadge(user);
+    renderProfilePlaceBadges(user);
 
     const bioEl = document.getElementById("bio");
     if (!bioEl) return user;

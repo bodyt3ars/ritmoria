@@ -1665,6 +1665,14 @@ async function ensureHomeNewsSchema() {
 
       CREATE INDEX IF NOT EXISTS idx_home_stream_top_tracks_position
         ON home_stream_top_tracks(position);
+
+      CREATE TABLE IF NOT EXISTS user_stream_place_stats (
+        user_id integer PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        first_places integer NOT NULL DEFAULT 0,
+        second_places integer NOT NULL DEFAULT 0,
+        third_places integer NOT NULL DEFAULT 0,
+        updated_at timestamp without time zone NOT NULL DEFAULT now()
+      );
     `);
 }
 
@@ -1715,6 +1723,7 @@ async function saveClosedQueueTopTracksSnapshot() {
   const snapshotRes = await pool.query(`
     SELECT
       t.id AS track_id,
+      t.user_id,
       t.title,
       t.artist,
       t.cover,
@@ -1774,6 +1783,85 @@ async function saveClosedQueueTopTracksSnapshot() {
   }
 
   await replaceHomeTopTracksSnapshot(snapshotRes.rows, "track_id");
+  await awardQueuePodiumPlaces(snapshotRes.rows);
+
+  return true;
+}
+
+function buildQueuePodiumSignature(rows = []) {
+  return rows
+    .slice(0, 3)
+    .map((row, index) => `${index + 1}:${Number(row.track_id || row.id || 0) || 0}`)
+    .join("|");
+}
+
+async function awardQueuePodiumPlaces(rows = []) {
+  const podiumRows = rows
+    .slice(0, 3)
+    .filter((row) => Number(row.user_id || 0) > 0);
+
+  if (!podiumRows.length) {
+    return false;
+  }
+
+  const signature = buildQueuePodiumSignature(podiumRows);
+  if (!signature) {
+    return false;
+  }
+
+  const signatureRes = await pool.query(
+    "SELECT value FROM system_settings WHERE key = 'queue_podium_signature'"
+  );
+
+  if (signatureRes.rows[0]?.value === signature) {
+    return false;
+  }
+
+  for (const [index, row] of podiumRows.entries()) {
+    const userId = Number(row.user_id || 0);
+    if (!userId) continue;
+
+    await pool.query(
+      `
+      INSERT INTO user_stream_place_stats (
+        user_id,
+        first_places,
+        second_places,
+        third_places,
+        updated_at
+      )
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        now()
+      )
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        first_places = user_stream_place_stats.first_places + EXCLUDED.first_places,
+        second_places = user_stream_place_stats.second_places + EXCLUDED.second_places,
+        third_places = user_stream_place_stats.third_places + EXCLUDED.third_places,
+        updated_at = now()
+      `,
+      [
+        userId,
+        index === 0 ? 1 : 0,
+        index === 1 ? 1 : 0,
+        index === 2 ? 1 : 0
+      ]
+    );
+  }
+
+  await pool.query(
+    `
+    INSERT INTO system_settings (key, value)
+    VALUES ('queue_podium_signature', $1)
+    ON CONFLICT (key)
+    DO UPDATE SET value = EXCLUDED.value
+    `,
+    [signature]
+  );
 
   return true;
 }
@@ -1861,6 +1949,7 @@ async function getHomeTopTracksSnapshot() {
     `
     SELECT
       t.id,
+      t.user_id,
       t.title,
       t.artist,
       t.cover,
@@ -1919,6 +2008,7 @@ async function getHomeTopTracksSnapshot() {
 
   if (liveRes.rows.length) {
     await replaceHomeTopTracksSnapshot(liveRes.rows, "id");
+    await awardQueuePodiumPlaces(liveRes.rows);
   }
 
   return liveRes.rows;
@@ -3929,6 +4019,9 @@ app.get("/api/profile", async (req, res) => {
           users.xp,
           users.collective_id,
           mc.name AS collective_name,
+          COALESCE(ps.first_places, 0) AS first_places,
+          COALESCE(ps.second_places, 0) AS second_places,
+          COALESCE(ps.third_places, 0) AS third_places,
           COALESCE(users.is_verified, false) AS is_verified,
           users.soundcloud,
           users.instagram,
@@ -3937,6 +4030,7 @@ app.get("/api/profile", async (req, res) => {
           users.website
           FROM users
           LEFT JOIN music_collectives mc ON mc.id = users.collective_id
+          LEFT JOIN user_stream_place_stats ps ON ps.user_id = users.id
           WHERE LOWER(users.username_tag) = LOWER($1)
              OR LOWER(users.username) = LOWER($1)
           `,
@@ -3977,6 +4071,9 @@ app.get("/api/profile", async (req, res) => {
           users.xp,
           users.collective_id,
           mc.name AS collective_name,
+          COALESCE(ps.first_places, 0) AS first_places,
+          COALESCE(ps.second_places, 0) AS second_places,
+          COALESCE(ps.third_places, 0) AS third_places,
           COALESCE(users.is_verified, false) AS is_verified,
           users.soundcloud,
           users.instagram,
@@ -3985,6 +4082,7 @@ app.get("/api/profile", async (req, res) => {
           users.website
         FROM users
         LEFT JOIN music_collectives mc ON mc.id = users.collective_id
+        LEFT JOIN user_stream_place_stats ps ON ps.user_id = users.id
         WHERE users.id = $1
         `,
         [payload.id]
@@ -6035,6 +6133,7 @@ app.get("/api/tracks/queue", async (req, res) => {
         });
       if (judgeRatedRows.length) {
         await replaceHomeTopTracksSnapshot(judgeRatedRows.slice(0, 10), "id");
+        await awardQueuePodiumPlaces(judgeRatedRows);
       }
     }
 
