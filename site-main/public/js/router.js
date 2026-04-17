@@ -11,7 +11,7 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260417-2";
+const ASSET_VERSION = "20260417-3";
 
 function withAssetVersion(url) {
   const separator = url.includes("?") ? "&" : "?";
