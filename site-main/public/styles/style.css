@@ -34,11 +34,11 @@
 .home-page .home-panel-title,
 .home-page .home-feed-title {
   margin: 0;
-  font-size: 24px;
-  color: #fff6fb;
+  font-size: 23px;
+  color: #f5efe8;
   line-height: 1.02;
-  letter-spacing: -0.02em;
-  text-shadow: 0 0 26px rgba(255, 94, 168, 0.14);
+  letter-spacing: -0.03em;
+  text-shadow: none;
 }
 
 .home-page .home-feed-header {
@@ -56,7 +56,7 @@
   width: fit-content;
   max-width: 100%;
   margin-bottom: 18px;
-  padding: 0 0 10px 18px;
+  padding: 0 0 12px 18px;
 }
 
 .home-page .home-panel-title-decorated::before {
@@ -64,13 +64,11 @@
   position: absolute;
   left: 0;
   top: 4px;
-  width: 8px;
-  height: calc(100% - 10px);
+  width: 2px;
+  height: calc(100% - 12px);
   border-radius: 999px;
-  background: linear-gradient(180deg, #ff9fcf, #ffcf6c);
-  box-shadow:
-    0 0 18px rgba(255, 154, 199, 0.28),
-    0 0 32px rgba(255, 207, 108, 0.14);
+  background: linear-gradient(180deg, rgba(244, 238, 228, 0.92), rgba(182, 168, 151, 0.48));
+  box-shadow: none;
 }
 
 .home-page .home-panel-title-decorated::after {
@@ -78,10 +76,19 @@
   position: absolute;
   left: 18px;
   bottom: 0;
-  width: min(140px, 45%);
+  width: min(120px, 42%);
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255, 173, 213, 0.9), rgba(255, 173, 213, 0));
+  background: linear-gradient(90deg, rgba(244, 238, 228, 0.72), rgba(244, 238, 228, 0));
+}
+
+.home-page .home-left-panel .home-panel-title-decorated,
+.home-page .home-right-panel .home-panel-title-decorated {
+  margin-bottom: 20px;
+}
+
+.home-page .home-feed .home-panel-title-decorated {
+  margin-bottom: 14px;
 }
 
 .home-page .home-news-block {
@@ -1683,7 +1690,7 @@
 
   .home-page .home-panel-title-decorated::before {
     top: 3px;
-    width: 6px;
+    width: 2px;
     height: calc(100% - 8px);
   }
 
