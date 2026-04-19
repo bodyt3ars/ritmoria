@@ -7,6 +7,36 @@ function homeEscapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+let homeQueueTimerInterval = null;
+let homeQueueStateMeta = null;
+
+function formatHomeCount(value) {
+  return new Intl.NumberFormat("ru-RU").format(Math.max(0, Number(value || 0)));
+}
+
+function formatHomeElapsed(ms) {
+  const totalSeconds = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (days > 0) return `${days} д ${hours} ч`;
+  if (hours > 0) return `${hours} ч ${minutes} мин`;
+  return `${Math.max(1, minutes)} мин`;
+}
+
+function formatHomeAbsoluteDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function formatHomeRelativeDate(value) {
   if (!value) return "";
 
@@ -173,6 +203,256 @@ function renderHomeNews(news = []) {
       ` : ""}
     </article>
   `).join("");
+}
+
+function renderHomeMomentum(queueState, challenge) {
+  const container = document.getElementById("homeMomentumHero");
+  if (!container) return;
+
+  const state = String(queueState?.state || "open");
+  const stateLabel = queueState?.label || (state === "closed" ? "Закрыта" : state === "paused" ? "На паузе" : "Открыта");
+  const changedAt = queueState?.changed_at || null;
+  const challengeProgress = Math.max(0, Number(challenge?.progress || 0));
+  const challengeGoal = Math.max(1, Number(challenge?.goal || 1));
+  const challengePercent = Math.max(0, Math.min(100, Math.round((challengeProgress / challengeGoal) * 100)));
+
+  homeQueueStateMeta = {
+    state,
+    label: stateLabel,
+    changedAt
+  };
+
+  container.innerHTML = `
+    <div class="home-momentum-shell">
+      <div class="home-momentum-copy">
+        <span class="home-momentum-kicker">
+          <i class="fa-solid fa-wave-square"></i>
+          Пульс платформы
+        </span>
+        <h2 class="home-momentum-title">Музыка, движение и азарт в одном потоке.</h2>
+        <p class="home-momentum-text">
+          Следи за стримом, лови еженедельный челлендж и возвращайся в момент, когда очередь снова взорвётся новыми именами.
+        </p>
+
+        <div class="home-signal-strip">
+          <span class="home-signal-pill is-${homeEscapeHtml(state)}">
+            <i class="fa-solid fa-radio"></i>
+            Очередь: <strong>${homeEscapeHtml(stateLabel)}</strong>
+          </span>
+          <span class="home-signal-pill">
+            <i class="fa-solid fa-stopwatch"></i>
+            <strong id="homeQueueTimerLabel">Обновляем таймер...</strong>
+          </span>
+          <span class="home-signal-pill">
+            <i class="fa-solid fa-fire"></i>
+            Неделя уже в движении
+          </span>
+        </div>
+      </div>
+
+      <div class="home-hero-side">
+        <article class="home-challenge-card">
+          <div class="home-challenge-top">
+            <div>
+              <div class="home-challenge-label">Челлендж недели</div>
+              <h3 class="home-challenge-title">${homeEscapeHtml(challenge?.title || "Поймай свой импульс")}</h3>
+            </div>
+            <span class="home-challenge-icon">
+              <i class="fa-solid ${homeEscapeHtml(challenge?.icon || "fa-bolt")}"></i>
+            </span>
+          </div>
+          <p class="home-challenge-copy">${homeEscapeHtml(challenge?.description || "Возвращайся чаще, чтобы держать темп и не выпадать из движухи.")}</p>
+          <div class="home-progress-meta">
+            <span>${formatHomeCount(challengeProgress)} из ${formatHomeCount(challengeGoal)}</span>
+            <strong>${challengePercent}%</strong>
+          </div>
+          <div class="home-progress-track">
+            <span style="width:${challengePercent}%"></span>
+          </div>
+        </article>
+
+        <article class="home-focus-card">
+          <h3 class="home-focus-title">Фокус недели</h3>
+          <p class="home-focus-text">${homeEscapeHtml(challenge?.focus || "Лучше всего удерживает тех, кто не просто слушает, а регулярно оценивает, выкладывает и следит за движением в очереди.")}</p>
+        </article>
+      </div>
+    </div>
+  `;
+
+  updateHomeQueueTimer();
+  startHomeQueueTimer();
+}
+
+function renderHomeForYou(forYou) {
+  const container = document.getElementById("homeForYouGrid");
+  if (!container) return;
+
+  if (!forYou || !forYou.user) {
+    container.innerHTML = `
+      <article class="home-for-you-card">
+        <span class="home-for-you-chip"><i class="fa-solid fa-door-open"></i>Для тебя</span>
+        <h3 class="home-for-you-title">Войди в аккаунт, чтобы лента стала личной.</h3>
+        <p class="home-for-you-text">Здесь появятся твой прогресс, streak, свежие уведомления и быстрые поводы вернуться в очередь.</p>
+        <a class="home-for-you-action" href="/login" data-home-track-link>
+          <i class="fa-solid fa-right-to-bracket"></i>
+          Войти
+        </a>
+      </article>
+    `;
+    return;
+  }
+
+  const rankState = forYou.user.rank_state || {};
+  const streakDays = Math.max(0, Number(forYou.streak_days || 0));
+  const unreadCount = Math.max(0, Number(forYou.unread_notifications || 0));
+  const tracksToRate = Array.isArray(forYou.tracks_to_rate) ? forYou.tracks_to_rate : [];
+  const latestNotifications = Array.isArray(forYou.latest_notifications) ? forYou.latest_notifications.slice(0, 2) : [];
+  const nextTrack = tracksToRate[0] || null;
+
+  container.innerHTML = `
+    <article class="home-for-you-card">
+      <span class="home-for-you-chip"><i class="fa-solid fa-sparkles"></i>Твой прогресс</span>
+      <h3 class="home-for-you-title">${homeEscapeHtml(rankState.rankName || "Твой ранг")}</h3>
+      <div class="home-for-you-stat">
+        <strong>${formatHomeCount(rankState.xp || 0)}</strong>
+        <span>XP сейчас</span>
+      </div>
+      <p class="home-for-you-text">
+        ${rankState.isMaxRank
+          ? "Ты уже на максимальном ранге. Самое время удерживать статус и собирать достижения."
+          : `До следующего ранга осталось ${formatHomeCount(rankState.xpForNextRank || 0)} XP.`}
+      </p>
+      <div class="home-progress-track">
+        <span style="width:${Math.max(0, Math.min(100, Number(rankState.progress || 0)))}%"></span>
+      </div>
+    </article>
+
+    <article class="home-for-you-card">
+      <span class="home-for-you-chip"><i class="fa-solid fa-fire-flame-curved"></i>Серия</span>
+      <h3 class="home-for-you-title">Ты в игре уже ${formatHomeCount(streakDays)} дн.</h3>
+      <p class="home-for-you-text">${homeEscapeHtml(forYou.streak_hint || "Возвращайся каждый день, чтобы серия не обнулилась и прогресс не остыл.")}</p>
+      <div class="home-for-you-list">
+        <div class="home-notification-mini">
+          <strong>${formatHomeCount(forYou.weekly_actions || 0)} действий за неделю</strong>
+          <span>${homeEscapeHtml(forYou.weekly_actions_hint || "Оценки, посты, репосты и загрузки двигают тебя вверх быстрее всего.")}</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="home-for-you-card">
+      <span class="home-for-you-chip"><i class="fa-solid fa-bell"></i>Сигналы для тебя</span>
+      <h3 class="home-for-you-title">${formatHomeCount(unreadCount)} непрочитанных уведомлений</h3>
+      <div class="home-for-you-list">
+        ${latestNotifications.length
+          ? latestNotifications.map((item) => `
+            <div class="home-notification-mini">
+              <strong>${homeEscapeHtml(item.actor_username || item.actor_username_tag || "РИТМОРИЯ")}</strong>
+              <span>${homeEscapeHtml(item.text || "Новое событие в твоём профиле.")}</span>
+            </div>
+          `).join("")
+          : `<div class="home-notification-mini"><strong>Пока тихо</strong><span>Как только тебя оценят, упомянут или заметят, всё появится здесь.</span></div>`}
+      </div>
+      <a class="home-for-you-action" href="/settings" data-home-track-link>
+        <i class="fa-solid fa-sliders"></i>
+        Открыть настройки
+      </a>
+    </article>
+
+    <article class="home-for-you-card">
+      <span class="home-for-you-chip"><i class="fa-solid fa-headphones"></i>Быстрый вход</span>
+      <h3 class="home-for-you-title">${nextTrack ? "Есть трек, который ждёт твою оценку" : "Очередь скоро заполнится"}</h3>
+      <p class="home-for-you-text">
+        ${nextTrack
+          ? `${homeEscapeHtml(nextTrack.artist || nextTrack.username || "Артист")} — ${homeEscapeHtml(nextTrack.title || "Без названия")}`
+          : "Как только появятся новые треки для оценки, этот блок сразу подкинет тебе лучший вход в движ."}
+      </p>
+      ${nextTrack
+        ? `<a class="home-for-you-action" href="/track/${Number(nextTrack.id)}" data-home-track-link><i class="fa-solid fa-play"></i>Открыть трек</a>`
+        : `<a class="home-for-you-action" href="/queue" data-home-track-link><i class="fa-solid fa-wave-square"></i>Перейти в очередь</a>`}
+    </article>
+  `;
+}
+
+function renderHomeActivity(items = []) {
+  const container = document.getElementById("homeActivityList");
+  const block = document.getElementById("homeActivityBlock");
+  if (!container || !block) return;
+
+  if (!Array.isArray(items) || !items.length) {
+    block.style.display = "none";
+    container.innerHTML = "";
+    return;
+  }
+
+  block.style.removeProperty("display");
+  container.innerHTML = items.map((item) => `
+    <article class="home-activity-card">
+      <img
+        class="home-activity-avatar"
+        src="${homeEscapeHtml(item.avatar || "/images/default-avatar.jpg")}"
+        alt="${homeEscapeHtml(item.username || "user")}"
+      >
+      <div class="home-activity-body">
+        <h3 class="home-activity-title">${homeEscapeHtml(item.title || "Новое движение")}</h3>
+        <p class="home-activity-text">${homeEscapeHtml(item.text || "")}</p>
+        <div class="home-activity-meta">
+          <span class="home-activity-type">
+            <i class="fa-solid ${homeEscapeHtml(item.icon || "fa-bolt")}"></i>
+            ${homeEscapeHtml(item.type_label || "Активность")}
+          </span>
+          <span class="home-activity-time">${homeEscapeHtml(formatHomeRelativeDate(item.created_at))}</span>
+        </div>
+      </div>
+      ${item.href ? `
+        <a class="home-activity-link" href="${homeEscapeHtml(item.href)}" data-home-track-link>
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          Открыть
+        </a>
+      ` : ""}
+    </article>
+  `).join("");
+}
+
+function updateHomeQueueTimer() {
+  const timer = document.getElementById("homeQueueTimerLabel");
+  if (!timer) return;
+
+  const state = homeQueueStateMeta?.state || "open";
+  const stateLabel = homeQueueStateMeta?.label || "Открыта";
+  const changedAt = homeQueueStateMeta?.changedAt ? new Date(homeQueueStateMeta.changedAt) : null;
+  const validDate = changedAt && !Number.isNaN(changedAt.getTime()) ? changedAt : null;
+
+  if (!validDate) {
+    timer.textContent = state === "closed"
+      ? "Идёт финальная витрина"
+      : state === "paused"
+        ? "Пауза в эфире"
+        : "Стрим в движении";
+    return;
+  }
+
+  const elapsed = formatHomeElapsed(Date.now() - validDate.getTime());
+  timer.textContent = state === "closed"
+    ? `Итоги держатся уже ${elapsed}`
+    : state === "paused"
+      ? `Пауза уже ${elapsed}`
+      : `Открыта уже ${elapsed}`;
+}
+
+function startHomeQueueTimer() {
+  if (homeQueueTimerInterval) {
+    window.clearInterval(homeQueueTimerInterval);
+  }
+
+  updateHomeQueueTimer();
+  homeQueueTimerInterval = window.setInterval(() => {
+    if (!document.querySelector(".home-page")) {
+      window.clearInterval(homeQueueTimerInterval);
+      homeQueueTimerInterval = null;
+      return;
+    }
+    updateHomeQueueTimer();
+  }, 1000);
 }
 
 function renderHomeTopTracks(tracks = []) {
@@ -505,7 +785,10 @@ async function refreshHomeTracksOnly() {
   if (!root) return;
 
   const data = await loadHomePageData();
+  renderHomeMomentum(data.queueState || null, data.weeklyChallenge || null);
+  renderHomeForYou(data.forYou || null);
   renderHomeNews(data.news || []);
+  renderHomeActivity(data.liveActivity || []);
   renderHomeTopTracks(data.topTracks || []);
   renderHomeSpotlightTracks(data.spotlightTracks || []);
   renderHomePosts(data.recommendedPosts || []);
@@ -600,9 +883,27 @@ window.initHomePage = async function initHomePage() {
   try {
     const data = await loadHomePageData();
     try {
+      renderHomeMomentum(data.queueState || null, data.weeklyChallenge || null);
+    } catch (err) {
+      console.error("renderHomeMomentum error:", err);
+    }
+
+    try {
+      renderHomeForYou(data.forYou || null);
+    } catch (err) {
+      console.error("renderHomeForYou error:", err);
+    }
+
+    try {
       renderHomeNews(data.news || []);
     } catch (err) {
       console.error("renderHomeNews error:", err);
+    }
+
+    try {
+      renderHomeActivity(data.liveActivity || []);
+    } catch (err) {
+      console.error("renderHomeActivity error:", err);
     }
 
     try {
@@ -636,7 +937,10 @@ window.initHomePage = async function initHomePage() {
     ensureHomeAutoRefresh();
   } catch (err) {
     console.error("initHomePage error:", err);
+    renderHomeMomentum(null, null);
+    renderHomeForYou(null);
     renderHomeNews([]);
+    renderHomeActivity([]);
     renderHomeTopTracks([]);
     renderHomeSpotlightTracks([]);
     renderHomePosts([]);

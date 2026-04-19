@@ -58,6 +58,393 @@
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
 }
 
+.home-page .home-momentum-block {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home-page .home-momentum-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 148, 205, 0.24), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(118, 82, 171, 0.2), transparent 36%),
+    linear-gradient(135deg, rgba(60, 36, 62, 0.96), rgba(18, 14, 28, 0.98));
+  border: 1px solid rgba(255, 182, 220, 0.18);
+  box-shadow:
+    0 24px 58px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.home-page .home-momentum-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.06), transparent 18%, transparent 72%, rgba(255,255,255,0.03));
+  pointer-events: none;
+}
+
+.home-page .home-momentum-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+  gap: 18px;
+}
+
+.home-page .home-momentum-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.home-page .home-momentum-kicker,
+.home-page .home-signal-pill,
+.home-page .home-for-you-chip,
+.home-page .home-activity-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 217, 235, 0.16);
+  color: #ffd4e6;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-page .home-momentum-title {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 0.96;
+  color: #fff8fc;
+  text-shadow: 0 0 34px rgba(255, 120, 190, 0.16);
+}
+
+.home-page .home-momentum-text {
+  margin: 0;
+  max-width: 620px;
+  color: rgba(255, 238, 246, 0.82);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.home-page .home-signal-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.home-page .home-signal-pill {
+  background: rgba(14, 10, 20, 0.34);
+  border-color: rgba(255, 228, 239, 0.14);
+  color: rgba(255, 236, 244, 0.88);
+  text-transform: none;
+}
+
+.home-page .home-signal-pill strong {
+  color: #fff8fb;
+  font-size: 14px;
+}
+
+.home-page .home-signal-pill.is-open {
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.18);
+}
+
+.home-page .home-signal-pill.is-closed {
+  box-shadow: 0 0 18px rgba(255, 170, 88, 0.14);
+}
+
+.home-page .home-signal-pill.is-paused {
+  box-shadow: 0 0 18px rgba(96, 165, 250, 0.14);
+}
+
+.home-page .home-hero-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-page .home-challenge-card,
+.home-page .home-focus-card,
+.home-page .home-for-you-card,
+.home-page .home-activity-card {
+  border-radius: 22px;
+  border: 1px solid rgba(255, 192, 223, 0.14);
+  background:
+    linear-gradient(180deg, rgba(54, 34, 56, 0.88), rgba(22, 18, 33, 0.96)),
+    radial-gradient(circle at top left, rgba(255, 116, 188, 0.12), transparent 42%);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
+}
+
+.home-page .home-challenge-card {
+  padding: 18px 18px 16px;
+}
+
+.home-page .home-challenge-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.home-page .home-challenge-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255, 148, 205, 0.28), rgba(255, 214, 120, 0.24));
+  color: #fff7fb;
+  font-size: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+}
+
+.home-page .home-challenge-label {
+  margin: 0 0 4px;
+  color: rgba(255, 211, 229, 0.7);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-page .home-challenge-title {
+  margin: 0;
+  color: #fff7fb;
+  font-size: 18px;
+}
+
+.home-page .home-challenge-copy {
+  margin: 0 0 14px;
+  color: rgba(255, 235, 244, 0.78);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.home-page .home-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: rgba(255, 233, 243, 0.72);
+  font-size: 13px;
+}
+
+.home-page .home-progress-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.home-page .home-progress-track span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff8fc8, #ffd46e);
+  box-shadow: 0 0 18px rgba(255, 143, 200, 0.24);
+}
+
+.home-page .home-focus-card {
+  padding: 16px 18px;
+}
+
+.home-page .home-focus-title {
+  margin: 0 0 8px;
+  color: #fff6fb;
+  font-size: 15px;
+}
+
+.home-page .home-focus-text {
+  margin: 0;
+  color: rgba(255, 231, 242, 0.72);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.home-page .home-for-you-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-page .home-for-you-card {
+  padding: 18px;
+  min-height: 184px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-page .home-for-you-title {
+  margin: 0;
+  color: #fff7fb;
+  font-size: 18px;
+}
+
+.home-page .home-for-you-text,
+.home-page .home-for-you-list {
+  margin: 0;
+  color: rgba(255, 233, 243, 0.76);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.home-page .home-for-you-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-page .home-for-you-chip {
+  background: rgba(255, 255, 255, 0.06);
+  text-transform: none;
+}
+
+.home-page .home-for-you-stat {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.home-page .home-for-you-stat strong {
+  font-size: 38px;
+  line-height: 0.92;
+  color: #fff9fc;
+}
+
+.home-page .home-for-you-stat span {
+  color: rgba(255, 228, 239, 0.72);
+  font-size: 14px;
+}
+
+.home-page .home-for-you-action,
+.home-page .home-activity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: auto;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 198, 225, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff4fa;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.home-page .home-for-you-action:hover,
+.home-page .home-activity-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 221, 236, 0.34);
+  background: rgba(255, 145, 202, 0.12);
+}
+
+.home-page .home-notification-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 209, 231, 0.1);
+}
+
+.home-page .home-notification-mini strong,
+.home-page .home-notification-mini span {
+  display: block;
+}
+
+.home-page .home-notification-mini strong {
+  color: #fff8fc;
+  font-size: 13px;
+}
+
+.home-page .home-notification-mini span {
+  color: rgba(255, 233, 243, 0.72);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.home-page .home-activity-block {
+  padding: 18px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(49, 31, 52, 0.92), rgba(20, 15, 30, 0.96)),
+    radial-gradient(circle at right top, rgba(255, 119, 180, 0.14), transparent 42%);
+  border: 1px solid rgba(255, 182, 220, 0.12);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
+.home-page .home-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-page .home-activity-card {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.home-page .home-activity-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 205, 228, 0.18);
+}
+
+.home-page .home-activity-title {
+  margin: 0 0 4px;
+  color: #fff8fc;
+  font-size: 15px;
+}
+
+.home-page .home-activity-text {
+  margin: 0;
+  color: rgba(255, 231, 242, 0.72);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.home-page .home-activity-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.home-page .home-activity-type {
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.home-page .home-activity-time {
+  color: rgba(255, 232, 242, 0.58);
+  font-size: 12px;
+}
+
 .home-page .home-news-list {
   display: flex;
   flex-direction: column;
@@ -1180,6 +1567,10 @@
   .home-page .home-right-panel {
     grid-column: 1 / -1;
   }
+
+  .home-page .home-for-you-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 820px) {
@@ -1189,10 +1580,23 @@
     padding: 120px 16px 32px;
   }
 
-  .home-page .home-left-panel,
+.home-page .home-left-panel,
 .home-page .home-right-panel {
   width: 100%;
 }
+
+  .home-page .home-momentum-shell,
+  .home-page .home-for-you-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-page .home-activity-card {
+    grid-template-columns: 44px 1fr;
+  }
+
+  .home-page .home-activity-link {
+    grid-column: 2;
+  }
 
   .home-page .home-spotlight-item {
     flex-basis: 84px;
@@ -1222,7 +1626,11 @@
 
   .home-page .home-track-card,
   .home-page .home-post,
-  .home-page .home-artist-card {
+  .home-page .home-artist-card,
+  .home-page .home-for-you-card,
+  .home-page .home-activity-card,
+  .home-page .home-momentum-hero,
+  .home-page .home-activity-block {
     border-radius: 18px;
   }
 
@@ -1241,6 +1649,24 @@
 
   .home-page .home-post {
     padding: 16px;
+  }
+
+  .home-page .home-momentum-hero,
+  .home-page .home-activity-block {
+    padding: 16px;
+  }
+
+  .home-page .home-for-you-card {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .home-page .home-momentum-title {
+    font-size: 28px;
+  }
+
+  .home-page .home-for-you-stat strong {
+    font-size: 32px;
   }
 
   .home-page .home-spotlight-shell {

@@ -5856,6 +5856,350 @@ res.json(posts.rows)
 
 })
 
+function getHomeChallengeCatalog() {
+  return [
+    {
+      id: "listener_streak",
+      title: "Серия слушателя",
+      description: "Оцени 5 треков за неделю и держи темп в очереди.",
+      focus: "Самый сильный сигнал удержания здесь — когда человек не только слушает, но и влияет на расклад оценок.",
+      goal: 5,
+      icon: "fa-headphones",
+      actionKeys: ["track_rate_user", "track_rate_judge", "profile_track_rate_user", "profile_track_rate_judge"]
+    },
+    {
+      id: "creator_wave",
+      title: "Волна создателя",
+      description: "Выложи 2 новых трека или поста на этой неделе.",
+      focus: "Контент создаёт цикл возврата: люди приходят проверить реакцию, комментарии и новую динамику профиля.",
+      goal: 2,
+      icon: "fa-compact-disc",
+      actionKeys: ["create_track", "create_post"]
+    },
+    {
+      id: "community_heat",
+      title: "Прогрей комьюнити",
+      description: "Оставь 6 осмысленных действий: комментарии, репосты или лайки впервые.",
+      focus: "Чем больше человек трогает других, тем меньше шансов, что он тихо выпадет из платформы.",
+      goal: 6,
+      icon: "fa-fire",
+      actionKeys: ["post_comment", "track_comment", "post_repost", "track_repost", "track_like_first"]
+    },
+    {
+      id: "judge_focus",
+      title: "Точность недели",
+      description: "Вернись 3 дня подряд и удержи личную серию активности.",
+      focus: "Серия делает платформу привычкой: пользователь заходит не ради одного действия, а чтобы не оборвать импульс.",
+      goal: 3,
+      icon: "fa-bolt",
+      actionKeys: ["daily_presence"]
+    }
+  ];
+}
+
+function getWeekRotationIndex(date = new Date()) {
+  const currentDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = currentDate.getUTCDay() || 7;
+  currentDate.setUTCDate(currentDate.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(currentDate.getUTCFullYear(), 0, 1));
+  return Math.ceil((((currentDate - yearStart) / 86400000) + 1) / 7);
+}
+
+function getHomeWeekBounds() {
+  const now = new Date();
+  const currentDay = now.getDay() || 7;
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (currentDay - 1));
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+
+  return { start, end };
+}
+
+function computeActivityStreak(rows = []) {
+  const days = [...new Set(
+    (Array.isArray(rows) ? rows : [])
+      .map((row) => String(row.activity_day || "").trim())
+      .filter(Boolean)
+  )];
+
+  if (!days.length) return 0;
+
+  const latest = new Date(`${days[0]}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const latestGap = Math.round((today.getTime() - latest.getTime()) / 86400000);
+  if (latestGap > 1) {
+    return 0;
+  }
+
+  let streak = 0;
+  let cursor = new Date(`${days[0]}T00:00:00`);
+
+  for (const day of days) {
+    const current = new Date(`${day}T00:00:00`);
+    const diff = Math.round((cursor.getTime() - current.getTime()) / 86400000);
+
+    if (streak === 0) {
+      streak = 1;
+      cursor = current;
+      continue;
+    }
+
+    if (diff === 1) {
+      streak += 1;
+      cursor = current;
+      continue;
+    }
+
+    break;
+  }
+
+  return streak;
+}
+
+async function getHomeQueueStateSummary() {
+  const settingsRes = await pool.query(
+    `
+    SELECT key, value
+    FROM system_settings
+    WHERE key IN ('queue_state', 'queue_state_changed_at')
+    `
+  );
+
+  const map = Object.fromEntries(settingsRes.rows.map((row) => [row.key, row.value]));
+  const state = String(map.queue_state || "open");
+
+  return {
+    state,
+    label: state === "closed" ? "Закрыта" : state === "paused" ? "На паузе" : "Открыта",
+    changed_at: map.queue_state_changed_at || null
+  };
+}
+
+async function getHomeLiveActivity(limit = 8) {
+  const result = await pool.query(
+    `
+    SELECT *
+    FROM (
+      SELECT
+        ut.created_at,
+        'track_release'::text AS activity_type,
+        'Новый трек'::text AS type_label,
+        'fa-compact-disc'::text AS icon,
+        COALESCE(u.username, u.username_tag, 'Артист') AS username,
+        u.username_tag,
+        u.avatar,
+        COALESCE(u.username, u.username_tag, 'Артист') || ' выпустил трек' AS title,
+        COALESCE(ut.title, 'Без названия') || CASE WHEN COALESCE(ut.artist, '') <> '' THEN ' • ' || ut.artist ELSE '' END AS text,
+        CASE
+          WHEN COALESCE(u.username_tag, '') <> '' AND COALESCE(ut.slug, '') <> '' THEN '/' || u.username_tag || '/' || ut.slug
+          ELSE NULL
+        END AS href
+      FROM user_tracks ut
+      JOIN users u ON u.id = ut.user_id
+      WHERE COALESCE(ut.is_archived, false) = false
+
+      UNION ALL
+
+      SELECT
+        tr.created_at,
+        'queue_rating'::text AS activity_type,
+        CASE WHEN tr.type = 'judge' THEN 'Оценка судьи' ELSE 'Новая оценка' END AS type_label,
+        CASE WHEN tr.type = 'judge' THEN 'fa-scale-balanced' ELSE 'fa-star' END AS icon,
+        COALESCE(actor.username, actor.username_tag, 'Участник') AS username,
+        actor.username_tag,
+        actor.avatar,
+        COALESCE(actor.username, actor.username_tag, 'Участник') || CASE WHEN tr.type = 'judge' THEN ' оценил трек в очереди' ELSE ' поднял рейтинг трека' END AS title,
+        COALESCE(t.title, 'Без названия') || ' • ' || COALESCE(t.artist, 'Артист') AS text,
+        '/track/' || t.id AS href
+      FROM track_ratings tr
+      JOIN users actor ON actor.id = tr.user_id
+      JOIN tracks t ON t.id = tr.track_id
+
+      UNION ALL
+
+      SELECT
+        p.created_at,
+        'post_drop'::text AS activity_type,
+        'Новый пост'::text AS type_label,
+        'fa-bolt'::text AS icon,
+        COALESCE(u.username, u.username_tag, 'Артист') AS username,
+        u.username_tag,
+        u.avatar,
+        COALESCE(u.username, u.username_tag, 'Артист') || ' вбросил новый пост' AS title,
+        LEFT(REGEXP_REPLACE(COALESCE(p.content, ''), '\s+', ' ', 'g'), 96) AS text,
+        '/' || u.username_tag AS href
+      FROM posts p
+      JOIN users u ON u.id = p.user_id
+      WHERE COALESCE(p.is_archived, false) = false
+
+      UNION ALL
+
+      SELECT
+        tc.created_at,
+        'track_comment'::text AS activity_type,
+        'Обсуждение'::text AS type_label,
+        'fa-comment-dots'::text AS icon,
+        COALESCE(actor.username, actor.username_tag, 'Слушатель') AS username,
+        actor.username_tag,
+        actor.avatar,
+        COALESCE(actor.username, actor.username_tag, 'Слушатель') || ' подключился к обсуждению' AS title,
+        COALESCE(ut.title, 'Без названия') || ' • ' || LEFT(REGEXP_REPLACE(COALESCE(tc.text, ''), '\s+', ' ', 'g'), 84) AS text,
+        CASE
+          WHEN COALESCE(owner.username_tag, '') <> '' AND COALESCE(ut.slug, '') <> '' THEN '/' || owner.username_tag || '/' || ut.slug
+          ELSE NULL
+        END AS href
+      FROM track_comments tc
+      JOIN users actor ON actor.id = tc.user_id
+      JOIN user_tracks ut ON ut.id = tc.track_id
+      JOIN users owner ON owner.id = ut.user_id
+    ) activity
+    ORDER BY created_at DESC
+    LIMIT $1
+    `,
+    [limit]
+  );
+
+  return result.rows;
+}
+
+async function getHomeForYou(viewerId) {
+  if (!viewerId) return null;
+
+  const { start, end } = getHomeWeekBounds();
+  const challengeCatalog = getHomeChallengeCatalog();
+  const challenge = challengeCatalog[getWeekRotationIndex(new Date()) % challengeCatalog.length];
+
+  const [
+    userRes,
+    notificationRes,
+    unreadRes,
+    streakRes,
+    weeklyRes,
+    queueTracksRes
+  ] = await Promise.all([
+    pool.query(
+      `
+      SELECT id, username, username_tag, avatar, role, COALESCE(xp, 0)::int AS xp
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [viewerId]
+    ),
+    pool.query(
+      `
+      SELECT
+        n.id,
+        n.text,
+        n.type,
+        n.entity_type,
+        n.entity_id,
+        n.metadata,
+        n.created_at,
+        u.username AS actor_username,
+        u.username_tag AS actor_username_tag
+      FROM notifications n
+      LEFT JOIN users u ON u.id = n.actor_id
+      WHERE n.user_id = $1
+        AND n.type != 'dm'
+      ORDER BY n.created_at DESC
+      LIMIT 2
+      `,
+      [viewerId]
+    ),
+    pool.query(
+      `
+      SELECT COUNT(*)::int AS count
+      FROM notifications
+      WHERE user_id = $1
+        AND is_read = false
+        AND type != 'dm'
+      `,
+      [viewerId]
+    ),
+    pool.query(
+      `
+      SELECT DISTINCT DATE(created_at) AS activity_day
+      FROM xp_events
+      WHERE user_id = $1
+      ORDER BY activity_day DESC
+      LIMIT 30
+      `,
+      [viewerId]
+    ),
+    pool.query(
+      `
+      SELECT action_key, COUNT(*)::int AS count
+      FROM xp_events
+      WHERE user_id = $1
+        AND created_at >= $2
+        AND created_at < $3
+      GROUP BY action_key
+      `,
+      [viewerId, start, end]
+    ),
+    pool.query(
+      `
+      SELECT
+        t.id,
+        t.title,
+        t.artist,
+        t.cover,
+        t.createdAt,
+        u.username,
+        u.username_tag
+      FROM tracks t
+      LEFT JOIN users u ON u.id = t.user_id
+      WHERE COALESCE(t.user_id, 0) != $1
+        AND NOT EXISTS (
+          SELECT 1
+          FROM track_ratings tr
+          WHERE tr.track_id = t.id
+            AND tr.user_id = $1
+        )
+      ORDER BY t.createdAt ASC
+      LIMIT 3
+      `,
+      [viewerId]
+    )
+  ]);
+
+  const user = userRes.rows[0] ? attachRankState(userRes.rows[0]) : null;
+  if (!user) return null;
+
+  const weeklyCounts = Object.fromEntries(
+    weeklyRes.rows.map((row) => [row.action_key, Number(row.count || 0)])
+  );
+
+  const challengeProgress = challenge.id === "judge_focus"
+    ? computeActivityStreak(streakRes.rows)
+    : challenge.actionKeys.reduce((sum, key) => sum + Number(weeklyCounts[key] || 0), 0);
+
+  const streakDays = computeActivityStreak(streakRes.rows);
+  const weeklyActions = Object.values(weeklyCounts).reduce((sum, count) => sum + Number(count || 0), 0);
+
+  return {
+    user,
+    unread_notifications: Number(unreadRes.rows[0]?.count || 0),
+    latest_notifications: notificationRes.rows,
+    streak_days: streakDays,
+    streak_hint: streakDays > 0
+      ? `Серия уже держится ${streakDays} дн. Ещё одно действие сегодня — и темп останется с тобой.`
+      : "Сделай любое действие сегодня и запусти новую серию активности.",
+    weekly_actions: weeklyActions,
+    weekly_actions_hint: "Чем выше недельный темп, тем чаще платформа начинает отдавать тебя в центр внимания.",
+    tracks_to_rate: queueTracksRes.rows,
+    challenge: {
+      ...challenge,
+      progress: challengeProgress
+    }
+  };
+}
+
 app.get("/api/home", async (req, res) => {
   try {
     res.set({
@@ -5868,6 +6212,9 @@ app.get("/api/home", async (req, res) => {
     const viewerId = getOptionalUserIdFromReq(req);
 
     const results = await Promise.allSettled([
+      getHomeQueueStateSummary(),
+      getHomeForYou(viewerId),
+      getHomeLiveActivity(8),
       pool.query(
         `
         SELECT
@@ -6145,7 +6492,28 @@ app.get("/api/home", async (req, res) => {
       )
     ]);
 
-    const [newsResult, topTracksResult, postsResult, topArtistsResult, spotlightTracksResult] = results;
+    const [
+      queueStateResult,
+      forYouResult,
+      liveActivityResult,
+      newsResult,
+      topTracksResult,
+      postsResult,
+      topArtistsResult,
+      spotlightTracksResult
+    ] = results;
+
+    if (queueStateResult.status === "rejected") {
+      console.error("HOME API QUEUE STATE ERROR:", queueStateResult.reason);
+    }
+
+    if (forYouResult.status === "rejected") {
+      console.error("HOME API FOR YOU ERROR:", forYouResult.reason);
+    }
+
+    if (liveActivityResult.status === "rejected") {
+      console.error("HOME API LIVE ACTIVITY ERROR:", liveActivityResult.reason);
+    }
 
     if (newsResult.status === "rejected") {
       console.error("HOME API NEWS ERROR:", newsResult.reason);
@@ -6167,6 +6535,13 @@ app.get("/api/home", async (req, res) => {
       console.error("HOME API SPOTLIGHT TRACKS ERROR:", spotlightTracksResult.reason);
     }
 
+    const queueState = queueStateResult.status === "fulfilled" ? queueStateResult.value : null;
+    const forYou = forYouResult.status === "fulfilled" ? forYouResult.value : null;
+    const weeklyChallenge = forYou?.challenge || {
+      ...getHomeChallengeCatalog()[getWeekRotationIndex(new Date()) % getHomeChallengeCatalog().length],
+      progress: 0
+    };
+    const liveActivity = liveActivityResult.status === "fulfilled" ? liveActivityResult.value : [];
     const news = newsResult.status === "fulfilled" ? newsResult.value.rows : [];
     const rawTopTracks = topTracksResult.status === "fulfilled" ? topTracksResult.value : [];
     const recommendedPosts = postsResult.status === "fulfilled" ? postsResult.value.rows : [];
@@ -6178,6 +6553,10 @@ app.get("/api/home", async (req, res) => {
     const spotlightTracks = await attachArtistMentionsToTracks(rawSpotlightTracks);
 
     res.json({
+      queueState,
+      weeklyChallenge,
+      forYou,
+      liveActivity,
       news,
       topTracks,
       recommendedPosts,
@@ -7847,6 +8226,16 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
       DO UPDATE SET value = EXCLUDED.value
       `,
       [state]
+    );
+
+    await pool.query(
+      `
+      INSERT INTO system_settings (key, value)
+      VALUES ('queue_state_changed_at', $1)
+      ON CONFLICT (key)
+      DO UPDATE SET value = EXCLUDED.value
+      `,
+      [new Date().toISOString()]
     );
 
     if (state === "closed" && currentState !== "closed") {
