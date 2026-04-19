@@ -7657,73 +7657,81 @@ app.get("/api/queue/state", async (req, res) => {
 
 // изменить состояние
 app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
-  const { state } = req.body;
+  try {
+    const { state } = req.body;
 
-  if (!["open", "paused", "closed"].includes(state)) {
-    return res.status(400).json({ error: "Invalid state" });
-  }
-
-  const currentStateRes = await pool.query(
-    "SELECT value FROM system_settings WHERE key = 'queue_state'"
-  );
-  const currentState = currentStateRes.rows[0]?.value || "open";
-
-  if (state === "closed" && currentState !== "closed") {
-    await saveClosedQueueTopTracksSnapshot();
-  }
-
-  // При новом открытии после завершённого стрима очищаем только активную очередь:
-  // сами queue-треки и все их queue-оценки/реакции. Snapshot главной не трогаем.
-  if (state === "open" && currentState === "closed") {
-    const trackIdsRes = await pool.query("SELECT id FROM tracks");
-    const trackIds = trackIdsRes.rows
-      .map((row) => Number(row.id || 0))
-      .filter(Boolean);
-
-    if (trackIds.length) {
-      await pool.query(
-        "DELETE FROM track_rating_details WHERE track_id = ANY($1::int[])",
-        [trackIds]
-      );
-      await pool.query(
-        "DELETE FROM track_ratings WHERE track_id = ANY($1::int[])",
-        [trackIds]
-      );
-      await pool.query(
-        `
-        DELETE FROM track_actions
-        WHERE track_id = ANY($1::int[])
-          AND COALESCE(entity_type, 'profile') = 'queue'
-        `,
-        [trackIds]
-      );
+    if (!["open", "paused", "closed"].includes(state)) {
+      return res.status(400).json({ error: "Invalid state" });
     }
 
-    await pool.query("DELETE FROM tracks");
+    const currentStateRes = await pool.query(
+      "SELECT value FROM system_settings WHERE key = 'queue_state'"
+    );
+    const currentState = currentStateRes.rows[0]?.value || "open";
+
+    if (state === "closed" && currentState !== "closed") {
+      const snapshotSaved = await saveClosedQueueTopTracksSnapshot();
+      if (!snapshotSaved) {
+        console.warn("QUEUE CLOSE: snapshot was not saved because no judge-rated tracks were found");
+      }
+    }
+
+    // При новом открытии после завершённого стрима очищаем только активную очередь:
+    // сами queue-треки и все их queue-оценки/реакции. Snapshot главной не трогаем.
+    if (state === "open" && currentState === "closed") {
+      const trackIdsRes = await pool.query("SELECT id FROM tracks");
+      const trackIds = trackIdsRes.rows
+        .map((row) => Number(row.id || 0))
+        .filter(Boolean);
+
+      if (trackIds.length) {
+        await pool.query(
+          "DELETE FROM track_rating_details WHERE track_id = ANY($1::int[])",
+          [trackIds]
+        );
+        await pool.query(
+          "DELETE FROM track_ratings WHERE track_id = ANY($1::int[])",
+          [trackIds]
+        );
+        await pool.query(
+          `
+          DELETE FROM track_actions
+          WHERE track_id = ANY($1::int[])
+            AND COALESCE(entity_type, 'profile') = 'queue'
+          `,
+          [trackIds]
+        );
+      }
+
+      await pool.query("DELETE FROM tracks");
+    }
+
+    await pool.query(
+      `
+      INSERT INTO system_settings (key, value)
+      VALUES ('queue_state', $1)
+      ON CONFLICT (key)
+      DO UPDATE SET value = EXCLUDED.value
+      `,
+      [state]
+    );
+
+    // Сохраняем именно предыдущее состояние, а не новое.
+    await pool.query(
+      `
+      INSERT INTO system_settings (key, value)
+      VALUES ('queue_prev_state', $1)
+      ON CONFLICT (key)
+      DO UPDATE SET value = EXCLUDED.value
+      `,
+      [currentState]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("QUEUE STATE UPDATE ERROR:", err);
+    res.status(500).json({ error: "queue_state_update_failed" });
   }
-
-  await pool.query(
-    `
-    INSERT INTO system_settings (key, value)
-    VALUES ('queue_state', $1)
-    ON CONFLICT (key)
-    DO UPDATE SET value = EXCLUDED.value
-    `,
-    [state]
-  );
-
-  // Сохраняем именно предыдущее состояние, а не новое.
-  await pool.query(
-    `
-    INSERT INTO system_settings (key, value)
-    VALUES ('queue_prev_state', $1)
-    ON CONFLICT (key)
-    DO UPDATE SET value = EXCLUDED.value
-    `,
-    [currentState]
-  );
-
-  res.json({ success: true });
 });
 
 

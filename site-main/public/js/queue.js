@@ -311,7 +311,7 @@ async function initAdminControls() {
   const closeBtn = document.getElementById("closeQueue");
 
   async function setState(state) {
-    await fetch("/api/queue/state", {
+    const res = await fetch("/api/queue/state", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -320,14 +320,31 @@ async function initAdminControls() {
       body: JSON.stringify({ state })
     });
 
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "queue_state_update_failed");
+    }
+
     loadQueue();
     loadQueueState();
   }
 
-  if (openBtn) openBtn.onclick = () => setState("open");
-  if (pauseBtn) pauseBtn.onclick = () => setState("paused");
-  if (resumeBtn) resumeBtn.onclick = () => setState("open");
-  if (closeBtn) closeBtn.onclick = () => setState("closed");
+  if (openBtn) openBtn.onclick = () => setState("open").catch((err) => {
+    console.error("Queue open error:", err);
+    alert("Не удалось открыть очередь");
+  });
+  if (pauseBtn) pauseBtn.onclick = () => setState("paused").catch((err) => {
+    console.error("Queue pause error:", err);
+    alert("Не удалось приостановить очередь");
+  });
+  if (resumeBtn) resumeBtn.onclick = () => setState("open").catch((err) => {
+    console.error("Queue resume error:", err);
+    alert("Не удалось открыть очередь");
+  });
+  if (closeBtn) closeBtn.onclick = () => setState("closed").catch((err) => {
+    console.error("Queue close error:", err);
+    alert("Не удалось закрыть очередь");
+  });
 }
 
 async function loadQueueState() {
