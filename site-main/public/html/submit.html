@@ -1,6 +1,11 @@
 <div class="submit-page">
   <div class="submit-card">
     <form id="trackForm">
+      <div class="submit-source-switch" id="submitSourceSwitch">
+        <button type="button" class="submit-source-tab is-active" data-submit-source="upload">Новый трек</button>
+        <button type="button" class="submit-source-tab" data-submit-source="profile">Из профиля</button>
+      </div>
+
       <div class="submit-form-grid">
         <div class="submit-cover-block">
           <label class="submit-cover-label" for="coverInput">
@@ -89,8 +94,22 @@
             </div>
           </div>
 
-          <div class="submit-status" id="statusText"></div>
+        </div>
+      </div>
 
+      <div class="submit-status" id="statusText"></div>
+
+      <div id="submitProfilePicker" class="submit-profile-picker submit-profile-picker-hidden">
+        <div class="submit-profile-picker-head">
+          <div>
+            <div class="submit-profile-kicker">Трек на оценку</div>
+            <h3>Выбери трек из профиля</h3>
+          </div>
+          <div id="submitProfilePickerMeta" class="submit-profile-picker-meta"></div>
+        </div>
+
+        <div id="submitProfileTracks" class="submit-profile-track-list">
+          <div class="submit-status">Загружаем треки...</div>
         </div>
       </div>
 

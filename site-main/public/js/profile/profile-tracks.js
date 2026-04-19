@@ -5,6 +5,11 @@ function canModerateProfileTracks() {
 }
 
 let currentTags = [];
+let profileTrackRatingState = {
+  trackId: null,
+  track: null,
+  myRatingLoaded: false
+};
 
 let trackListenState = {
   trackId: null,
@@ -262,6 +267,7 @@ function renderTrack(track, options = {}) {
   const isReposted = !!track.reposted;
   const showRepostButton = !window.currentProfileIsMine && !isMy;
   const canModerate = canModerateProfileTracks();
+  const canRate = canRateProfileTrack(track);
   const repostMeta = isRepost && track.reposted_at
     ? `
       <div class="track-repost-meta">
@@ -279,6 +285,7 @@ function renderTrack(track, options = {}) {
     `
     : "";
   const artistMarkup = renderTrackArtistDisplay(track, { asHtml: true });
+  const ratingSummary = renderProfileTrackRatingSummary(track);
 
   return `
     <div class="track-card" id="track-card-${track.id}" data-track-id="${track.id}">
@@ -313,10 +320,20 @@ function renderTrack(track, options = {}) {
           </div>
 
           <div class="track-meta-right">
-            <div class="track-meta-info">
-              ${formatDate(track.created_at)}
-              ${track.genre ? `<span class="genre-chip">#${escapeTrackHtml(track.genre)}</span>` : ""}
+            <div class="track-meta-stack">
+              <div class="track-meta-info">
+                ${formatDate(track.created_at)}
+                ${track.genre ? `<span class="genre-chip">#${escapeTrackHtml(track.genre)}</span>` : ""}
+              </div>
+              ${ratingSummary}
             </div>
+
+            ${canRate ? `
+              <button class="profile-track-rate-btn" type="button" onclick="openProfileTrackRatingModal(event, ${track.id})">
+                <i class="fa-regular fa-star"></i>
+                <span>${track.profile_my_rating_type ? "Обновить оценку" : "Оценить"}</span>
+              </button>
+            ` : ""}
 
             ${(isMy || canModerate) ? `
               <div class="track-menu">
@@ -432,6 +449,7 @@ async function loadTracks() {
     });
 
     hydrateTrackCards(container);
+    initProfileTrackRatingModal();
 
     syncProfileTrackCardsWithGlobalPlayer();
   } catch (err) {
@@ -1014,6 +1032,271 @@ function formatDate(dateStr) {
   return date.toLocaleDateString();
 }
 
+function canRateProfileTrack(track) {
+  if (!track || !window.currentUser?.id) return false;
+  return Number(track.user_id || 0) !== Number(window.currentUser.id || 0);
+}
+
+function formatProfileRatingValue(value) {
+  const numeric = Number(value || 0);
+  return numeric > 0 ? numeric.toFixed(1) : "—";
+}
+
+function renderProfileTrackRatingSummary(track) {
+  const total = Number(track.profile_total_score || 0);
+  const userVotes = Number(track.profile_user_votes_count || 0);
+  const judgeVotes = Number(track.profile_judge_votes_count || 0);
+  const hasVotes = userVotes > 0 || judgeVotes > 0;
+
+  return `
+    <div class="profile-track-rating-summary" id="profile-track-rating-summary-${track.id}">
+      <div class="profile-track-rating-pill ${hasVotes ? "has-votes" : ""}">
+        <span class="profile-track-rating-pill-label">Рейтинг</span>
+        <strong class="profile-track-rating-pill-value">${formatProfileRatingValue(total)}</strong>
+      </div>
+      <div class="profile-track-rating-meta">
+        <span>Юзеры ${formatProfileRatingValue(track.profile_user_score || 0)}</span>
+        <span>Судьи ${formatProfileRatingValue(track.profile_judge_score || 0)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function getProfileTrackRatingInputs() {
+  return {
+    rhymes: document.getElementById("profileRateRhymes"),
+    structure: document.getElementById("profileRateStructure"),
+    style: document.getElementById("profileRateStyle"),
+    charisma: document.getElementById("profileRateCharisma"),
+    vibe: document.getElementById("profileRateVibe"),
+    memory: document.getElementById("profileRateMemory")
+  };
+}
+
+function calcProfileTrackRatingTotal() {
+  const inputs = getProfileTrackRatingInputs();
+  const base =
+    Number(inputs.rhymes?.value || 0) +
+    Number(inputs.structure?.value || 0) +
+    Number(inputs.style?.value || 0) +
+    Number(inputs.charisma?.value || 0);
+  const vibe = Number(inputs.vibe?.value || 0);
+  const memory = Number(inputs.memory?.value || 0);
+
+  return Math.round(base * (1 + vibe * 0.1) * (1 + memory * 0.1) * 1.111111);
+}
+
+function syncProfileTrackRatingModalUi() {
+  const map = [
+    ["profileRateRhymes", "profileRateRhymesValue"],
+    ["profileRateStructure", "profileRateStructureValue"],
+    ["profileRateStyle", "profileRateStyleValue"],
+    ["profileRateCharisma", "profileRateCharismaValue"],
+    ["profileRateVibe", "profileRateVibeValue"],
+    ["profileRateMemory", "profileRateMemoryValue"]
+  ];
+
+  map.forEach(([inputId, valueId]) => {
+    const input = document.getElementById(inputId);
+    const valueEl = document.getElementById(valueId);
+    if (!input || !valueEl) return;
+
+    valueEl.textContent = input.value;
+    input.style.setProperty(
+      "--profile-rate-fill",
+      `${((Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min))) * 100}%`
+    );
+  });
+
+  const totalEl = document.getElementById("profileTrackRateTotal");
+  if (totalEl) {
+    totalEl.textContent = String(calcProfileTrackRatingTotal());
+  }
+}
+
+function setProfileTrackRatingDefaults(values = {}) {
+  const inputs = getProfileTrackRatingInputs();
+  if (!inputs.rhymes) return;
+
+  inputs.rhymes.value = values.rhymes ?? 1;
+  inputs.structure.value = values.structure ?? 1;
+  inputs.style.value = values.style ?? 1;
+  inputs.charisma.value = values.charisma ?? 1;
+  inputs.vibe.value = values.vibe ?? 1;
+  inputs.memory.value = values.memory ?? 1;
+  syncProfileTrackRatingModalUi();
+}
+
+function initProfileTrackRatingModal() {
+  const modal = document.getElementById("profileTrackRateModal");
+  if (!modal || modal.dataset.initialized === "true") return;
+  modal.dataset.initialized = "true";
+
+  Object.values(getProfileTrackRatingInputs()).forEach((input) => {
+    input?.addEventListener("input", syncProfileTrackRatingModalUi);
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeProfileTrackRatingModal();
+    }
+  });
+
+  syncProfileTrackRatingModalUi();
+}
+
+async function openProfileTrackRatingModal(event, id) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  const track = getAllKnownTracks().find((item) => Number(item.id) === Number(id));
+  const modal = document.getElementById("profileTrackRateModal");
+  if (!track || !modal) return;
+
+  if (!canRateProfileTrack(track)) {
+    alert("Нельзя оценивать свой трек.");
+    return;
+  }
+
+  initProfileTrackRatingModal();
+
+  profileTrackRatingState.trackId = Number(id);
+  profileTrackRatingState.track = track;
+  profileTrackRatingState.myRatingLoaded = false;
+
+  document.getElementById("profileTrackRateTitle").textContent = track.title || "Без названия";
+  document.getElementById("profileTrackRateArtist").textContent = renderTrackArtistDisplay(track, { asHtml: false });
+  document.getElementById("profileTrackRateCover").src = track.cover
+    ? (track.cover.startsWith("http") ? track.cover : "/" + track.cover.replace(/^\/+/, ""))
+    : "/images/default-cover.jpg";
+
+  const status = document.getElementById("profileTrackRateStatus");
+  if (status) status.textContent = "";
+
+  setProfileTrackRatingDefaults();
+  modal.style.display = "flex";
+
+  try {
+    const res = await fetch(`/api/profile-tracks/${id}/my-rating`, {
+      headers: {
+        Authorization: "Bearer " + localStorage.getItem("token")
+      }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (!data) return;
+
+    profileTrackRatingState.myRatingLoaded = true;
+    setProfileTrackRatingDefaults(data);
+  } catch (err) {
+    console.error("openProfileTrackRatingModal error", err);
+  }
+}
+
+function closeProfileTrackRatingModal() {
+  const modal = document.getElementById("profileTrackRateModal");
+  if (!modal) return;
+  modal.style.display = "none";
+}
+
+function resetProfileTrackRatingModal() {
+  setProfileTrackRatingDefaults();
+  const status = document.getElementById("profileTrackRateStatus");
+  if (status) status.textContent = "";
+}
+
+function applyProfileTrackRatingSummary(trackId, summary, ratingType = "") {
+  const numericTrackId = Number(trackId);
+  if (!numericTrackId || !summary) return;
+
+  const applyToCollection = (collection) => {
+    if (!Array.isArray(collection)) return collection;
+    return collection.map((track) => (
+      Number(track.id) === numericTrackId
+        ? {
+            ...track,
+            ...summary,
+            profile_my_rating_type: ratingType || track.profile_my_rating_type || null
+          }
+        : track
+    ));
+  };
+
+  window.currentTracks = applyToCollection(window.currentTracks);
+  window.currentRepostTracks = applyToCollection(window.currentRepostTracks);
+  window.currentMentionTracks = applyToCollection(window.currentMentionTracks);
+
+  const summaryEl = document.getElementById(`profile-track-rating-summary-${numericTrackId}`);
+  if (summaryEl) {
+    const track = getAllKnownTracks().find((item) => Number(item.id) === numericTrackId);
+    if (track) {
+      summaryEl.outerHTML = renderProfileTrackRatingSummary(track);
+    }
+  }
+
+  const card = document.getElementById(`track-card-${numericTrackId}`);
+  const buttonLabel = card?.querySelector(".profile-track-rate-btn span");
+  if (buttonLabel) {
+    buttonLabel.textContent = "Обновить оценку";
+  }
+}
+
+async function submitProfileTrackRating() {
+  const trackId = Number(profileTrackRatingState.trackId || 0);
+  if (!trackId) return;
+
+  const status = document.getElementById("profileTrackRateStatus");
+  const submitBtn = document.getElementById("profileTrackRateSubmit");
+  const inputs = getProfileTrackRatingInputs();
+
+  try {
+    if (status) status.textContent = "Сохраняем оценку...";
+    if (submitBtn) submitBtn.disabled = true;
+
+    const res = await fetch(`/api/profile-tracks/${trackId}/rate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token")
+      },
+      body: JSON.stringify({
+        rhymes: Number(inputs.rhymes.value),
+        structure: Number(inputs.structure.value),
+        style: Number(inputs.style.value),
+        charisma: Number(inputs.charisma.value),
+        vibe: Number(inputs.vibe.value),
+        memory: Number(inputs.memory.value),
+        score: calcProfileTrackRatingTotal()
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(window.getApiErrorMessage?.(data, "Не удалось сохранить оценку") || "Не удалось сохранить оценку");
+    }
+
+    applyProfileTrackRatingSummary(trackId, data.summary || {}, data.rating_type || "");
+
+    if (data?.xp && typeof window.applyXPAndCheckRank === "function") {
+      window.applyXPAndCheckRank(data.xp, data.newXP, data.xpState);
+    } else if (data?.xp && typeof window.showXP === "function") {
+      window.showXP(data.xp);
+    }
+
+    if (status) status.textContent = "Оценка сохранена";
+    setTimeout(() => {
+      closeProfileTrackRatingModal();
+    }, 500);
+  } catch (err) {
+    console.error("submitProfileTrackRating error", err);
+    if (status) status.textContent = err.message || "Не удалось сохранить оценку";
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
 function goToComments(slug, tag) {
   navigate(`/${tag}/${slug}#comments`);
 }
@@ -1398,3 +1681,7 @@ window.initTrackModal = initTrackModal;
 window.openTrackModal = openTrackModal;
 window.closeTrackModal = closeTrackModal;
 window.submitUserTrack = submitUserTrack;
+window.openProfileTrackRatingModal = openProfileTrackRatingModal;
+window.closeProfileTrackRatingModal = closeProfileTrackRatingModal;
+window.resetProfileTrackRatingModal = resetProfileTrackRatingModal;
+window.submitProfileTrackRating = submitProfileTrackRating;

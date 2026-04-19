@@ -15,6 +15,10 @@ function initSubmitPage() {
   const statusText = document.getElementById("statusText");
   const trackForm = document.getElementById("trackForm");
   const submitBtn = trackForm?.querySelector(".submit-submit-btn");
+  const sourceSwitch = document.getElementById("submitSourceSwitch");
+  const profilePicker = document.getElementById("submitProfilePicker");
+  const profileTracksEl = document.getElementById("submitProfileTracks");
+  const profilePickerMeta = document.getElementById("submitProfilePickerMeta");
 
   if (!trackForm) return;
 
@@ -24,6 +28,10 @@ function initSubmitPage() {
   let externalCoverUrl = null;
   let queueStateInterval = null;
   const maxQueueTrackSize = 20 * 1024 * 1024;
+  let submitSourceMode = "upload";
+  let profileTracksLoaded = false;
+  let profileTracks = [];
+  let selectedProfileTrackId = null;
 
   function setStatus(message, type = "") {
     if (!statusText) return;
@@ -74,6 +82,106 @@ function initSubmitPage() {
 
     if (audioInput) {
       audioInput.value = "";
+    }
+  }
+
+  function setSubmitSourceMode(mode = "upload") {
+    submitSourceMode = mode === "profile" ? "profile" : "upload";
+    trackForm.classList.toggle("submit-mode-profile", submitSourceMode === "profile");
+    profilePicker?.classList.toggle("submit-profile-picker-hidden", submitSourceMode !== "profile");
+
+    sourceSwitch?.querySelectorAll("[data-submit-source]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.submitSource === submitSourceMode);
+    });
+
+    if (submitSourceMode === "profile" && !profileTracksLoaded) {
+      loadProfileTracksForSubmit();
+    }
+  }
+
+  function formatProfileTrackDate(dateValue) {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("ru-RU");
+  }
+
+  function renderSubmitProfileTracks() {
+    if (!profileTracksEl) return;
+
+    if (!profileTracks.length) {
+      profileTracksEl.innerHTML = `<div class="submit-status">В профиле пока нет треков для отправки на оценку.</div>`;
+      return;
+    }
+
+    profileTracksEl.innerHTML = profileTracks.map((track) => {
+      const cover = track.cover
+        ? (String(track.cover).startsWith("http") ? String(track.cover) : "/" + String(track.cover).replace(/^\/+/, ""))
+        : "/images/default-cover.jpg";
+      const disabled = !!track.is_in_queue;
+      const selected = Number(selectedProfileTrackId) === Number(track.id);
+
+      return `
+        <button
+          type="button"
+          class="submit-profile-track-card ${selected ? "is-selected" : ""} ${disabled ? "is-disabled" : ""}"
+          data-profile-track-id="${track.id}"
+          ${disabled ? "disabled" : ""}
+        >
+          <img src="${cover}" class="submit-profile-track-cover" alt="${track.title || "Track cover"}">
+          <div class="submit-profile-track-info">
+            <div class="submit-profile-track-title">${track.title || "Без названия"}</div>
+            <div class="submit-profile-track-artist">${track.artist || track.username_tag || "Артист"}</div>
+            <div class="submit-profile-track-meta">${formatProfileTrackDate(track.created_at)}${track.genre ? ` • #${track.genre}` : ""}</div>
+          </div>
+          <div class="submit-profile-track-badge">${disabled ? "Уже в очереди" : (selected ? "Выбрано" : "Выбрать")}</div>
+        </button>
+      `;
+    }).join("");
+
+    profileTracksEl.querySelectorAll("[data-profile-track-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedProfileTrackId = Number(button.dataset.profileTrackId);
+        renderSubmitProfileTracks();
+      });
+    });
+
+    if (profilePickerMeta) {
+      const availableCount = profileTracks.filter((track) => !track.is_in_queue).length;
+      profilePickerMeta.textContent = `Доступно ${availableCount}`;
+    }
+  }
+
+  async function loadProfileTracksForSubmit() {
+    if (!profileTracksEl) return;
+
+    try {
+      profileTracksEl.innerHTML = `<div class="submit-status">Загружаем треки...</div>`;
+
+      const res = await fetch("/user-tracks", {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token")
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error("profile_tracks_load_failed");
+      }
+
+      const data = await res.json();
+      profileTracks = Array.isArray(data)
+        ? data.filter((track) => track.audio || track.soundcloud)
+        : [];
+      profileTracksLoaded = true;
+
+      if (!selectedProfileTrackId) {
+        selectedProfileTrackId = Number(profileTracks.find((track) => !track.is_in_queue)?.id || 0) || null;
+      }
+
+      renderSubmitProfileTracks();
+    } catch (err) {
+      console.error("loadProfileTracksForSubmit error", err);
+      profileTracksLoaded = false;
+      profileTracksEl.innerHTML = `<div class="submit-status submit-status-error">Не удалось загрузить треки из профиля.</div>`;
     }
   }
 
@@ -196,9 +304,58 @@ function initSubmitPage() {
     }
   });
 
+  sourceSwitch?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-submit-source]");
+    if (!button) return;
+    setSubmitSourceMode(button.dataset.submitSource);
+  });
+
 
   trackForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    if (submitSourceMode === "profile") {
+      if (!selectedProfileTrackId) {
+        setStatus("Выбери трек из профиля", "error");
+        return;
+      }
+
+      try {
+        setStatus("Отправка...");
+        if (submitBtn) submitBtn.disabled = true;
+
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/tracks/from-profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token
+          },
+          body: JSON.stringify({ profileTrackId: selectedProfileTrackId })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(window.getApiErrorMessage?.(data, "Не удалось отправить трек из профиля") || "Не удалось отправить трек из профиля");
+        }
+
+        setStatus("Трек из профиля отправлен в очередь", "success");
+        profileTracks = profileTracks.map((track) => (
+          Number(track.id) === Number(selectedProfileTrackId)
+            ? { ...track, is_in_queue: true }
+            : track
+        ));
+        selectedProfileTrackId = Number(profileTracks.find((track) => !track.is_in_queue)?.id || 0) || null;
+        renderSubmitProfileTracks();
+      } catch (err) {
+        console.error("submit profile track error", err);
+        setStatus(err.message || "Не удалось отправить трек из профиля", "error");
+      } finally {
+        await checkQueueState();
+      }
+
+      return;
+    }
 
     const audioFile = audioInput?.files?.[0];
     const coverFile = coverInput?.files?.[0];
@@ -268,6 +425,7 @@ function initSubmitPage() {
   });
 
   checkQueueState();
+  setSubmitSourceMode("upload");
 
   if (window.__submitQueueInterval) {
     clearInterval(window.__submitQueueInterval);

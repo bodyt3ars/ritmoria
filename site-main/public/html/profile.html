@@ -420,5 +420,78 @@
     <div id="copyToast" class="profile-copy-toast">
   Ссылка скопирована
 </div>
+
+    <div id="profileTrackRateModal" class="profile-modal">
+      <div class="profile-modal-content profile-track-rate-modal-content">
+        <div class="profile-track-rate-head">
+          <div>
+            <div class="profile-track-rate-kicker">Оценка трека</div>
+            <h3 id="profileTrackRateTitle">Оценить трек</h3>
+            <p id="profileTrackRateArtist" class="profile-track-rate-artist"></p>
+          </div>
+
+          <button class="profile-icon-btn" type="button" onclick="closeProfileTrackRatingModal()" title="Закрыть">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="profile-track-rate-grid">
+          <div class="profile-track-rate-cover-shell">
+            <img id="profileTrackRateCover" class="profile-track-rate-cover" alt="Обложка трека">
+            <div class="profile-track-rate-total-card">
+              <span class="profile-track-rate-total-label">Итог</span>
+              <strong id="profileTrackRateTotal">44</strong>
+            </div>
+          </div>
+
+          <div class="profile-track-rate-controls">
+            <div class="profile-track-rate-rows">
+              <label class="profile-track-rate-row">
+                <span>Рифмы и образы</span>
+                <input id="profileRateRhymes" type="range" min="1" max="10" step="1" value="1">
+                <strong id="profileRateRhymesValue">1</strong>
+              </label>
+
+              <label class="profile-track-rate-row">
+                <span>Структура и ритмика</span>
+                <input id="profileRateStructure" type="range" min="1" max="10" step="1" value="1">
+                <strong id="profileRateStructureValue">1</strong>
+              </label>
+
+              <label class="profile-track-rate-row">
+                <span>Реализация стиля</span>
+                <input id="profileRateStyle" type="range" min="1" max="10" step="1" value="1">
+                <strong id="profileRateStyleValue">1</strong>
+              </label>
+
+              <label class="profile-track-rate-row">
+                <span>Харизма</span>
+                <input id="profileRateCharisma" type="range" min="1" max="10" step="1" value="1">
+                <strong id="profileRateCharismaValue">1</strong>
+              </label>
+
+              <label class="profile-track-rate-row profile-track-rate-row-bonus">
+                <span>Атмосфера</span>
+                <input id="profileRateVibe" type="range" min="1" max="5" step="1" value="1">
+                <strong id="profileRateVibeValue">1</strong>
+              </label>
+
+              <label class="profile-track-rate-row profile-track-rate-row-bonus">
+                <span>Запоминаемость</span>
+                <input id="profileRateMemory" type="range" min="1" max="5" step="1" value="1">
+                <strong id="profileRateMemoryValue">1</strong>
+              </label>
+            </div>
+
+            <p id="profileTrackRateStatus" class="profile-track-rate-status"></p>
+
+            <div class="profile-modal-buttons">
+              <button type="button" class="profile-secondary-btn" onclick="resetProfileTrackRatingModal()">Сбросить</button>
+              <button id="profileTrackRateSubmit" type="button" class="profile-main-btn" onclick="submitProfileTrackRating()">Сохранить оценку</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 </div>
 </div>

@@ -1609,6 +1609,44 @@ async function ensureTrackRepostSchema() {
   `);
 }
 
+async function ensureProfileTrackRatingsSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS profile_track_ratings (
+      id SERIAL PRIMARY KEY,
+      profile_track_id integer NOT NULL REFERENCES user_tracks(id) ON DELETE CASCADE,
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type varchar(10) NOT NULL CHECK (type IN ('user', 'judge')),
+      score integer NOT NULL,
+      created_at timestamp without time zone DEFAULT now(),
+      updated_at timestamp without time zone DEFAULT now(),
+      UNIQUE(profile_track_id, user_id, type)
+    );
+
+    CREATE TABLE IF NOT EXISTS profile_track_rating_details (
+      id SERIAL PRIMARY KEY,
+      profile_track_id integer NOT NULL REFERENCES user_tracks(id) ON DELETE CASCADE,
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      rhymes numeric(10,2) NOT NULL,
+      structure numeric(10,2) NOT NULL,
+      style numeric(10,2) NOT NULL,
+      charisma numeric(10,2) NOT NULL,
+      vibe numeric(10,2) NOT NULL,
+      memory numeric(10,2) NOT NULL,
+      total integer NOT NULL,
+      rating_type varchar(10) NOT NULL CHECK (rating_type IN ('user', 'judge')),
+      created_at timestamp without time zone DEFAULT now(),
+      updated_at timestamp without time zone DEFAULT now(),
+      UNIQUE(profile_track_id, user_id, rating_type)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_profile_track_ratings_track
+      ON profile_track_ratings(profile_track_id, type);
+
+    CREATE INDEX IF NOT EXISTS idx_profile_track_rating_details_track
+      ON profile_track_rating_details(profile_track_id, rating_type);
+  `);
+}
+
 async function ensureMentionsSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS post_mentions (
@@ -7230,6 +7268,54 @@ app.get("/user-tracks", async (req, res) => {
       SELECT 
         user_tracks.*,
         users.username_tag,
+        COALESCE((
+          SELECT ROUND(AVG(ptr.score)::numeric, 1)
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = user_tracks.id
+            AND ptr.type = 'user'
+        ), 0) AS profile_user_score,
+        COALESCE((
+          SELECT ROUND(AVG(ptr.score)::numeric, 1)
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = user_tracks.id
+            AND ptr.type = 'judge'
+        ), 0) AS profile_judge_score,
+        (
+          (
+            COALESCE((
+              SELECT AVG(ptr.score)
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = user_tracks.id
+                AND ptr.type = 'user'
+            ), 0)
+            +
+            COALESCE((
+              SELECT AVG(ptr.score)
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = user_tracks.id
+                AND ptr.type = 'judge'
+            ), 0)
+          ) / 2.0
+        )::numeric(10,1) AS profile_total_score,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = user_tracks.id
+            AND ptr.type = 'user'
+        ), 0) AS profile_user_votes_count,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = user_tracks.id
+            AND ptr.type = 'judge'
+        ), 0) AS profile_judge_votes_count,
+        (
+          SELECT ptr.type
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = user_tracks.id
+            AND ptr.user_id = $2
+          LIMIT 1
+        ) AS profile_my_rating_type,
         (
           SELECT COUNT(*)::int
           FROM track_listens
@@ -7239,7 +7325,20 @@ app.get("/user-tracks", async (req, res) => {
           SELECT 1
           FROM track_reposts
           WHERE track_reposts.track_id = user_tracks.id AND track_reposts.user_id = $2
-        ) AS reposted
+        ) AS reposted,
+        EXISTS(
+          SELECT 1
+          FROM tracks t
+          WHERE t.user_id = user_tracks.user_id
+            AND (
+              (user_tracks.audio IS NOT NULL AND t.audio = user_tracks.audio)
+              OR (user_tracks.soundcloud IS NOT NULL AND t.soundcloud = user_tracks.soundcloud)
+              OR (
+                LOWER(COALESCE(t.title, '')) = LOWER(COALESCE(user_tracks.title, ''))
+                AND LOWER(COALESCE(t.artist, '')) = LOWER(COALESCE(user_tracks.artist, ''))
+              )
+            )
+        ) AS is_in_queue
       FROM user_tracks
       JOIN users ON users.id = user_tracks.user_id
       WHERE user_tracks.user_id = $1
@@ -7255,6 +7354,282 @@ app.get("/user-tracks", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "server_error" });
+  }
+});
+
+app.get("/api/profile-tracks/:id/my-rating", auth, async (req, res) => {
+  try {
+    const profileTrackId = Number(req.params.id);
+    const userId = req.user.id;
+
+    if (!profileTrackId) {
+      return res.status(400).json({ error: "invalid_track_id" });
+    }
+
+    const ratingType = ["judge", "admin"].includes(String(req.user?.role || "").toLowerCase())
+      ? "judge"
+      : "user";
+
+    const result = await pool.query(
+      `
+      SELECT rhymes, structure, style, charisma, vibe, memory, total, rating_type
+      FROM profile_track_rating_details
+      WHERE profile_track_id = $1
+        AND user_id = $2
+        AND rating_type = $3
+      LIMIT 1
+      `,
+      [profileTrackId, userId, ratingType]
+    );
+
+    res.json(result.rows[0] || null);
+  } catch (err) {
+    console.error("PROFILE TRACK MY RATING ERROR:", err);
+    res.status(500).json({ error: "profile_track_my_rating_failed" });
+  }
+});
+
+app.post("/api/profile-tracks/:id/rate", requireRole(["user", "judge", "admin"]), async (req, res) => {
+  try {
+    const profileTrackId = Number(req.params.id);
+    const userId = req.user.id;
+    const role = String(req.user?.role || "").toLowerCase();
+    const ratingType = ["judge", "admin"].includes(role) ? "judge" : "user";
+
+    const rhymes = Number(req.body?.rhymes);
+    const structure = Number(req.body?.structure);
+    const style = Number(req.body?.style);
+    const charisma = Number(req.body?.charisma);
+    const vibe = Number(req.body?.vibe);
+    const memory = Number(req.body?.memory);
+    const score = Number(req.body?.score);
+
+    if (!profileTrackId) {
+      return res.status(400).json({ error: "invalid_track_id" });
+    }
+
+    const metricValues = [rhymes, structure, style, charisma, vibe, memory, score];
+    if (metricValues.some((value) => !Number.isFinite(value))) {
+      return res.status(400).json({ error: "invalid_rating_values" });
+    }
+
+    const trackRes = await pool.query(
+      `
+      SELECT id, user_id
+      FROM user_tracks
+      WHERE id = $1
+        AND COALESCE(is_archived, false) = false
+      LIMIT 1
+      `,
+      [profileTrackId]
+    );
+
+    if (!trackRes.rows.length) {
+      return res.status(404).json({ error: "track_not_found" });
+    }
+
+    if (Number(trackRes.rows[0].user_id || 0) === Number(userId)) {
+      return res.status(403).json({ error: "cannot_rate_own_track" });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO profile_track_ratings (profile_track_id, user_id, type, score, updated_at)
+      VALUES ($1, $2, $3, $4, now())
+      ON CONFLICT (profile_track_id, user_id, type)
+      DO UPDATE SET
+        score = EXCLUDED.score,
+        updated_at = now()
+      `,
+      [profileTrackId, userId, ratingType, score]
+    );
+
+    await pool.query(
+      `
+      INSERT INTO profile_track_rating_details (
+        profile_track_id,
+        user_id,
+        rhymes,
+        structure,
+        style,
+        charisma,
+        vibe,
+        memory,
+        total,
+        rating_type,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+      ON CONFLICT (profile_track_id, user_id, rating_type)
+      DO UPDATE SET
+        rhymes = EXCLUDED.rhymes,
+        structure = EXCLUDED.structure,
+        style = EXCLUDED.style,
+        charisma = EXCLUDED.charisma,
+        vibe = EXCLUDED.vibe,
+        memory = EXCLUDED.memory,
+        total = EXCLUDED.total,
+        updated_at = now()
+      `,
+      [profileTrackId, userId, rhymes, structure, style, charisma, vibe, memory, score, ratingType]
+    );
+
+    const summaryRes = await pool.query(
+      `
+      SELECT
+        COALESCE((
+          SELECT ROUND(AVG(ptr.score)::numeric, 1)
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = $1
+            AND ptr.type = 'user'
+        ), 0) AS profile_user_score,
+        COALESCE((
+          SELECT ROUND(AVG(ptr.score)::numeric, 1)
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = $1
+            AND ptr.type = 'judge'
+        ), 0) AS profile_judge_score,
+        (
+          (
+            COALESCE((
+              SELECT AVG(ptr.score)
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = $1
+                AND ptr.type = 'user'
+            ), 0)
+            +
+            COALESCE((
+              SELECT AVG(ptr.score)
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = $1
+                AND ptr.type = 'judge'
+            ), 0)
+          ) / 2.0
+        )::numeric(10,1) AS profile_total_score,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = $1
+            AND ptr.type = 'user'
+        ), 0) AS profile_user_votes_count,
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM profile_track_ratings ptr
+          WHERE ptr.profile_track_id = $1
+            AND ptr.type = 'judge'
+        ), 0) AS profile_judge_votes_count
+      `,
+      [profileTrackId]
+    );
+
+    const xpState = await awardXP(req.user.id, `profile_track_rate_${ratingType}`, {
+      amount: ratingType === "judge" ? 25 : 15,
+      eventKey: `profile-track-rate:${ratingType}:${profileTrackId}`,
+      meta: { profileTrackId }
+    });
+
+    res.json({
+      success: true,
+      rating_type: ratingType,
+      summary: summaryRes.rows[0] || null,
+      ...getXpPayload(xpState)
+    });
+  } catch (err) {
+    console.error("PROFILE TRACK RATE ERROR:", err);
+    res.status(500).json({ error: "profile_track_rate_failed" });
+  }
+});
+
+app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), async (req, res) => {
+  try {
+    const queueStateRes = await pool.query(
+      "SELECT value FROM system_settings WHERE key = 'queue_state'"
+    );
+
+    const state = queueStateRes.rows[0]?.value || "open";
+    if (state !== "open") {
+      return res.status(403).json({ error: "queue_not_open" });
+    }
+
+    const profileTrackId = Number(req.body?.profileTrackId);
+    const userId = req.user.id;
+
+    if (!profileTrackId) {
+      return res.status(400).json({ error: "invalid_track_id" });
+    }
+
+    const trackRes = await pool.query(
+      `
+      SELECT id, user_id, title, artist, cover, audio, soundcloud
+      FROM user_tracks
+      WHERE id = $1
+        AND user_id = $2
+        AND COALESCE(is_archived, false) = false
+      LIMIT 1
+      `,
+      [profileTrackId, userId]
+    );
+
+    if (!trackRes.rows.length) {
+      return res.status(404).json({ error: "profile_track_not_found" });
+    }
+
+    const profileTrack = trackRes.rows[0];
+    if (!profileTrack.audio && !profileTrack.soundcloud) {
+      return res.status(400).json({ error: "audio_required" });
+    }
+
+    const duplicateRes = await pool.query(
+      `
+      SELECT id
+      FROM tracks
+      WHERE user_id = $1
+        AND (
+          ($2::text <> '' AND audio = $2)
+          OR ($3::text <> '' AND soundcloud = $3)
+          OR (
+            LOWER(COALESCE(title, '')) = LOWER(COALESCE($4, ''))
+            AND LOWER(COALESCE(artist, '')) = LOWER(COALESCE($5, ''))
+          )
+        )
+      LIMIT 1
+      `,
+      [
+        userId,
+        String(profileTrack.audio || ""),
+        String(profileTrack.soundcloud || ""),
+        String(profileTrack.title || ""),
+        String(profileTrack.artist || "")
+      ]
+    );
+
+    if (duplicateRes.rows.length) {
+      return res.status(409).json({ error: "queue_track_exists" });
+    }
+
+    const createdRes = await pool.query(
+      `
+      INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id)
+      VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+      RETURNING *
+      `,
+      [
+        profileTrack.artist || "",
+        profileTrack.title || "Без названия",
+        profileTrack.soundcloud || "",
+        profileTrack.cover || null,
+        profileTrack.audio || null,
+        userId
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      track: createdRes.rows[0]
+    });
+  } catch (err) {
+    console.error("QUEUE TRACK FROM PROFILE ERROR:", err);
+    res.status(500).json({ error: "queue_track_from_profile_failed" });
   }
 });
 
@@ -10264,6 +10639,7 @@ await ensurePostSocialSchema();
 await ensureTrackCommentsSchema();
 await ensureTrackActionsSchema();
 await ensureTrackRepostSchema();
+await ensureProfileTrackRatingsSchema();
 await ensureMentionsSchema();
 await ensureHomeNewsSchema();
 await ensureUserBadgeSchema();
