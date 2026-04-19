@@ -61,10 +61,23 @@
  
   <link rel="stylesheet" href="/styles/base.css">
   <link rel="stylesheet" href="/styles/navbar.css">
+  <style>
+    body.boot-loading #navbar,
+    body.boot-loading #app,
+    body.boot-loading #player {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    body.boot-loading #globalLoader {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
   
   
 </head>
-<body>
+<body class="boot-loading">
 
   <!-- ВИДЕОФОН -->
   <div class="video-background">
@@ -107,7 +120,7 @@
     renderPage(location.pathname + location.search);
   </script>
 
-<div id="globalLoader" class="page-loader hidden">
+<div id="globalLoader" class="page-loader">
   <div class="spinner"></div>
 </div>
 

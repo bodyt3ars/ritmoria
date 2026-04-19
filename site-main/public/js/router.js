@@ -1,4 +1,5 @@
 function showLoader() {
+  document.body?.classList.add("boot-loading");
   const loader = document.getElementById("globalLoader");
   if (loader) loader.classList.remove("hidden");
 }
@@ -6,6 +7,8 @@ function showLoader() {
 function hideLoader() {
   const loader = document.getElementById("globalLoader");
   if (loader) loader.classList.add("hidden");
+  document.body?.classList.remove("boot-loading");
+  document.body?.classList.add("app-ready");
 }
 
 const pageCache = {};

@@ -1933,6 +1933,10 @@ async function awardQueuePodiumPlaces(rows = []) {
 }
 
 async function replaceHomeTopTracksSnapshot(rows = [], idField = "track_id") {
+  if (!Array.isArray(rows) || !rows.length) {
+    return false;
+  }
+
   await pool.query("DELETE FROM home_stream_top_tracks");
 
   for (const [index, row] of rows.entries()) {
@@ -1978,6 +1982,8 @@ async function replaceHomeTopTracksSnapshot(rows = [], idField = "track_id") {
       ]
     );
   }
+
+  return true;
 }
 
 async function getHomeTopTracksSnapshot() {
@@ -2013,6 +2019,8 @@ async function getHomeTopTracksSnapshot() {
     "SELECT value FROM system_settings WHERE key = 'queue_state'"
   );
 
+  // Если очередь уже открыта заново и живых треков в ней ещё нет,
+  // просто не строим новый рейтинг с нуля.
   if (queueStateRes.rows[0]?.value !== "closed") {
     return [];
   }
@@ -7669,7 +7677,9 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
     await saveClosedQueueTopTracksSnapshot();
   }
 
-  // 🔥 если открываем после closed → очищаем очередь
+  // При повторном открытии после закрытия очищаем только активную очередь.
+  // Снимок рейтинга для главной (home_stream_top_tracks) намеренно сохраняем,
+  // чтобы витрина лучших треков прошлого стрима не исчезала.
   if (state === "open") {
     const prev = await pool.query(
       "SELECT value FROM system_settings WHERE key = 'queue_prev_state'"

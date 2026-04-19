@@ -112,16 +112,30 @@ svg {
 #navbar {
   position: relative;
   z-index: 1000;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 #app {
   position: relative;
   z-index: 1;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 #player {
   position: relative;
   z-index: 1200;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+body.boot-loading {
+  overflow: hidden;
+}
+
+body.boot-loading #navbar,
+body.boot-loading #app,
+body.boot-loading #player {
+  opacity: 0;
+  visibility: hidden;
 }
 @media (max-width: 768px) {
   #background-video {
@@ -244,10 +258,6 @@ svg {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-#app {
-  transition: opacity 0.2s ease;
 }
 
 /* 👇 DISCOVER FULLSCREEN */
