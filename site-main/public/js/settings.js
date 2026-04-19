@@ -895,6 +895,188 @@ async function performSettingsLogoutAfterDelete() {
   navigate("/");
 }
 
+function getAchievementDifficultyLabel(value) {
+  if (value === "legendary") return "Легендарное";
+  if (value === "hard") return "Сложное";
+  if (value === "medium") return "Среднее";
+  return "Лёгкое";
+}
+
+function formatAchievementProgress(value, goal) {
+  return `${Number(value || 0)} / ${Number(goal || 0)}`;
+}
+
+function formatAchievementDate(value) {
+  if (!value) return "";
+
+  try {
+    return new Date(value).toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+  } catch {
+    return "";
+  }
+}
+
+function renderAchievementCard(achievement = {}) {
+  const progress = Number(achievement?.progress?.current || 0);
+  const goal = Number(achievement?.progress?.goal || 1);
+  const percent = Math.max(0, Math.min(100, Number(achievement?.progress?.percent || 0)));
+  const completed = Boolean(achievement?.completed);
+  const completedAt = formatAchievementDate(achievement?.completedAt);
+  const difficulty = String(achievement?.difficulty || "easy");
+
+  return `
+    <article class="settings-achievement-card ${completed ? "is-completed" : ""}">
+      <div class="settings-achievement-card-top">
+        <div class="settings-achievement-icon">
+          <i class="fa-solid ${settingsEscapeHtml(achievement?.icon || "fa-star")}"></i>
+        </div>
+
+        <div class="settings-achievement-head">
+          <div class="settings-achievement-meta">
+            <span class="settings-achievement-difficulty settings-achievement-difficulty-${settingsEscapeHtml(difficulty)}">
+              ${settingsEscapeHtml(getAchievementDifficultyLabel(difficulty))}
+            </span>
+            <span class="settings-achievement-xp">+${Number(achievement?.xpReward || 0)} XP</span>
+          </div>
+
+          <h3 class="settings-achievement-title">${settingsEscapeHtml(achievement?.title || "Достижение")}</h3>
+          <p class="settings-achievement-description">${settingsEscapeHtml(achievement?.description || "")}</p>
+        </div>
+      </div>
+
+      <div class="settings-achievement-progress-wrap">
+        <div class="settings-achievement-progress-meta">
+          <span>${settingsEscapeHtml(formatAchievementProgress(progress, goal))}</span>
+          <span>${percent}%</span>
+        </div>
+
+        <div class="settings-achievement-progress">
+          <div class="settings-achievement-progress-fill" style="width:${percent}%"></div>
+        </div>
+      </div>
+
+      <div class="settings-achievement-footer">
+        <span class="settings-achievement-status ${completed ? "is-completed" : ""}">
+          ${completed ? `Открыто${completedAt ? ` • ${settingsEscapeHtml(completedAt)}` : ""}` : "В процессе"}
+        </span>
+      </div>
+    </article>
+  `;
+}
+
+function renderAchievementsSection(data = {}) {
+  const summary = data?.summary || {};
+  const categories = Array.isArray(data?.categories) ? data.categories : [];
+  const achievements = Array.isArray(data?.achievements) ? data.achievements : [];
+  const grouped = new Map();
+
+  achievements.forEach((achievement) => {
+    const categoryKey = String(achievement?.category || "other");
+    if (!grouped.has(categoryKey)) {
+      grouped.set(categoryKey, []);
+    }
+    grouped.get(categoryKey).push(achievement);
+  });
+
+  return `
+    <div class="settings-achievements-shell">
+      <section class="settings-achievements-hero">
+        <div class="settings-achievements-kicker">Твои достижения</div>
+        <h3 class="settings-achievements-title">Прогресс на РИТМОРИИ</h3>
+        <p class="settings-achievements-text">
+          Держи темп, закрывай цели и забирай XP за каждое выполненное достижение.
+        </p>
+
+        <div class="settings-achievements-summary">
+          <div class="settings-achievements-summary-card">
+            <span class="settings-achievements-summary-label">Открыто</span>
+            <strong>${Number(summary.completedCount || 0)} / ${Number(summary.totalCount || 0)}</strong>
+          </div>
+          <div class="settings-achievements-summary-card">
+            <span class="settings-achievements-summary-label">Заработано XP</span>
+            <strong>${Number(summary.totalXpEarned || 0)}</strong>
+          </div>
+          <div class="settings-achievements-summary-card">
+            <span class="settings-achievements-summary-label">Потенциал</span>
+            <strong>${Number(summary.totalXpAvailable || 0)}</strong>
+          </div>
+          <div class="settings-achievements-summary-card">
+            <span class="settings-achievements-summary-label">Следующая цель</span>
+            <strong>${Number(summary.remainingCount || 0)}</strong>
+          </div>
+        </div>
+      </section>
+
+      ${
+        categories.length
+          ? `
+            <div class="settings-achievements-category-row">
+              ${categories.map((category) => `
+                <div class="settings-achievements-category-pill">
+                  <span>${settingsEscapeHtml(category?.title || "")}</span>
+                  <strong>${Number(category?.completedCount || 0)} / ${Number(category?.totalCount || 0)}</strong>
+                </div>
+              `).join("")}
+            </div>
+          `
+          : ""
+      }
+
+      <div class="settings-achievements-sections">
+        ${categories.map((category) => {
+          const items = grouped.get(String(category?.key || "")) || [];
+          return `
+            <section class="settings-achievement-group">
+              <div class="settings-achievement-group-head">
+                <div>
+                  <div class="settings-achievement-group-kicker">Раздел</div>
+                  <h4>${settingsEscapeHtml(category?.title || "")}</h4>
+                </div>
+                <span>${Number(category?.completedCount || 0)} / ${Number(category?.totalCount || 0)}</span>
+              </div>
+
+              <div class="settings-achievements-grid-panel">
+                ${items.map((achievement) => renderAchievementCard(achievement)).join("")}
+              </div>
+            </section>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+async function loadAchievementsSection() {
+  const body = document.getElementById("modalBody");
+  if (!body) return;
+
+  body.innerHTML = `<div class="settings-loading-state">Собираем достижения...</div>`;
+
+  try {
+    const res = await fetch("/api/settings/achievements", {
+      headers: {
+        Authorization: "Bearer " + settingsGetToken()
+      }
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      body.innerHTML = `<div class="settings-empty-state">Не удалось загрузить достижения.</div>`;
+      return;
+    }
+
+    body.innerHTML = renderAchievementsSection(data);
+  } catch (err) {
+    console.log("loadAchievementsSection error:", err);
+    body.innerHTML = `<div class="settings-empty-state">Не удалось загрузить достижения.</div>`;
+  }
+}
+
 async function openSettingsSection(type) {
   
   const modal = document.getElementById("settingsModal");
@@ -1070,6 +1252,12 @@ if (type === "archive") {
   if (type === "collective") {
     title.innerText = "Музыкальные объединения";
     loadCollectiveSection();
+    return;
+  }
+
+  if (type === "achievements") {
+    title.innerText = "Достижения";
+    loadAchievementsSection();
     return;
   }
 

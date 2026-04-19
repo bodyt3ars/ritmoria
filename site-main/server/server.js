@@ -10674,6 +10674,270 @@ app.get("/api/settings/liked-posts", auth, async (req, res) => {
   }
 });
 
+const SETTINGS_ACHIEVEMENT_CATEGORIES = [
+  { key: "profile", title: "Профиль" },
+  { key: "creation", title: "Контент" },
+  { key: "ratings", title: "Оценки" },
+  { key: "discussion", title: "Общение" },
+  { key: "social", title: "Связи" },
+  { key: "impact", title: "Импакт" },
+  { key: "status", title: "Статус" }
+];
+
+function getSettingsAchievementCatalog() {
+  return [
+    { id: "bio_first_line", title: "Первый штрих", description: "Добавь описание профиля, чтобы люди сразу понимали твой вайб.", category: "profile", icon: "fa-signature", difficulty: "easy", xpReward: 20, goal: 1, metricKey: "has_bio" },
+    { id: "avatar_custom", title: "Лицо сцены", description: "Поставь свою аватарку вместо стандартной.", category: "profile", icon: "fa-user-astronaut", difficulty: "easy", xpReward: 20, goal: 1, metricKey: "has_custom_avatar" },
+    { id: "first_contact", title: "На связи", description: "Добавь хотя бы одну ссылку на свои площадки или контакт.", category: "profile", icon: "fa-link", difficulty: "easy", xpReward: 25, goal: 1, metricKey: "profile_links_count" },
+    { id: "network_spread", title: "Везде свой", description: "Заполни три внешние ссылки в профиле.", category: "profile", icon: "fa-satellite-dish", difficulty: "medium", xpReward: 60, goal: 3, metricKey: "profile_links_count" },
+    { id: "profile_polished", title: "Собранный образ", description: "Закрой базовый профиль: био, кастомный аватар, почта и хотя бы одна ссылка.", category: "profile", icon: "fa-id-card", difficulty: "medium", xpReward: 80, goal: 4, metricKey: "profile_depth_score" },
+    { id: "verified_signal", title: "Знак доверия", description: "Получи верификацию профиля.", category: "profile", icon: "fa-badge-check", difficulty: "hard", xpReward: 140, goal: 1, metricKey: "is_verified" },
+
+    { id: "first_post", title: "Первый выход", description: "Опубликуй свой первый пост.", category: "creation", icon: "fa-pen-nib", difficulty: "easy", xpReward: 20, goal: 1, metricKey: "posts_created" },
+    { id: "five_posts", title: "Лента ожила", description: "Сделай 5 постов.", category: "creation", icon: "fa-newspaper", difficulty: "medium", xpReward: 50, goal: 5, metricKey: "posts_created" },
+    { id: "fifteen_posts", title: "Голос площадки", description: "Опубликуй 15 постов.", category: "creation", icon: "fa-bullhorn", difficulty: "medium", xpReward: 80, goal: 15, metricKey: "posts_created" },
+    { id: "forty_posts", title: "Хроника движения", description: "Дойди до 40 постов.", category: "creation", icon: "fa-book-open", difficulty: "hard", xpReward: 150, goal: 40, metricKey: "posts_created" },
+    { id: "first_track", title: "Первый релиз", description: "Загрузи первый трек в профиль.", category: "creation", icon: "fa-waveform", difficulty: "easy", xpReward: 25, goal: 1, metricKey: "tracks_uploaded" },
+    { id: "three_tracks", title: "Мини-сет", description: "Загрузи 3 трека.", category: "creation", icon: "fa-compact-disc", difficulty: "medium", xpReward: 60, goal: 3, metricKey: "tracks_uploaded" },
+    { id: "ten_tracks", title: "Каталог растёт", description: "Загрузи 10 треков.", category: "creation", icon: "fa-record-vinyl", difficulty: "hard", xpReward: 110, goal: 10, metricKey: "tracks_uploaded" },
+    { id: "twentyfive_tracks", title: "Собственная дискография", description: "Собери 25 треков в профиле.", category: "creation", icon: "fa-headphones-simple", difficulty: "legendary", xpReward: 220, goal: 25, metricKey: "tracks_uploaded" },
+
+    { id: "first_queue_rating", title: "Первый вердикт", description: "Оцени первый трек в очереди.", category: "ratings", icon: "fa-scale-balanced", difficulty: "easy", xpReward: 20, goal: 1, metricKey: "queue_ratings_user" },
+    { id: "ten_queue_ratings", title: "Ритм судейства", description: "Поставь 10 пользовательских оценок в очереди.", category: "ratings", icon: "fa-sliders", difficulty: "medium", xpReward: 55, goal: 10, metricKey: "queue_ratings_user" },
+    { id: "twentyfive_queue_ratings", title: "В разборе", description: "Поставь 25 пользовательских оценок в очереди.", category: "ratings", icon: "fa-list-check", difficulty: "medium", xpReward: 90, goal: 25, metricKey: "queue_ratings_user" },
+    { id: "seventyfive_queue_ratings", title: "Наслушанность", description: "Оставь 75 пользовательских оценок в очереди.", category: "ratings", icon: "fa-wave-square", difficulty: "hard", xpReward: 170, goal: 75, metricKey: "queue_ratings_user" },
+    { id: "first_judge_rating", title: "Голос жюри", description: "Поставь первую судейскую оценку в очереди.", category: "ratings", icon: "fa-gavel", difficulty: "medium", xpReward: 40, goal: 1, metricKey: "queue_ratings_judge" },
+    { id: "fifteen_judge_ratings", title: "Судья в работе", description: "Поставь 15 судейских оценок в очереди.", category: "ratings", icon: "fa-landmark", difficulty: "hard", xpReward: 120, goal: 15, metricKey: "queue_ratings_judge" },
+    { id: "first_profile_rating", title: "Точечный отзыв", description: "Оцени первый профильный трек.", category: "ratings", icon: "fa-music", difficulty: "easy", xpReward: 18, goal: 1, metricKey: "profile_ratings_user" },
+    { id: "ten_profile_ratings", title: "Слух настроен", description: "Оцени 10 профильных треков.", category: "ratings", icon: "fa-ear-listen", difficulty: "medium", xpReward: 55, goal: 10, metricKey: "profile_ratings_user" },
+    { id: "thirty_profile_ratings", title: "Куратор профилей", description: "Оцени 30 профильных треков.", category: "ratings", icon: "fa-layer-group", difficulty: "hard", xpReward: 110, goal: 30, metricKey: "profile_ratings_user" },
+    { id: "first_profile_judge", title: "Профессиональный разбор", description: "Поставь первую судейскую оценку профильному треку.", category: "ratings", icon: "fa-medal", difficulty: "medium", xpReward: 45, goal: 1, metricKey: "profile_ratings_judge" },
+    { id: "fifteen_profile_judge", title: "Критик сезона", description: "Поставь 15 судейских оценок профильным трекам.", category: "ratings", icon: "fa-crown", difficulty: "hard", xpReward: 130, goal: 15, metricKey: "profile_ratings_judge" },
+
+    { id: "first_track_comment", title: "Первый фидбек", description: "Оставь комментарий под треком.", category: "discussion", icon: "fa-comment-music", difficulty: "easy", xpReward: 18, goal: 1, metricKey: "track_comments_written" },
+    { id: "fifteen_track_comments", title: "Внутри дискуссии", description: "Напиши 15 комментариев под треками.", category: "discussion", icon: "fa-comments", difficulty: "medium", xpReward: 65, goal: 15, metricKey: "track_comments_written" },
+    { id: "fifty_track_comments", title: "Голос обсуждения", description: "Напиши 50 комментариев под треками.", category: "discussion", icon: "fa-microphone-lines", difficulty: "hard", xpReward: 130, goal: 50, metricKey: "track_comments_written" },
+    { id: "first_post_comment", title: "Диалог начался", description: "Оставь комментарий под постом.", category: "discussion", icon: "fa-message", difficulty: "easy", xpReward: 18, goal: 1, metricKey: "post_comments_written" },
+    { id: "fifteen_post_comments", title: "Пульс ленты", description: "Напиши 15 комментариев под постами.", category: "discussion", icon: "fa-comment-dots", difficulty: "medium", xpReward: 65, goal: 15, metricKey: "post_comments_written" },
+    { id: "fifty_post_comments", title: "Собеседник площадки", description: "Напиши 50 комментариев под постами.", category: "discussion", icon: "fa-quote-left", difficulty: "hard", xpReward: 130, goal: 50, metricKey: "post_comments_written" },
+
+    { id: "first_follow", title: "Первый коннект", description: "Подпишись на первого артиста.", category: "social", icon: "fa-user-plus", difficulty: "easy", xpReward: 12, goal: 1, metricKey: "following_count" },
+    { id: "twentyfive_following", title: "В своей обойме", description: "Подпишись на 25 артистов.", category: "social", icon: "fa-users-viewfinder", difficulty: "medium", xpReward: 70, goal: 25, metricKey: "following_count" },
+    { id: "first_follower", title: "Тебя заметили", description: "Получи первого подписчика.", category: "social", icon: "fa-user-check", difficulty: "easy", xpReward: 25, goal: 1, metricKey: "followers_count" },
+    { id: "ten_followers", title: "Своя аудитория", description: "Собери 10 подписчиков.", category: "social", icon: "fa-user-group", difficulty: "medium", xpReward: 70, goal: 10, metricKey: "followers_count" },
+    { id: "fifty_followers", title: "Имя на слуху", description: "Собери 50 подписчиков.", category: "social", icon: "fa-fire", difficulty: "hard", xpReward: 180, goal: 50, metricKey: "followers_count" },
+
+    { id: "ten_track_listens", title: "Первые уши", description: "Получи 10 прослушиваний своих треков.", category: "impact", icon: "fa-headphones", difficulty: "easy", xpReward: 30, goal: 10, metricKey: "track_listens_received" },
+    { id: "hundred_track_listens", title: "Разогрев", description: "Получи 100 прослушиваний своих треков.", category: "impact", icon: "fa-volume-high", difficulty: "medium", xpReward: 100, goal: 100, metricKey: "track_listens_received" },
+    { id: "fivehundred_track_listens", title: "Треки на повторе", description: "Получи 500 прослушиваний своих треков.", category: "impact", icon: "fa-tower-broadcast", difficulty: "legendary", xpReward: 260, goal: 500, metricKey: "track_listens_received" },
+    { id: "ten_track_likes", title: "Реакция зала", description: "Получи 10 лайков на свои треки.", category: "impact", icon: "fa-heart", difficulty: "easy", xpReward: 35, goal: 10, metricKey: "track_likes_received" },
+    { id: "fifty_track_likes", title: "Людям заходит", description: "Получи 50 лайков на свои треки.", category: "impact", icon: "fa-heart-circle-bolt", difficulty: "medium", xpReward: 110, goal: 50, metricKey: "track_likes_received" },
+    { id: "five_track_reposts", title: "Передай дальше", description: "Получи 5 репостов своих треков.", category: "impact", icon: "fa-share-nodes", difficulty: "medium", xpReward: 50, goal: 5, metricKey: "track_reposts_received" },
+    { id: "twentyfive_track_reposts", title: "Трек гуляет по сети", description: "Получи 25 репостов своих треков.", category: "impact", icon: "fa-arrows-turn-right", difficulty: "hard", xpReward: 160, goal: 25, metricKey: "track_reposts_received" },
+    { id: "ten_track_comments_received", title: "Тебя обсуждают", description: "Получи 10 комментариев под своими треками.", category: "impact", icon: "fa-comment-lines", difficulty: "medium", xpReward: 45, goal: 10, metricKey: "track_comments_received" },
+    { id: "fifty_track_comments_received", title: "Точка притяжения", description: "Получи 50 комментариев под своими треками.", category: "impact", icon: "fa-comments-dollar", difficulty: "hard", xpReward: 150, goal: 50, metricKey: "track_comments_received" },
+    { id: "twenty_post_likes", title: "Поймали момент", description: "Получи 20 лайков на свои посты.", category: "impact", icon: "fa-thumbs-up", difficulty: "easy", xpReward: 40, goal: 20, metricKey: "post_likes_received" },
+    { id: "hundred_post_likes", title: "Лента откликнулась", description: "Получи 100 лайков на свои посты.", category: "impact", icon: "fa-bolt", difficulty: "hard", xpReward: 150, goal: 100, metricKey: "post_likes_received" },
+    { id: "ten_post_comments_received", title: "Есть разговор", description: "Получи 10 комментариев под своими постами.", category: "impact", icon: "fa-inbox", difficulty: "medium", xpReward: 45, goal: 10, metricKey: "post_comments_received" },
+    { id: "fifty_post_comments_received", title: "Центр внимания", description: "Получи 50 комментариев под своими постами.", category: "impact", icon: "fa-wand-magic-sparkles", difficulty: "hard", xpReward: 150, goal: 50, metricKey: "post_comments_received" },
+    { id: "ten_post_reposts", title: "Разошлось по лентам", description: "Получи 10 репостов своих постов.", category: "impact", icon: "fa-retweet", difficulty: "medium", xpReward: 55, goal: 10, metricKey: "post_reposts_received" },
+
+    { id: "join_collective", title: "В команде", description: "Вступи в музыкальное объединение.", category: "status", icon: "fa-users", difficulty: "medium", xpReward: 45, goal: 1, metricKey: "in_collective" },
+    { id: "own_collective", title: "Основатель", description: "Создай своё музыкальное объединение.", category: "status", icon: "fa-flag", difficulty: "hard", xpReward: 130, goal: 1, metricKey: "owns_collective" },
+    { id: "first_podium", title: "Первый подиум", description: "Попади в призовые места хотя бы один раз.", category: "status", icon: "fa-trophy", difficulty: "hard", xpReward: 90, goal: 1, metricKey: "total_podiums" },
+    { id: "first_win", title: "Чемпион стрима", description: "Займи первое место хотя бы один раз.", category: "status", icon: "fa-trophy-star", difficulty: "legendary", xpReward: 180, goal: 1, metricKey: "first_places" },
+    { id: "three_podiums", title: "Серия сильных выходов", description: "Собери 3 призовых места.", category: "status", icon: "fa-award", difficulty: "legendary", xpReward: 180, goal: 3, metricKey: "total_podiums" },
+    { id: "xp_100", title: "Первые очки", description: "Набери 100 XP.", category: "status", icon: "fa-sparkles", difficulty: "easy", xpReward: 30, goal: 100, metricKey: "total_xp" },
+    { id: "xp_500", title: "Хороший темп", description: "Набери 500 XP.", category: "status", icon: "fa-gauge-high", difficulty: "medium", xpReward: 90, goal: 500, metricKey: "total_xp" },
+    { id: "xp_1500", title: "Высокая инерция", description: "Набери 1500 XP.", category: "status", icon: "fa-rocket", difficulty: "hard", xpReward: 180, goal: 1500, metricKey: "total_xp" },
+    { id: "xp_4000", title: "Доминанта", description: "Набери 4000 XP.", category: "status", icon: "fa-meteor", difficulty: "legendary", xpReward: 320, goal: 4000, metricKey: "total_xp" }
+  ];
+}
+
+function getSettingsAchievementProgressValue(definition, metrics) {
+  const value = Number(metrics?.[definition.metricKey] || 0);
+  if (!Number.isFinite(value) || value < 0) return 0;
+  return value;
+}
+
+async function getSettingsAchievementMetrics(userId) {
+  const metricsRes = await pool.query(
+    `
+    SELECT
+      COALESCE(u.xp, 0)::int AS total_xp,
+      CASE WHEN COALESCE(NULLIF(BTRIM(u.bio), ''), '') <> '' THEN 1 ELSE 0 END::int AS has_bio,
+      CASE WHEN COALESCE(u.avatar, '') <> '' AND COALESCE(u.avatar, '') <> '/images/default-avatar.jpg' THEN 1 ELSE 0 END::int AS has_custom_avatar,
+      CASE WHEN COALESCE(NULLIF(BTRIM(u.email), ''), '') <> '' THEN 1 ELSE 0 END::int AS has_email,
+      CASE WHEN COALESCE(NULLIF(BTRIM(u.soundcloud), ''), '') <> '' THEN 1 ELSE 0 END::int AS has_soundcloud,
+      CASE WHEN COALESCE(NULLIF(BTRIM(u.instagram), ''), '') <> '' THEN 1 ELSE 0 END::int AS has_instagram,
+      CASE WHEN COALESCE(NULLIF(BTRIM(u.twitter), ''), '') <> '' THEN 1 ELSE 0 END::int AS has_twitter,
+      CASE WHEN COALESCE(NULLIF(BTRIM(u.telegram), ''), '') <> '' THEN 1 ELSE 0 END::int AS has_telegram,
+      CASE WHEN COALESCE(NULLIF(BTRIM(u.website), ''), '') <> '' THEN 1 ELSE 0 END::int AS has_website,
+      CASE WHEN COALESCE(u.is_verified, false) THEN 1 ELSE 0 END::int AS is_verified,
+      CASE WHEN u.collective_id IS NOT NULL THEN 1 ELSE 0 END::int AS in_collective,
+      CASE WHEN mc.owner_user_id = u.id THEN 1 ELSE 0 END::int AS owns_collective,
+      COALESCE(ps.first_places, 0)::int AS first_places,
+      COALESCE(ps.second_places, 0)::int AS second_places,
+      COALESCE(ps.third_places, 0)::int AS third_places,
+      (SELECT COUNT(*)::int FROM posts p WHERE p.user_id = u.id AND COALESCE(p.is_archived, false) = false) AS posts_created,
+      (SELECT COUNT(*)::int FROM user_tracks t WHERE t.user_id = u.id AND COALESCE(t.is_archived, false) = false) AS tracks_uploaded,
+      (SELECT COUNT(*)::int FROM track_ratings tr WHERE tr.user_id = u.id AND tr.type = 'user') AS queue_ratings_user,
+      (SELECT COUNT(*)::int FROM track_ratings tr WHERE tr.user_id = u.id AND tr.type = 'judge') AS queue_ratings_judge,
+      (SELECT COUNT(*)::int FROM profile_track_ratings ptr WHERE ptr.user_id = u.id AND ptr.type = 'user') AS profile_ratings_user,
+      (SELECT COUNT(*)::int FROM profile_track_ratings ptr WHERE ptr.user_id = u.id AND ptr.type = 'judge') AS profile_ratings_judge,
+      (SELECT COUNT(*)::int FROM track_comments tc WHERE tc.user_id = u.id) AS track_comments_written,
+      (SELECT COUNT(*)::int FROM post_comments pc WHERE pc.user_id = u.id) AS post_comments_written,
+      (SELECT COUNT(*)::int FROM follows f WHERE f.following_id = u.id) AS followers_count,
+      (SELECT COUNT(*)::int FROM follows f WHERE f.follower_id = u.id) AS following_count,
+      (SELECT COUNT(*)::int FROM track_listens tl JOIN user_tracks t ON t.id = tl.track_id WHERE t.user_id = u.id AND tl.user_id <> u.id) AS track_listens_received,
+      (SELECT COUNT(*)::int FROM track_likes tl JOIN user_tracks t ON t.id = tl.track_id WHERE t.user_id = u.id AND tl.user_id <> u.id) AS track_likes_received,
+      (SELECT COUNT(*)::int FROM track_reposts trp JOIN user_tracks t ON t.id = trp.track_id WHERE t.user_id = u.id AND trp.user_id <> u.id) AS track_reposts_received,
+      (SELECT COUNT(*)::int FROM track_comments tc JOIN user_tracks t ON t.id = tc.track_id WHERE t.user_id = u.id AND tc.user_id <> u.id) AS track_comments_received,
+      (SELECT COUNT(*)::int FROM post_reactions pr JOIN posts p ON p.id = pr.post_id WHERE p.user_id = u.id AND pr.user_id <> u.id AND pr.reaction = 'like') AS post_likes_received,
+      (SELECT COUNT(*)::int FROM post_comments pc JOIN posts p ON p.id = pc.post_id WHERE p.user_id = u.id AND pc.user_id <> u.id) AS post_comments_received,
+      (SELECT COUNT(*)::int FROM post_reposts pr JOIN posts p ON p.id = pr.post_id WHERE p.user_id = u.id AND pr.user_id <> u.id) AS post_reposts_received
+    FROM users u
+    LEFT JOIN music_collectives mc ON mc.id = u.collective_id
+    LEFT JOIN user_stream_place_stats ps ON ps.user_id = u.id
+    WHERE u.id = $1
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  if (!metricsRes.rows.length) {
+    throw new Error("achievement_user_not_found");
+  }
+
+  const row = metricsRes.rows[0];
+  const profileLinksCount =
+    Number(row.has_soundcloud || 0) +
+    Number(row.has_instagram || 0) +
+    Number(row.has_twitter || 0) +
+    Number(row.has_telegram || 0) +
+    Number(row.has_website || 0);
+
+  return {
+    ...row,
+    profile_links_count: profileLinksCount,
+    profile_depth_score:
+      Number(row.has_bio || 0) +
+      Number(row.has_custom_avatar || 0) +
+      Number(row.has_email || 0) +
+      (profileLinksCount > 0 ? 1 : 0),
+    total_podiums:
+      Number(row.first_places || 0) +
+      Number(row.second_places || 0) +
+      Number(row.third_places || 0)
+  };
+}
+
+async function getUnlockedAchievementMap(userId) {
+  const unlockedRes = await pool.query(
+    `
+    SELECT event_key, created_at
+    FROM xp_events
+    WHERE user_id = $1
+      AND action_key = 'achievement_unlock'
+      AND event_key LIKE 'achievement:%'
+    `,
+    [userId]
+  );
+
+  return new Map(
+    unlockedRes.rows.map((row) => [
+      String(row.event_key || "").replace(/^achievement:/, ""),
+      row.created_at
+    ])
+  );
+}
+
+app.get("/api/settings/achievements", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const catalog = getSettingsAchievementCatalog();
+    const metrics = await getSettingsAchievementMetrics(userId);
+    const unlockedMap = await getUnlockedAchievementMap(userId);
+
+    for (const achievement of catalog) {
+      const value = getSettingsAchievementProgressValue(achievement, metrics);
+      if (value < achievement.goal || unlockedMap.has(achievement.id)) {
+        continue;
+      }
+
+      const xpState = await awardXP(userId, "achievement_unlock", {
+        amount: achievement.xpReward,
+        eventKey: `achievement:${achievement.id}`,
+        meta: {
+          achievementId: achievement.id,
+          title: achievement.title,
+          difficulty: achievement.difficulty,
+          category: achievement.category
+        }
+      });
+
+      if (Number(xpState?.gainedXP || 0) > 0) {
+        metrics.total_xp = Number(metrics.total_xp || 0) + Number(xpState.gainedXP || 0);
+        unlockedMap.set(achievement.id, new Date().toISOString());
+      }
+    }
+
+    const achievements = catalog.map((achievement) => {
+      const rawValue = getSettingsAchievementProgressValue(achievement, metrics);
+      const current = Math.max(0, Math.min(rawValue, achievement.goal));
+      const completedAt = unlockedMap.get(achievement.id) || null;
+      const completed = Boolean(completedAt) || rawValue >= achievement.goal;
+
+      return {
+        id: achievement.id,
+        title: achievement.title,
+        description: achievement.description,
+        category: achievement.category,
+        difficulty: achievement.difficulty,
+        xpReward: achievement.xpReward,
+        icon: achievement.icon,
+        completed,
+        completedAt,
+        progress: {
+          current,
+          goal: achievement.goal,
+          percent: achievement.goal > 0 ? Math.max(0, Math.min(100, Math.round((current / achievement.goal) * 100))) : 0
+        }
+      };
+    });
+
+    const categories = SETTINGS_ACHIEVEMENT_CATEGORIES.map((category) => {
+      const items = achievements.filter((achievement) => achievement.category === category.key);
+      return {
+        ...category,
+        totalCount: items.length,
+        completedCount: items.filter((achievement) => achievement.completed).length
+      };
+    }).filter((category) => category.totalCount > 0);
+
+    const completedCount = achievements.filter((achievement) => achievement.completed).length;
+    const totalXpAvailable = achievements.reduce((sum, achievement) => sum + Number(achievement.xpReward || 0), 0);
+    const totalXpEarned = achievements
+      .filter((achievement) => achievement.completedAt)
+      .reduce((sum, achievement) => sum + Number(achievement.xpReward || 0), 0);
+
+    res.json({
+      summary: {
+        totalCount: achievements.length,
+        completedCount,
+        remainingCount: Math.max(0, achievements.length - completedCount),
+        totalXpAvailable,
+        totalXpEarned
+      },
+      categories,
+      achievements
+    });
+  } catch (err) {
+    console.error("SETTINGS ACHIEVEMENTS ERROR:", err);
+    res.status(500).json({ error: "settings_achievements_failed" });
+  }
+});
+
 app.post("/api/posts/:id/repost", auth, async (req, res) => {
   try {
     const postId = Number(req.params.id);
