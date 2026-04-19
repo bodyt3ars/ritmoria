@@ -7669,13 +7669,6 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
     );
     const currentState = currentStateRes.rows[0]?.value || "open";
 
-    if (state === "closed" && currentState !== "closed") {
-      const snapshotSaved = await saveClosedQueueTopTracksSnapshot();
-      if (!snapshotSaved) {
-        console.warn("QUEUE CLOSE: snapshot was not saved because no judge-rated tracks were found");
-      }
-    }
-
     // При новом открытии после завершённого стрима очищаем только активную очередь:
     // сами queue-треки и все их queue-оценки/реакции. Snapshot главной не трогаем.
     if (state === "open" && currentState === "closed") {
@@ -7715,6 +7708,17 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
       `,
       [state]
     );
+
+    if (state === "closed" && currentState !== "closed") {
+      try {
+        const snapshotSaved = await saveClosedQueueTopTracksSnapshot();
+        if (!snapshotSaved) {
+          console.warn("QUEUE CLOSE: snapshot was not saved because no judge-rated tracks were found");
+        }
+      } catch (snapshotErr) {
+        console.error("QUEUE CLOSE SNAPSHOT ERROR:", snapshotErr);
+      }
+    }
 
     // Сохраняем именно предыдущее состояние, а не новое.
     await pool.query(
