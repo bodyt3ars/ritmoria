@@ -1808,19 +1808,45 @@ async function saveClosedQueueTopTracksSnapshot() {
         WHERE track_id = t.id AND type = 'judge'
       ), 0) AS judge_score,
       (
-        (
-          COALESCE((
-            SELECT AVG(score)
+        CASE
+          WHEN EXISTS (
+            SELECT 1
             FROM track_ratings
             WHERE track_id = t.id AND type = 'user'
-          ), 0)
-          +
-          COALESCE((
+          ) AND EXISTS (
+            SELECT 1
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'judge'
+          ) THEN (
+            (
+              COALESCE((
+                SELECT AVG(score)
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'user'
+              ), 0)
+              +
+              COALESCE((
+                SELECT AVG(score)
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'judge'
+              ), 0)
+            ) / 2.0
+          )
+          WHEN EXISTS (
+            SELECT 1
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'judge'
+          ) THEN COALESCE((
             SELECT AVG(score)
             FROM track_ratings
             WHERE track_id = t.id AND type = 'judge'
           ), 0)
-        ) / 2.0
+          ELSE COALESCE((
+            SELECT AVG(score)
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'user'
+          ), 0)
+        END
       )::numeric(10,1) AS total_score,
       COALESCE((
         SELECT COUNT(*)::int
@@ -2050,19 +2076,45 @@ async function getHomeTopTracksSnapshot() {
         WHERE track_id = t.id AND type = 'judge'
       ), 0) AS judge_score,
       (
-        (
-          COALESCE((
-            SELECT AVG(score)
+        CASE
+          WHEN EXISTS (
+            SELECT 1
             FROM track_ratings
             WHERE track_id = t.id AND type = 'user'
-          ), 0)
-          +
-          COALESCE((
+          ) AND EXISTS (
+            SELECT 1
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'judge'
+          ) THEN (
+            (
+              COALESCE((
+                SELECT AVG(score)
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'user'
+              ), 0)
+              +
+              COALESCE((
+                SELECT AVG(score)
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'judge'
+              ), 0)
+            ) / 2.0
+          )
+          WHEN EXISTS (
+            SELECT 1
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'judge'
+          ) THEN COALESCE((
             SELECT AVG(score)
             FROM track_ratings
             WHERE track_id = t.id AND type = 'judge'
           ), 0)
-        ) / 2.0
+          ELSE COALESCE((
+            SELECT AVG(score)
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'user'
+          ), 0)
+        END
       )::numeric(10,1) AS total_score,
       COALESCE((
         SELECT COUNT(*)::int
@@ -6432,19 +6484,45 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_score,
 
           (
-            (
-              COALESCE((
-                SELECT AVG(score)
+            CASE
+              WHEN EXISTS (
+                SELECT 1
                 FROM track_ratings
                 WHERE track_id = t.id AND type = 'user'
-              ),0)
-              +
-              COALESCE((
+              ) AND EXISTS (
+                SELECT 1
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'judge'
+              ) THEN (
+                (
+                  COALESCE((
+                    SELECT AVG(score)
+                    FROM track_ratings
+                    WHERE track_id = t.id AND type = 'user'
+                  ),0)
+                  +
+                  COALESCE((
+                    SELECT AVG(score)
+                    FROM track_ratings
+                    WHERE track_id = t.id AND type = 'judge'
+                  ),0)
+                ) / 2.0
+              )
+              WHEN EXISTS (
+                SELECT 1
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'judge'
+              ) THEN COALESCE((
                 SELECT AVG(score)
                 FROM track_ratings
                 WHERE track_id = t.id AND type = 'judge'
               ),0)
-            ) / 2.0
+              ELSE COALESCE((
+                SELECT AVG(score)
+                FROM track_ratings
+                WHERE track_id = t.id AND type = 'user'
+              ),0)
+            END
           ) as total_score
 
         FROM tracks t
@@ -7289,21 +7367,52 @@ app.get("/user-tracks", async (req, res) => {
             AND ptr.type = 'judge'
         ), 0) AS profile_judge_score,
         (
-          (
-            COALESCE((
-              SELECT AVG(ptr.score)
+          CASE
+            WHEN EXISTS (
+              SELECT 1
               FROM profile_track_ratings ptr
               WHERE ptr.profile_track_id = user_tracks.id
                 AND ptr.type = 'user'
-            ), 0)
-            +
-            COALESCE((
+            ) AND EXISTS (
+              SELECT 1
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = user_tracks.id
+                AND ptr.type = 'judge'
+            ) THEN (
+              (
+                COALESCE((
+                  SELECT AVG(ptr.score)
+                  FROM profile_track_ratings ptr
+                  WHERE ptr.profile_track_id = user_tracks.id
+                    AND ptr.type = 'user'
+                ), 0)
+                +
+                COALESCE((
+                  SELECT AVG(ptr.score)
+                  FROM profile_track_ratings ptr
+                  WHERE ptr.profile_track_id = user_tracks.id
+                    AND ptr.type = 'judge'
+                ), 0)
+              ) / 2.0
+            )
+            WHEN EXISTS (
+              SELECT 1
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = user_tracks.id
+                AND ptr.type = 'judge'
+            ) THEN COALESCE((
               SELECT AVG(ptr.score)
               FROM profile_track_ratings ptr
               WHERE ptr.profile_track_id = user_tracks.id
                 AND ptr.type = 'judge'
             ), 0)
-          ) / 2.0
+            ELSE COALESCE((
+              SELECT AVG(ptr.score)
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = user_tracks.id
+                AND ptr.type = 'user'
+            ), 0)
+          END
         )::numeric(10,1) AS profile_total_score,
         COALESCE((
           SELECT COUNT(*)::int
@@ -7498,21 +7607,52 @@ app.post("/api/profile-tracks/:id/rate", requireRole(["user", "judge", "admin"])
             AND ptr.type = 'judge'
         ), 0) AS profile_judge_score,
         (
-          (
-            COALESCE((
-              SELECT AVG(ptr.score)
+          CASE
+            WHEN EXISTS (
+              SELECT 1
               FROM profile_track_ratings ptr
               WHERE ptr.profile_track_id = $1
                 AND ptr.type = 'user'
-            ), 0)
-            +
-            COALESCE((
+            ) AND EXISTS (
+              SELECT 1
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = $1
+                AND ptr.type = 'judge'
+            ) THEN (
+              (
+                COALESCE((
+                  SELECT AVG(ptr.score)
+                  FROM profile_track_ratings ptr
+                  WHERE ptr.profile_track_id = $1
+                    AND ptr.type = 'user'
+                ), 0)
+                +
+                COALESCE((
+                  SELECT AVG(ptr.score)
+                  FROM profile_track_ratings ptr
+                  WHERE ptr.profile_track_id = $1
+                    AND ptr.type = 'judge'
+                ), 0)
+              ) / 2.0
+            )
+            WHEN EXISTS (
+              SELECT 1
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = $1
+                AND ptr.type = 'judge'
+            ) THEN COALESCE((
               SELECT AVG(ptr.score)
               FROM profile_track_ratings ptr
               WHERE ptr.profile_track_id = $1
                 AND ptr.type = 'judge'
             ), 0)
-          ) / 2.0
+            ELSE COALESCE((
+              SELECT AVG(ptr.score)
+              FROM profile_track_ratings ptr
+              WHERE ptr.profile_track_id = $1
+                AND ptr.type = 'user'
+            ), 0)
+          END
         )::numeric(10,1) AS profile_total_score,
         COALESCE((
           SELECT COUNT(*)::int
