@@ -1,0 +1,40 @@
+<div class="queue-page battles-page">
+  <div class="queue-section-nav" aria-label="Разделы очереди">
+    <button type="button" class="queue-section-nav-btn" onclick="navigate('/queue')">Очередь</button>
+    <button type="button" class="queue-section-nav-btn is-active" onclick="navigate('/queue/battles')">Баттлы</button>
+  </div>
+
+  <section class="battles-hero">
+    <div class="battles-hero-copy">
+      <span class="battles-kicker">Турнирная зона</span>
+      <h1 class="queue-title battles-title">Баттлы</h1>
+      <p class="battles-text">
+        Админ собирает сетку, участники занимают свободные слоты и заходят в баттл со своим треком.
+      </p>
+    </div>
+
+    <div id="battlesHeroMeta" class="battles-hero-meta"></div>
+  </section>
+
+  <div id="battlesAdminPanel" class="battles-admin-panel queue-hidden"></div>
+  <div id="battlesCurrentWrap" class="battles-current-wrap"></div>
+</div>
+
+<div id="battleSubmitModal" class="battles-modal queue-hidden">
+  <div class="battles-modal-card">
+    <div class="battles-modal-head">
+      <div>
+        <div class="battles-modal-kicker">Заявка в баттл</div>
+        <h2 id="battleSubmitTitle">Занять слот</h2>
+      </div>
+      <button type="button" class="battles-modal-close" onclick="closeBattleSubmitModal()">&times;</button>
+    </div>
+
+    <div class="battles-submit-tabs">
+      <button type="button" class="battles-submit-tab is-active" data-battle-submit-mode="file">Загрузить файл</button>
+      <button type="button" class="battles-submit-tab" data-battle-submit-mode="profile">Из профиля</button>
+    </div>
+
+    <div id="battleSubmitBody" class="battles-submit-body"></div>
+  </div>
+</div>

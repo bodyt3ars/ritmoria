@@ -1,4 +1,9 @@
 <div class="queue-page">
+  <div class="queue-section-nav" aria-label="Разделы очереди">
+    <button type="button" class="queue-section-nav-btn is-active" onclick="navigate('/queue')">Очередь</button>
+    <button type="button" class="queue-section-nav-btn" onclick="navigate('/queue/battles')">Баттлы</button>
+  </div>
+
   <div class="queue-header">
     <h1 class="queue-title">Очередь треков</h1>
     <div id="queueStatusText" class="queue-status">загрузка...</div>

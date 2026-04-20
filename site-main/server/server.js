@@ -299,6 +299,11 @@ const profileTrackUploadFields = createHandledUpload(
   "track_upload_failed",
   "Не удалось загрузить трек. Проверь файл и попробуй ещё раз."
 );
+const battleTrackUploadFields = createHandledUpload(
+  profileTrackUpload.fields([{ name: "audio", maxCount: 1 }, { name: "cover", maxCount: 1 }]),
+  "battle_track_upload_failed",
+  "Не удалось загрузить трек для баттла. Проверь файл и попробуй ещё раз."
+);
 const postMediaUploadSingle = createHandledUpload(
   postUpload.single("media"),
   "post_media_upload_failed",
@@ -2886,6 +2891,130 @@ async function ensurePlaylistsSchema() {
     ALTER TABLE user_playlists
       ADD COLUMN IF NOT EXISTS updated_at timestamp without time zone DEFAULT now();
   `);
+}
+
+async function ensureBattlesSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS battle_brackets (
+      id SERIAL PRIMARY KEY,
+      title varchar(180) NOT NULL,
+      slots_count integer NOT NULL,
+      status varchar(24) NOT NULL DEFAULT 'open',
+      created_by integer REFERENCES users(id) ON DELETE SET NULL,
+      created_at timestamp without time zone DEFAULT now(),
+      updated_at timestamp without time zone DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS battle_entries (
+      id SERIAL PRIMARY KEY,
+      battle_id integer NOT NULL REFERENCES battle_brackets(id) ON DELETE CASCADE,
+      slot_number integer NOT NULL,
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      source_type varchar(24) NOT NULL DEFAULT 'file',
+      profile_track_id integer REFERENCES user_tracks(id) ON DELETE SET NULL,
+      artist varchar(255),
+      title varchar(255) NOT NULL,
+      cover text,
+      audio text,
+      soundcloud text,
+      created_at timestamp without time zone DEFAULT now(),
+      UNIQUE (battle_id, slot_number),
+      UNIQUE (battle_id, user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_battle_brackets_status
+      ON battle_brackets(status, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_battle_entries_battle
+      ON battle_entries(battle_id, slot_number);
+  `);
+}
+
+function normalizeBattleSlotsCount(value) {
+  const numericValue = Number(value || 0);
+  return [4, 8, 16, 32].includes(numericValue) ? numericValue : 0;
+}
+
+async function getCurrentBattlePayload(viewer = null) {
+  const battleRes = await pool.query(
+    `
+    SELECT
+      b.*,
+      creator.username AS creator_username,
+      creator.username_tag AS creator_username_tag
+    FROM battle_brackets b
+    LEFT JOIN users creator ON creator.id = b.created_by
+    WHERE b.status IN ('open', 'filled')
+    ORDER BY b.created_at DESC, b.id DESC
+    LIMIT 1
+    `
+  );
+
+  if (!battleRes.rows.length) {
+    return {
+      battle: null,
+      entries: [],
+      openSlots: [],
+      viewer: {
+        id: Number(viewer?.id || 0) || null,
+        role: viewer?.role || null,
+        canManage: String(viewer?.role || "") === "admin",
+        canJoin: Boolean(viewer && !viewer.is_banned)
+      }
+    };
+  }
+
+  const battle = battleRes.rows[0];
+  const entriesRes = await pool.query(
+    `
+    SELECT
+      e.*,
+      u.username,
+      u.username_tag,
+      u.avatar
+    FROM battle_entries e
+    JOIN users u ON u.id = e.user_id
+    WHERE e.battle_id = $1
+    ORDER BY e.slot_number ASC
+    `,
+    [battle.id]
+  );
+
+  const entries = entriesRes.rows.map((entry) => ({
+    ...entry,
+    user_id: Number(entry.user_id || 0),
+    slot_number: Number(entry.slot_number || 0)
+  }));
+  const occupiedSlots = new Set(entries.map((entry) => Number(entry.slot_number || 0)));
+  const openSlots = [];
+
+  for (let slot = 1; slot <= Number(battle.slots_count || 0); slot += 1) {
+    if (!occupiedSlots.has(slot)) {
+      openSlots.push(slot);
+    }
+  }
+
+  const viewerId = Number(viewer?.id || 0) || null;
+  const viewerEntry = viewerId
+    ? entries.find((entry) => Number(entry.user_id || 0) === viewerId) || null
+    : null;
+
+  return {
+    battle: {
+      ...battle,
+      slots_count: Number(battle.slots_count || 0),
+      participants_count: entries.length
+    },
+    entries,
+    openSlots,
+    viewer: {
+      id: viewerId,
+      role: viewer?.role || null,
+      canManage: String(viewer?.role || "") === "admin",
+      canJoin: Boolean(viewer && !viewer.is_banned),
+      entrySlot: viewerEntry ? Number(viewerEntry.slot_number || 0) : null
+    }
+  };
 }
 
 function requireRole(roles = []) {
@@ -8160,6 +8289,373 @@ app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), as
   }
 });
 
+app.get("/api/battles/current", async (req, res) => {
+  try {
+    const viewer = await getUserFromToken(req);
+    const payload = await getCurrentBattlePayload(viewer);
+    res.json(payload);
+  } catch (err) {
+    console.error("BATTLES CURRENT ERROR:", err);
+    res.status(500).json({ error: "battle_load_failed" });
+  }
+});
+
+app.post("/api/battles", requireRole(["admin"]), async (req, res) => {
+  const slotsCount = normalizeBattleSlotsCount(req.body?.slotsCount);
+  const title = sanitizeTrackText(req.body?.title, { maxLength: 180 }) || `Баттл на ${slotsCount} участников`;
+
+  if (!slotsCount) {
+    return res.status(400).json({ error: "invalid_slots_count" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `
+      UPDATE battle_brackets
+      SET status = 'archived',
+          updated_at = now()
+      WHERE status IN ('open', 'filled')
+      `
+    );
+
+    const createdRes = await client.query(
+      `
+      INSERT INTO battle_brackets (title, slots_count, status, created_by)
+      VALUES ($1, $2, 'open', $3)
+      RETURNING *
+      `,
+      [title, slotsCount, req.user.id]
+    );
+
+    await client.query("COMMIT");
+    res.status(201).json({ success: true, battle: createdRes.rows[0] || null });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("BATTLES CREATE ERROR:", err);
+    res.status(500).json({ error: "battle_create_failed" });
+  } finally {
+    client.release();
+  }
+});
+
+app.post("/api/battles/:id/archive", requireRole(["admin"]), async (req, res) => {
+  try {
+    const battleId = Number(req.params.id || 0);
+    if (!battleId) {
+      return res.status(400).json({ error: "battle_not_found" });
+    }
+
+    const archivedRes = await pool.query(
+      `
+      UPDATE battle_brackets
+      SET status = 'archived',
+          updated_at = now()
+      WHERE id = $1
+      RETURNING id
+      `,
+      [battleId]
+    );
+
+    if (!archivedRes.rows.length) {
+      return res.status(404).json({ error: "battle_not_found" });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("BATTLES ARCHIVE ERROR:", err);
+    res.status(500).json({ error: "battle_archive_failed" });
+  }
+});
+
+app.post("/api/battles/:id/join/file", requireRole(["user", "judge", "admin"]), battleTrackUploadFields, async (req, res) => {
+  const battleId = Number(req.params.id || 0);
+  const slotNumber = Number(req.body?.slotNumber || 0);
+  const title = sanitizeTrackText(req.body?.title, { maxLength: 160 });
+  const artist = sanitizeTrackText(req.body?.artist, { maxLength: 255 });
+  const coverFile = req.files?.cover?.[0] || null;
+  const audioFile = req.files?.audio?.[0] || null;
+
+  if (!battleId || !slotNumber) {
+    return res.status(400).json({ error: "invalid_battle_slot" });
+  }
+
+  if (!title) {
+    return res.status(400).json({ error: "title_required" });
+  }
+
+  if (!audioFile) {
+    return res.status(400).json({ error: "audio_required" });
+  }
+
+  let audioPath = null;
+  let coverPath = null;
+
+  try {
+    assertSupportedAudioFile(audioFile);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const battleRes = await client.query(
+        `
+        SELECT *
+        FROM battle_brackets
+        WHERE id = $1
+        LIMIT 1
+        FOR UPDATE
+        `,
+        [battleId]
+      );
+
+      if (!battleRes.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "battle_not_found" });
+      }
+
+      const battle = battleRes.rows[0];
+      if (!["open", "filled"].includes(String(battle.status || "open"))) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "battle_closed" });
+      }
+
+      if (slotNumber < 1 || slotNumber > Number(battle.slots_count || 0)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "invalid_battle_slot" });
+      }
+
+      const slotRes = await client.query(
+        `SELECT id FROM battle_entries WHERE battle_id = $1 AND slot_number = $2 LIMIT 1`,
+        [battleId, slotNumber]
+      );
+      if (slotRes.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "battle_slot_taken" });
+      }
+
+      const existingUserRes = await client.query(
+        `SELECT id FROM battle_entries WHERE battle_id = $1 AND user_id = $2 LIMIT 1`,
+        [battleId, req.user.id]
+      );
+      if (existingUserRes.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "battle_user_exists" });
+      }
+
+      const fileTimestamp = Date.now();
+      const audioExt = getSafeAudioExtension(audioFile);
+      const audioFileName = `battle-audio-${battleId}-${fileTimestamp}${audioExt}`;
+      const audioDiskPath = path.join(__dirname, "..", "public", "uploads", "battles", "audio", audioFileName);
+      fs.mkdirSync(path.dirname(audioDiskPath), { recursive: true });
+      fs.writeFileSync(audioDiskPath, audioFile.buffer);
+      audioPath = `/uploads/battles/audio/${audioFileName}`;
+
+      if (coverFile) {
+        const coverFileName = `battle-cover-${battleId}-${fileTimestamp}.webp`;
+        const coverDiskPath = path.join(__dirname, "..", "public", "uploads", "battles", "covers", coverFileName);
+        fs.mkdirSync(path.dirname(coverDiskPath), { recursive: true });
+        await sharp(coverFile.buffer)
+          .resize(500, 500, { fit: "cover" })
+          .webp({ quality: 90 })
+          .toFile(coverDiskPath);
+        coverPath = `/uploads/battles/covers/${coverFileName}`;
+      }
+
+      const createdEntryRes = await client.query(
+        `
+        INSERT INTO battle_entries (
+          battle_id,
+          slot_number,
+          user_id,
+          source_type,
+          artist,
+          title,
+          cover,
+          audio
+        )
+        VALUES ($1, $2, $3, 'file', $4, $5, $6, $7)
+        RETURNING *
+        `,
+        [battleId, slotNumber, req.user.id, artist || "", title, coverPath, audioPath]
+      );
+
+      const countRes = await client.query(
+        `SELECT COUNT(*)::int AS count FROM battle_entries WHERE battle_id = $1`,
+        [battleId]
+      );
+      const participantsCount = Number(countRes.rows[0]?.count || 0);
+      const nextStatus = participantsCount >= Number(battle.slots_count || 0) ? "filled" : "open";
+
+      await client.query(
+        `
+        UPDATE battle_brackets
+        SET status = $2,
+            updated_at = now()
+        WHERE id = $1
+        `,
+        [battleId, nextStatus]
+      );
+
+      await client.query("COMMIT");
+      res.status(201).json({ success: true, entry: createdEntryRes.rows[0] || null });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    if (audioPath) {
+      fs.unlink(path.join(__dirname, "..", "public", audioPath.replace(/^\/+/, "")), () => {});
+    }
+    if (coverPath) {
+      fs.unlink(path.join(__dirname, "..", "public", coverPath.replace(/^\/+/, "")), () => {});
+    }
+    console.error("BATTLES JOIN FILE ERROR:", err);
+    res.status(500).json({ error: "battle_join_failed" });
+  }
+});
+
+app.post("/api/battles/:id/join-profile", requireRole(["user", "judge", "admin"]), async (req, res) => {
+  const battleId = Number(req.params.id || 0);
+  const slotNumber = Number(req.body?.slotNumber || 0);
+  const profileTrackId = Number(req.body?.profileTrackId || 0);
+
+  if (!battleId || !slotNumber || !profileTrackId) {
+    return res.status(400).json({ error: "invalid_battle_slot" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const battleRes = await client.query(
+      `
+      SELECT *
+      FROM battle_brackets
+      WHERE id = $1
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [battleId]
+    );
+
+    if (!battleRes.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "battle_not_found" });
+    }
+
+    const battle = battleRes.rows[0];
+    if (!["open", "filled"].includes(String(battle.status || "open"))) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "battle_closed" });
+    }
+
+    if (slotNumber < 1 || slotNumber > Number(battle.slots_count || 0)) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "invalid_battle_slot" });
+    }
+
+    const slotRes = await client.query(
+      `SELECT id FROM battle_entries WHERE battle_id = $1 AND slot_number = $2 LIMIT 1`,
+      [battleId, slotNumber]
+    );
+    if (slotRes.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "battle_slot_taken" });
+    }
+
+    const existingUserRes = await client.query(
+      `SELECT id FROM battle_entries WHERE battle_id = $1 AND user_id = $2 LIMIT 1`,
+      [battleId, req.user.id]
+    );
+    if (existingUserRes.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "battle_user_exists" });
+    }
+
+    const profileTrackRes = await client.query(
+      `
+      SELECT id, title, artist, cover, audio, soundcloud
+      FROM user_tracks
+      WHERE id = $1
+        AND user_id = $2
+        AND COALESCE(is_archived, false) = false
+      LIMIT 1
+      `,
+      [profileTrackId, req.user.id]
+    );
+
+    if (!profileTrackRes.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "profile_track_not_found" });
+    }
+
+    const profileTrack = profileTrackRes.rows[0];
+    if (!profileTrack.audio && !profileTrack.soundcloud) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "audio_required" });
+    }
+
+    const createdEntryRes = await client.query(
+      `
+      INSERT INTO battle_entries (
+        battle_id,
+        slot_number,
+        user_id,
+        source_type,
+        profile_track_id,
+        artist,
+        title,
+        cover,
+        audio,
+        soundcloud
+      )
+      VALUES ($1, $2, $3, 'profile', $4, $5, $6, $7, $8, $9)
+      RETURNING *
+      `,
+      [
+        battleId,
+        slotNumber,
+        req.user.id,
+        profileTrack.id,
+        profileTrack.artist || "",
+        profileTrack.title || "Без названия",
+        profileTrack.cover || null,
+        profileTrack.audio || null,
+        profileTrack.soundcloud || null
+      ]
+    );
+
+    const countRes = await client.query(
+      `SELECT COUNT(*)::int AS count FROM battle_entries WHERE battle_id = $1`,
+      [battleId]
+    );
+    const participantsCount = Number(countRes.rows[0]?.count || 0);
+    const nextStatus = participantsCount >= Number(battle.slots_count || 0) ? "filled" : "open";
+
+    await client.query(
+      `
+      UPDATE battle_brackets
+      SET status = $2,
+          updated_at = now()
+      WHERE id = $1
+      `,
+      [battleId, nextStatus]
+    );
+
+    await client.query("COMMIT");
+    res.status(201).json({ success: true, entry: createdEntryRes.rows[0] || null });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("BATTLES JOIN PROFILE ERROR:", err);
+    res.status(500).json({ error: "battle_join_failed" });
+  } finally {
+    client.release();
+  }
+});
+
 // ======================
 // 🔥 QUEUE CONTROL (ADMIN)
 // ======================
@@ -11482,6 +11978,7 @@ await ensureHomeNewsSchema();
 await ensureUserBadgeSchema();
 await ensureCommunitySchema();
 await ensurePlaylistsSchema();
+await ensureBattlesSchema();
     app.listen(APP_PORT, () => {
       console.log(`Server running on ${APP_BASE_URL} (port ${APP_PORT})`);
       syncTelegramWebhooks().catch((error) => {

@@ -367,6 +367,24 @@ export async function renderPage(path) {
     return;
   }
 
+  // QUEUE BATTLES
+  if (routePath === "/queue/battles") {
+    setSeoMeta({
+      title: "Баттлы — Ритмория",
+      description: "Баттлы Ритмории: турнирная сетка, свободные места и подача трека в один клик.",
+      canonical: "https://ritmoria.com/queue/battles"
+    });
+    const ok = await renderSimplePage({
+      app,
+      htmlUrl: "/html/battles.html",
+      styles: ["/styles/queue.css", "/styles/battles.css"],
+      scriptSrc: "/js/battles.js",
+      initName: "initBattlesPage"
+    });
+    if (!ok || renderToken !== currentRenderToken) return;
+    return;
+  }
+
   // PLAYLISTS
   if (routePath === "/playlists") {
     setSeoMeta({

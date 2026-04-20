@@ -4,6 +4,42 @@
   padding: 0 20px;
 }
 
+.queue-section-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 22px;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(34, 16, 25, 0.72);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+}
+
+.queue-section-nav-btn {
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,0.64);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.queue-section-nav-btn:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.06);
+}
+
+.queue-section-nav-btn.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(197,116,149,0.34), rgba(109,58,83,0.42));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
 .queue-title {
   font-size: 32px;
   margin-bottom: 25px;
