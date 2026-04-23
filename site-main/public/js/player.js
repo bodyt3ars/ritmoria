@@ -965,6 +965,20 @@
       return `${location.origin}/${track.username_tag}/${track.slug}`;
     }
 
+    function getCurrentTrackPath(track = getCurrentTrackFromStorage()) {
+      if (!track) return "";
+
+      if (track.username_tag && track.slug) {
+        return `/${track.username_tag}/${track.slug}`;
+      }
+
+      if (track.id) {
+        return `/track?id=${encodeURIComponent(track.id)}`;
+      }
+
+      return "";
+    }
+
     function navigateFromPlayer(path) {
       const target = String(path || "").trim();
       if (!target) return;
@@ -1790,11 +1804,11 @@
     });
 
     titleEl?.addEventListener("click", () => {
-      const track = getCurrentTrackFromStorage();
-      if (!track?.username_tag || !track?.slug) return;
+      const targetPath = getCurrentTrackPath();
+      if (!targetPath) return;
 
       closeContextMenu();
-      navigateFromPlayer(`/${track.username_tag}/${track.slug}`);
+      navigateFromPlayer(targetPath);
     });
 
     artistEl?.addEventListener("click", (e) => {
@@ -1816,11 +1830,11 @@
     });
 
     coverWrap?.addEventListener("click", () => {
-      const track = getCurrentTrackFromStorage();
-      if (!track?.username_tag || !track?.slug) return;
+      const targetPath = getCurrentTrackPath();
+      if (!targetPath) return;
 
       closeContextMenu();
-      navigateFromPlayer(`/${track.username_tag}/${track.slug}`);
+      navigateFromPlayer(targetPath);
     });
 
     coverWrap?.addEventListener("contextmenu", (e) => {
@@ -2250,10 +2264,21 @@
     const player = document.getElementById("global-player");
     if (!player) return;
 
+    const titleNode = document.getElementById("gp-title");
+    const coverNode = document.getElementById("gp-cover-wrap");
+    const metaNode = document.querySelector(".gp-meta");
+    const targetPath =
+      track?.username_tag && track?.slug
+        ? `/${track.username_tag}/${track.slug}`
+        : (track?.id ? `/track?id=${encodeURIComponent(track.id)}` : "");
+
     player.classList.remove("hidden");
-    document.getElementById("gp-title").textContent = track.title || "Unknown track";
+    titleNode.textContent = track.title || "Unknown track";
     document.getElementById("gp-artist").innerHTML = renderStoredPlayerArtistMarkup(track, { clickable: true });
     document.getElementById("gp-cover").src = track.cover || "/images/default-avatar.jpg";
+    titleNode?.classList.toggle("gp-track-linkable", !!targetPath);
+    coverNode?.classList.toggle("gp-track-linkable", !!targetPath);
+    metaNode?.classList.toggle("gp-track-linkable", !!targetPath);
   }
 
   function saveTrackObject(track, isPlaying) {

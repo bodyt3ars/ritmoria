@@ -71,6 +71,19 @@ body {
   flex-shrink: 0;
 }
 
+.gp-cover-wrap.gp-track-linkable,
+.gp-title.gp-track-linkable,
+.gp-meta.gp-track-linkable {
+  cursor: pointer;
+}
+
+.gp-cover-wrap.gp-track-linkable:hover .gp-cover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.44),
+    0 0 18px rgba(176, 116, 151, 0.28);
+}
+
 .gp-cover {
   width: 60px;
   height: 60px;
@@ -79,6 +92,7 @@ body {
   box-shadow:
     0 6px 18px rgba(0, 0, 0, 0.4),
     0 0 12px rgba(176, 116, 151, 0.22);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .gp-meta-row {
@@ -106,6 +120,10 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+}
+
+.gp-title.gp-track-linkable:hover {
+  color: #ffd9ea;
 }
 
 .gp-artist {
