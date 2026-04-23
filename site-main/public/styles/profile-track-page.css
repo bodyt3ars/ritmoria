@@ -536,11 +536,38 @@
 .profile-track-page #profileTrackWaveform {
   margin-top: 16px;
   min-height: 112px;
-  padding: 12px 0 2px;
+  padding: 14px 10px 6px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+    radial-gradient(circle at top left, rgba(217, 154, 188, 0.10), transparent 34%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 14px 30px rgba(0, 0, 0, 0.16);
+  cursor: pointer;
+  overflow: hidden;
 }
 
 .profile-track-page .profile-track-waveform {
+  position: relative;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-track-page .profile-track-waveform::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 100%);
+  background-size: 34px 100%, 100% 20px;
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.profile-track-page .profile-track-waveform wave {
+  border-radius: 14px;
 }
 
 .profile-track-page .profile-track-time-row {

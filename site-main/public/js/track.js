@@ -12,6 +12,7 @@ function initTrackPage() {
   const playBtn = document.getElementById("playBtn");
   const progress = document.getElementById("progress");
   const progressWrap = document.getElementById("progressWrap");
+  const waveformEl = document.getElementById("trackWaveform");
   const currentTimeEl = document.getElementById("current");
   const durationEl = document.getElementById("duration");
   const volume = document.getElementById("volume");
@@ -46,6 +47,8 @@ function initTrackPage() {
   let scReady = false;
   let commentsController = null;
   let currentReaction = null;
+  let waveSurfer = null;
+  let waveSyncLocked = false;
 
   const criteria = [
     { key: "rhymes_avg", label: "Рифмы и образы" },
@@ -70,6 +73,103 @@ function initTrackPage() {
     durationEl.textContent = "0:00";
     customPlayer?.classList.remove("playing");
     playerCover?.classList.remove("playing");
+    if (waveSurfer) {
+      try {
+        waveSyncLocked = true;
+        waveSurfer.seekTo(0);
+      } catch (e) {}
+      requestAnimationFrame(() => {
+        waveSyncLocked = false;
+      });
+    }
+  }
+
+  function setWaveformMode(enabled) {
+    if (!waveformEl) return;
+    waveformEl.classList.toggle("is-hidden", !enabled);
+    progressWrap.classList.toggle("is-hidden", !!enabled);
+  }
+
+  function destroyTrackWaveform() {
+    if (waveSurfer) {
+      try {
+        waveSurfer.destroy();
+      } catch (e) {}
+      waveSurfer = null;
+    }
+
+    waveSyncLocked = false;
+    if (waveformEl) {
+      waveformEl.onclick = null;
+      waveformEl.innerHTML = "";
+    }
+    setWaveformMode(false);
+  }
+
+  function seekTrackWaveform(progressRatio) {
+    const safeProgress = Math.max(0, Math.min(1, Number(progressRatio) || 0));
+
+    if (isMP3) {
+      if (!audio.duration) return;
+      audio.currentTime = safeProgress * audio.duration;
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+      return;
+    }
+
+    if (trackScWidget) {
+      trackScWidget.getDuration((durationMs) => {
+        if (!durationMs) return;
+        trackScWidget.seekTo(safeProgress * durationMs);
+      });
+    }
+  }
+
+  function initTrackWaveform(audioSrc) {
+    destroyTrackWaveform();
+
+    if (!waveformEl || !audioSrc || typeof WaveSurfer === "undefined") {
+      setWaveformMode(false);
+      return;
+    }
+
+    setWaveformMode(true);
+
+    waveSurfer = WaveSurfer.create({
+      container: waveformEl,
+      waveColor: "rgba(255,255,255,0.26)",
+      progressColor: "#d99abc",
+      cursorColor: "rgba(255,255,255,0.92)",
+      cursorWidth: 2,
+      height: 58,
+      barWidth: 3,
+      barGap: 2,
+      barRadius: 999,
+      normalize: true,
+      responsive: true,
+      interact: true,
+      dragToSeek: true
+    });
+
+    waveSurfer.load(audioSrc);
+
+    waveSurfer.on("ready", () => {
+      const duration = Number(audio.duration || waveSurfer.getDuration() || 0);
+      if (duration > 0) {
+        durationEl.textContent = formatTime(duration);
+      }
+    });
+
+    waveSurfer.on("seek", (progressRatio) => {
+      if (waveSyncLocked) return;
+      seekTrackWaveform(progressRatio);
+    });
+
+    waveformEl.onclick = (e) => {
+      const rect = waveformEl.getBoundingClientRect();
+      if (!rect.width) return;
+      const progressRatio = (e.clientX - rect.left) / rect.width;
+      seekTrackWaveform(progressRatio);
+    };
   }
 
   function applyTrackReactionUi(action, likes, dislikes) {
@@ -145,6 +245,7 @@ function initTrackPage() {
     audio.pause();
     audio.removeAttribute("src");
     audio.load();
+    destroyTrackWaveform();
     resetPlayerUI();
   }
 
@@ -315,10 +416,12 @@ function initTrackPage() {
         showMP3Player();
         audio.src = track.audio;
         audio.load();
+        initTrackWaveform(track.audio);
       } else if (track.soundcloud) {
         showSCPlayer();
         initSoundCloud(track.soundcloud);
       } else {
+        destroyTrackWaveform();
         mp3Player.style.display = "none";
         scWrapper.style.display = "none";
       }
@@ -446,6 +549,15 @@ function initTrackPage() {
     currentTimeEl.textContent = "0:00";
     customPlayer?.classList.remove("playing");
     playerCover?.classList.remove("playing");
+    if (waveSurfer) {
+      try {
+        waveSyncLocked = true;
+        waveSurfer.seekTo(0);
+      } catch (e) {}
+      requestAnimationFrame(() => {
+        waveSyncLocked = false;
+      });
+    }
   });
 
   audio.addEventListener("loadedmetadata", () => {
@@ -457,6 +569,16 @@ function initTrackPage() {
     const percent = (audio.currentTime / audio.duration) * 100;
     progress.style.width = percent + "%";
     currentTimeEl.textContent = formatTime(audio.currentTime);
+
+    if (waveSurfer) {
+      try {
+        waveSyncLocked = true;
+        waveSurfer.seekTo(percent / 100);
+      } catch (e) {}
+      requestAnimationFrame(() => {
+        waveSyncLocked = false;
+      });
+    }
   });
 
   progressWrap.addEventListener("click", (e) => {

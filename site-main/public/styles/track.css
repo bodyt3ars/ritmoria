@@ -397,9 +397,57 @@
 .track-page .player-center {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
   min-width: 0;
+}
+
+.track-page .track-page-wave-stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.track-page .track-page-waveform {
+  position: relative;
+  min-height: 76px;
+  border-radius: 18px;
+  padding: 8px 10px 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+    radial-gradient(circle at top left, rgba(232, 154, 194, 0.10), transparent 34%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 24px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.track-page .track-page-waveform::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 100%);
+  background-size: 32px 100%, 100% 18px;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.track-page .track-page-waveform.is-hidden {
+  display: none;
+}
+
+.track-page .track-page-waveform wave {
+  border-radius: 12px;
+}
+
+.track-page .track-page-progress-fallback.is-hidden {
+  display: none;
 }
 
 .track-page .progress-wrap {

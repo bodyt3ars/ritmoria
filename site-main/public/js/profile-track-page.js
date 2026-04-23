@@ -120,6 +120,7 @@ function beginProfileTrackListenSession(track, audio) {
 
 function destroyProfileTrackWave() {
   const state = getProfileTrackPageState();
+  const waveformEl = document.getElementById("profileTrackWaveform");
   if (window.__profileTrackWaveSurfer) {
     try {
       window.__profileTrackWaveSurfer.destroy();
@@ -127,6 +128,11 @@ function destroyProfileTrackWave() {
       console.log("WaveSurfer destroy error:", e);
     }
     window.__profileTrackWaveSurfer = null;
+  }
+  if (waveformEl) {
+    waveformEl.onclick = null;
+    waveformEl.onpointerdown = null;
+    waveformEl.innerHTML = "";
   }
   state.waveSyncLocked = false;
 }
@@ -386,50 +392,62 @@ window.loadProfileTrackPage = async function (tag, slug) {
 
     wavesurfer = WaveSurfer.create({
       container: waveformEl,
-      waveColor: "rgba(255,255,255,0.16)",
+      waveColor: "rgba(255,255,255,0.28)",
       progressColor: "#d99abc",
-      cursorColor: "#fff",
+      cursorColor: "rgba(255,255,255,0.92)",
+      cursorWidth: 2,
       height: 104,
       barWidth: 3,
       barGap: 2,
       barRadius: 999,
       responsive: true,
-      normalize: true
+      normalize: true,
+      interact: true,
+      dragToSeek: true
     });
 
     window.__profileTrackWaveSurfer = wavesurfer;
     wavesurfer.load(audioSrc);
 
+    const seekProfileTrackWave = (progress) => {
+      if (pageState.waveSyncLocked) {
+        pageState.waveSyncLocked = false;
+      }
+
+      const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0));
+      const state = window.getGlobalPlayerState?.();
+      const current = state?.track;
+      const isSameTrack = isSameProfileTrack(track, current);
+
+      if (!isSameTrack || typeof window.seekGlobalPlayer !== "function") {
+        return false;
+      }
+
+      window.seekGlobalPlayer(safeProgress, "profile-track-waveform");
+      return true;
+    };
+
     wavesurfer.on("ready", () => {
       pageState.waveSyncLocked = false;
       durationEl.textContent = formatProfileTrackTime(wavesurfer.getDuration());
       if (waveformStatusEl) {
-        waveformStatusEl.textContent = "MP3 waveform ready";
+        waveformStatusEl.textContent = "Вэйвформа готова";
       }
     });
 
     wavesurfer.on("seek", (progress) => {
-  if (pageState.waveSyncLocked) return;
-  const state = window.getGlobalPlayerState?.();
-  const current = state?.track;
-  const globalAudio = document.getElementById("global-audio");
+      seekProfileTrackWave(progress);
+    });
 
-  const thisAudioSrc = track.audio
-    ? "/" + String(track.audio).replace(/^\/+/, "")
-    : "";
+    const handleWavePointerSeek = (e) => {
+      const rect = waveformEl.getBoundingClientRect();
+      if (!rect.width) return;
+      const progress = (e.clientX - rect.left) / rect.width;
+      seekProfileTrackWave(progress);
+    };
 
-  const isSameTrack =
-    current &&
-    (
-      (current.audioSrc && current.audioSrc === thisAudioSrc) ||
-      (current.soundcloud && current.soundcloud === (track.soundcloud || ""))
-    );
-
-  if (!isSameTrack) return;
-  if (!globalAudio || !globalAudio.duration) return;
-
-  globalAudio.currentTime = progress * globalAudio.duration;
-});
+    waveformEl.onclick = handleWavePointerSeek;
+    waveformEl.onpointerdown = handleWavePointerSeek;
 
     playBtn.onclick = () => {
       const state = window.getGlobalPlayerState?.();
