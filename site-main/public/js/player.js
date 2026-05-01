@@ -20,20 +20,18 @@
   let lastScPosition = 0;
   let lastScDuration = 0;
 
-  function decodeTokenPayload() {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return null;
-      const parts = token.split(".");
-      if (parts.length < 2) return null;
-      return JSON.parse(atob(parts[1]));
-    } catch {
-      return null;
+  function hasPlayerSession() {
+    if (typeof window.hasSessionCache === "function") {
+      return window.hasSessionCache();
     }
+    return !!localStorage.getItem("token");
   }
 
   function getCurrentUserId() {
-    return decodeTokenPayload()?.id || "guest";
+    if (typeof window.getSessionUserId === "function") {
+      return window.getSessionUserId();
+    }
+    return "guest";
   }
 
   function getPlaylistsStorageKey() {
@@ -41,12 +39,10 @@
   }
 
   function getPlaylistAuthHeaders() {
-    const token = localStorage.getItem("token");
-    if (!token) return null;
+    if (!hasPlayerSession()) return null;
 
     return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
+      "Content-Type": "application/json"
     };
   }
 
@@ -273,18 +269,17 @@
 
     persist(playlists, { dispatch = true } = {}) {
       const safe = this.saveLocal(playlists, { dispatch });
-      if (localStorage.getItem("token")) {
+      if (hasPlayerSession()) {
         saveRemotePlaylists(safe).catch(() => {});
       }
       return safe;
     },
 
     async ensureInitialized({ force = false, dispatch = false } = {}) {
-      const token = localStorage.getItem("token");
       const userId = String(getCurrentUserId());
       const localPlaylists = this.saveLocal(this.getLocal(), { dispatch: false });
 
-      if (!token) {
+      if (!hasPlayerSession()) {
         playlistSyncState.syncedUserId = null;
         return localPlaylists;
       }
@@ -660,11 +655,7 @@
     if (!trackId) return null;
 
     try {
-      const res = await fetch(`/api/track-likes/${trackId}`, {
-        headers: localStorage.getItem("token")
-          ? { Authorization: "Bearer " + localStorage.getItem("token") }
-          : {}
-      });
+      const res = await fetch(`/api/track-likes/${trackId}`);
 
       if (!res.ok) return null;
       return await res.json();
@@ -1609,9 +1600,11 @@
 
     async function toggleCurrentTrackLike() {
       const track = getCurrentTrackFromStorage();
-      const token = localStorage.getItem("token");
+      const hasSession = typeof window.hasActiveSession === "function"
+        ? await window.hasActiveSession()
+        : hasPlayerSession();
 
-      if (!track?.id || !token) {
+      if (!track?.id || !hasSession) {
         alert("Нужно войти в аккаунт.");
         return;
       }
@@ -1620,8 +1613,7 @@
         const res = await fetch("/api/track-like", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({ trackId: track.id })
         });
@@ -2047,11 +2039,7 @@
     if (!safeTag) return [];
 
     try {
-      const res = await fetch(`/user-tracks?tag=${encodeURIComponent(safeTag)}`, {
-        headers: localStorage.getItem("token")
-          ? { Authorization: "Bearer " + localStorage.getItem("token") }
-          : {}
-      });
+      const res = await fetch(`/user-tracks?tag=${encodeURIComponent(safeTag)}`);
 
       if (!res.ok) return [];
 

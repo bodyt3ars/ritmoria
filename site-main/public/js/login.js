@@ -46,30 +46,12 @@ function initLoginPage() {
         return;
       }
 
-      if (!data?.token) {
-        setError("Сервер не вернул токен");
-        return;
-      }
-
-      localStorage.setItem("token", data.token);
-
-      await window.RitmoriaPlaylistStore?.ensureInitialized?.({ force: true, dispatch: true });
-
-      if (window.refreshNavbarRealtimeState) {
-        await window.refreshNavbarRealtimeState();
+      window.markActiveSession?.(true, data.user || null);
+      if (typeof window.completeAuthTransition === "function") {
+        window.completeAuthTransition("/");
       } else {
-        if (window.loadNavbarUser) {
-          await window.loadNavbarUser();
-        }
-        if (window.loadNavbarNotifications) {
-          await window.loadNavbarNotifications();
-        }
-        if (window.loadNavbarMessagesBadge) {
-          await window.loadNavbarMessagesBadge();
-        }
+        window.location.assign("/");
       }
-
-      navigate("/");
     } catch (error) {
       console.error("Login error:", error);
       setError("Ошибка сервера");
@@ -155,27 +137,14 @@ function initLoginPage() {
             return;
           }
 
-          if (statusData.status === "approved" && statusData.token) {
+          if (statusData.status === "approved") {
             stopTelegramPolling();
-            localStorage.setItem("token", statusData.token);
-
-            await window.RitmoriaPlaylistStore?.ensureInitialized?.({ force: true, dispatch: true });
-
-            if (window.refreshNavbarRealtimeState) {
-              await window.refreshNavbarRealtimeState();
+            window.markActiveSession?.(true, statusData.user || null);
+            if (typeof window.completeAuthTransition === "function") {
+              window.completeAuthTransition("/");
             } else {
-              if (window.loadNavbarUser) {
-                await window.loadNavbarUser();
-              }
-              if (window.loadNavbarNotifications) {
-                await window.loadNavbarNotifications();
-              }
-              if (window.loadNavbarMessagesBadge) {
-                await window.loadNavbarMessagesBadge();
-              }
+              window.location.assign("/");
             }
-
-            navigate("/");
             return;
           }
 

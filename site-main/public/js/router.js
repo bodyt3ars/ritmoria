@@ -14,7 +14,7 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260418-1";
+const ASSET_VERSION = "20260501-1";
 
 const DEFAULT_SEO = {
   title: "Ритмория — музыкальная платформа для артистов",
@@ -71,6 +71,32 @@ function withAssetVersion(url) {
   const separator = url.includes("?") ? "&" : "?";
   return `${url}${separator}v=${ASSET_VERSION}`;
 }
+
+function clearSpaPageCache() {
+  Object.keys(pageCache).forEach((key) => {
+    delete pageCache[key];
+  });
+}
+
+async function requireActiveSession() {
+  if (typeof window.hasActiveSession === "function") {
+    const active = await window.hasActiveSession();
+    if (!active) {
+      navigate("/login");
+      return false;
+    }
+    return true;
+  }
+
+  if (!localStorage.getItem("token")) {
+    navigate("/login");
+    return false;
+  }
+
+  return true;
+}
+
+window.clearSpaPageCache = clearSpaPageCache;
 
 async function loadPage(url) {
   try {
@@ -220,12 +246,10 @@ async function preloadProfileAssets() {
 
 
 function initProfileAfterRenderDeferred() {
-  if (!localStorage.getItem("token")) {
-    navigate("/login");
-    return;
-  }
-
   runAfterPaint(async () => {
+    if (!(await requireActiveSession())) {
+      return;
+    }
     await safeCall("initProfilePageFull");
   });
 }
@@ -338,11 +362,7 @@ export async function renderPage(path) {
       scriptSrc: "/js/submit.js",
       initName: "initSubmitPage",
       beforeRender: async () => {
-        if (!localStorage.getItem("token")) {
-          navigate("/login");
-          return false;
-        }
-        return true;
+        return requireActiveSession();
       }
     });
     if (!ok || renderToken !== currentRenderToken) return;
@@ -521,11 +541,7 @@ export async function renderPage(path) {
       scriptSrc: "/js/admin.js",
       initName: "initAdminPage",
       beforeRender: async () => {
-        if (!localStorage.getItem("token")) {
-          navigate("/login");
-          return false;
-        }
-        return true;
+        return requireActiveSession();
       }
     });
     if (!ok || renderToken !== currentRenderToken) return;
@@ -585,11 +601,7 @@ export async function renderPage(path) {
     scriptSrc: "/js/settings.js",
     initName: "initSettingsPage",
       beforeRender: async () => {
-        if (!localStorage.getItem("token")) {
-          navigate("/login");
-          return false;
-        }
-        return true;
+        return requireActiveSession();
       }
     });
     if (!ok || renderToken !== currentRenderToken) return;
@@ -610,11 +622,7 @@ export async function renderPage(path) {
       scriptSrc: "/js/messages.js",
       initName: "initMessagesPage",
       beforeRender: async () => {
-        if (!localStorage.getItem("token")) {
-          navigate("/login");
-          return false;
-        }
-        return true;
+        return requireActiveSession();
       }
     });
     if (!ok || renderToken !== currentRenderToken) return;

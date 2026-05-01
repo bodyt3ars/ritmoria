@@ -1,7 +1,9 @@
-const token = localStorage.getItem("token")
+(async () => {
+  const hasSession = typeof window.hasActiveSession === "function"
+    ? await window.hasActiveSession()
+    : !!localStorage.getItem("token");
 
-if(!token){
-
-navigate("/login")
-
-}
+  if (!hasSession) {
+    navigate("/login");
+  }
+})();

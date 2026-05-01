@@ -22,13 +22,32 @@ function setNavbarBadgeState(badge, count) {
   }
 }
 
+async function hasNavbarSession() {
+  if (typeof window.hasActiveSession === "function") {
+    return window.hasActiveSession();
+  }
+  return !!localStorage.getItem("token");
+}
+
+function buildNavbarProfilePath(tag) {
+  const safeTag = String(tag || "").trim();
+  return safeTag ? `/${encodeURIComponent(safeTag)}` : "/profile";
+}
+
+function setNavbarEmptyState(list) {
+  if (!list) return;
+  const empty = document.createElement("div");
+  empty.className = "navbar-notification-empty";
+  empty.textContent = "Пока пусто";
+  list.replaceChildren(empty);
+}
+
 async function loadNavbarMessagesBadge() {
-  const token = localStorage.getItem("token");
   const link = document.getElementById("navMessagesLink");
   const badge = document.getElementById("navMessagesBadge");
   if (!link || !badge) return;
 
-  if (!token) {
+  if (!(await hasNavbarSession())) {
     link.classList.add("navbar-hidden");
     link.style.setProperty("display", "none", "important");
     setNavbarBadgeState(badge, 0);
@@ -39,13 +58,15 @@ async function loadNavbarMessagesBadge() {
   link.style.removeProperty("display");
 
   try {
-    const res = await fetch("/api/messages/unread-summary", {
-      headers: {
-        Authorization: "Bearer " + token
-      }
-    });
+    const res = await fetch("/api/messages/unread-summary");
 
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (res.status === 401) {
+        window.clearAuthClientState?.();
+      }
+      setNavbarBadgeState(badge, 0);
+      return;
+    }
     const data = await res.json();
     const unreadConversations = Number(data.unread_conversations || 0);
     setNavbarBadgeState(badge, unreadConversations);
@@ -56,7 +77,7 @@ async function loadNavbarMessagesBadge() {
 }
 
 async function refreshNavbarRealtimeState() {
-  if (!localStorage.getItem("token")) return;
+  if (!(await hasNavbarSession())) return;
   ensureNavbarRealtimeLoop();
   await loadNavbarUser();
   await loadNavbarNotifications();
@@ -68,7 +89,7 @@ function ensureNavbarRealtimeLoop() {
 
   navbarRealtimeLoopInterval = setInterval(async () => {
     if (document.visibilityState === "hidden") return;
-    if (!localStorage.getItem("token")) return;
+    if (!(await hasNavbarSession())) return;
 
     const notificationsWrap = document.getElementById("navNotificationsWrap");
     const messagesLink = document.getElementById("navMessagesLink");
@@ -329,8 +350,6 @@ function initMobileNavbar() {
 }
 
 async function loadNavbarUser() {
-  const token = localStorage.getItem("token");
-
   const navGuest = document.getElementById("navGuest");
   const navUser = document.getElementById("navUser");
   const navAvatar = document.getElementById("navAvatar");
@@ -348,7 +367,7 @@ async function loadNavbarUser() {
   }
   navDropdown?.classList.remove("active");
 
-  if (!token) {
+  if (!(await hasNavbarSession())) {
     navAvatar.src = "/images/default-avatar.jpg";
     navGuest.classList.remove("navbar-hidden");
     navUser.classList.add("navbar-hidden");
@@ -364,16 +383,13 @@ async function loadNavbarUser() {
   }
 
   try {
-    const res = await fetch("/me", {
-      headers: {
-        Authorization: "Bearer " + token
-      }
-    });
+    const res = await fetch("/me");
 
     if (!res.ok) throw new Error("Unauthorized");
 
     const user = await res.json();
     window.currentUser = user;
+    window.markActiveSession?.(true, user);
 
     navAvatar.src = user.avatar
       ? `${user.avatar}?t=${Date.now()}`
@@ -394,6 +410,7 @@ async function loadNavbarUser() {
     }
   } catch (err) {
     console.error("Navbar user error:", err);
+    window.clearAuthClientState?.();
 
     navAvatar.src = "/images/default-avatar.jpg";
     navGuest.classList.remove("navbar-hidden");
@@ -472,17 +489,16 @@ function formatNotificationTime(value) {
 }
 
 async function loadNavbarNotifications() {
-  const token = localStorage.getItem("token");
   const wrap = document.getElementById("navNotificationsWrap");
   const list = document.getElementById("navNotificationsList");
   const badge = document.getElementById("navNotificationsBadge");
   if (!wrap || !list || !badge) return;
 
-  if (!token) {
+  if (!(await hasNavbarSession())) {
     wrap.classList.add("navbar-hidden");
     wrap.style.setProperty("display", "none", "important");
     setNavbarBadgeState(badge, 0);
-    list.innerHTML = `<div class="navbar-notification-empty">Пока пусто</div>`;
+    setNavbarEmptyState(list);
     return;
   }
 
@@ -490,12 +506,15 @@ async function loadNavbarNotifications() {
   wrap.style.removeProperty("display");
 
   try {
-    const res = await fetch("/api/notifications", {
-      headers: {
-        Authorization: "Bearer " + token
+    const res = await fetch("/api/notifications");
+    if (!res.ok) {
+      if (res.status === 401) {
+        window.clearAuthClientState?.();
       }
-    });
-    if (!res.ok) return;
+      setNavbarBadgeState(badge, 0);
+      setNavbarEmptyState(list);
+      return;
+    }
     const data = await res.json();
     const items = Array.isArray(data.items) ? data.items : [];
     const unreadCount = Number(data.unreadCount || 0);
@@ -503,45 +522,65 @@ async function loadNavbarNotifications() {
     setNavbarBadgeState(badge, unreadCount);
 
     if (!items.length) {
-      list.innerHTML = `<div class="navbar-notification-empty">Пока пусто</div>`;
+      setNavbarEmptyState(list);
       return;
     }
 
-    list.innerHTML = items.map((item) => `
-      <button type="button" class="navbar-notification-item ${item.is_read ? "" : "is-unread"}" data-notification-id="${item.id}" data-notification-type="${item.type}" data-entity-type="${item.entity_type || ""}" data-entity-id="${item.entity_id || ""}" data-actor-tag="${item.actor_username_tag || ""}" data-metadata='${JSON.stringify(item.metadata || {}).replace(/'/g, "&apos;")}'>
-        <img class="navbar-notification-avatar" src="${item.actor_avatar || "/images/default-avatar.jpg"}" alt="${item.actor_username || "user"}">
-        <div class="navbar-notification-copy">
-          <div class="navbar-notification-text">${item.text}</div>
-          <div class="navbar-notification-time">${formatNotificationTime(item.created_at)}</div>
-        </div>
-      </button>
-    `).join("");
+    const fragment = document.createDocumentFragment();
 
-    list.querySelectorAll(".navbar-notification-item").forEach((button) => {
+    items.forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `navbar-notification-item${item.is_read ? "" : " is-unread"}`;
+      button.dataset.notificationId = String(item.id || "");
+      button.dataset.notificationType = String(item.type || "");
+      button.dataset.entityType = String(item.entity_type || "");
+      button.dataset.entityId = String(item.entity_id || "");
+      button.dataset.actorTag = String(item.actor_username_tag || "");
+      button.dataset.metadata = JSON.stringify(item.metadata || {});
+
+      const avatar = document.createElement("img");
+      avatar.className = "navbar-notification-avatar";
+      avatar.src = String(item.actor_avatar || "").trim() || "/images/default-avatar.jpg";
+      avatar.alt = String(item.actor_username || "user");
+
+      const copy = document.createElement("div");
+      copy.className = "navbar-notification-copy";
+
+      const text = document.createElement("div");
+      text.className = "navbar-notification-text";
+      text.textContent = String(item.text || "");
+
+      const time = document.createElement("div");
+      time.className = "navbar-notification-time";
+      time.textContent = formatNotificationTime(item.created_at);
+
+      copy.append(text, time);
+      button.append(avatar, copy);
+
       button.addEventListener("click", async () => {
         const notificationId = Number(button.dataset.notificationId);
         let metadata = {};
         try {
-          metadata = JSON.parse((button.dataset.metadata || "").replace(/&apos;/g, "'"));
+          metadata = JSON.parse(button.dataset.metadata || "{}");
         } catch {}
 
         if (notificationId) {
           await fetch(`/api/notifications/${notificationId}/read`, {
-            method: "POST",
-            headers: { Authorization: "Bearer " + token }
+            method: "POST"
           }).catch(() => {});
         }
 
         document.getElementById("navNotificationsDropdown")?.classList.remove("active");
         await loadNavbarNotifications();
 
-        const type = button.dataset.notificationType;
-        const entityType = button.dataset.entityType;
-        const entityId = button.dataset.entityId;
-        const actorTag = button.dataset.actorTag;
+        const type = String(button.dataset.notificationType || "");
+        const entityType = String(button.dataset.entityType || "");
+        const entityId = String(button.dataset.entityId || "");
+        const actorTag = String(button.dataset.actorTag || "");
 
         if (type === "follow" && actorTag) {
-          navigate(`/${actorTag}`);
+          navigate(buildNavbarProfilePath(actorTag));
           return;
         }
         if ((entityType === "post" || type.startsWith("post_")) && entityId) {
@@ -569,8 +608,7 @@ async function loadNavbarNotifications() {
           await fetch(`/api/settings/collective/invite/${Number(metadata.inviteId)}/respond`, {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
-              Authorization: "Bearer " + token
+              "Content-Type": "application/json"
             },
             body: JSON.stringify({ action: decision })
           }).catch((err) => {
@@ -598,7 +636,10 @@ async function loadNavbarNotifications() {
           return;
         }
       });
+      fragment.append(button);
     });
+
+    list.replaceChildren(fragment);
   } catch (err) {
     console.error("loadNavbarNotifications error:", err);
     setNavbarBadgeState(badge, 0);
@@ -621,11 +662,9 @@ function initNotificationsDropdown() {
 
   readAllBtn?.addEventListener("click", async (e) => {
     e.stopPropagation();
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!(await hasNavbarSession())) return;
     await fetch("/api/notifications/read-all", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + token }
+      method: "POST"
     }).catch(() => {});
     await loadNavbarNotifications();
   });
@@ -639,18 +678,13 @@ async function goToProfile(e) {
   if (e) e.stopPropagation();
   closeNavbarProfileDropdown();
 
-  const token = localStorage.getItem("token");
-  if (!token) {
+  if (!(await hasNavbarSession())) {
     navigate("/login");
     return;
   }
 
   try {
-    const res = await fetch("/me", {
-      headers: {
-        Authorization: "Bearer " + token
-      }
-    });
+    const res = await fetch("/me");
 
     if (!res.ok) throw new Error("Unauthorized");
 
@@ -658,12 +692,13 @@ async function goToProfile(e) {
     const tag = user.username_tag;
 
     if (tag) {
-      navigate(`/${tag}`);
+      navigate(buildNavbarProfilePath(tag));
     } else {
       navigate("/profile");
     }
   } catch (err) {
     console.error("goToProfile error", err);
+    window.clearAuthClientState?.();
     navigate("/profile");
   }
 }
@@ -677,13 +712,12 @@ function goToSettings(e) {
 async function performLogout(e) {
   if (e) e.stopPropagation();
   closeNavbarProfileDropdown();
-  localStorage.removeItem("token");
   localStorage.removeItem("userAvatar");
-  window.currentUser = null;
-  await loadNavbarUser();
-  await loadNavbarNotifications();
-  await loadNavbarMessagesBadge();
-  navigate("/");
+  if (typeof window.performServerLogout === "function") {
+    await window.performServerLogout("/");
+  } else {
+    window.location.assign("/");
+  }
 }
 
 async function confirmLogout(e) {

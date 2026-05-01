@@ -1,20 +1,26 @@
+async function getCurrentViewerProfile() {
+  const hasSession = typeof window.hasActiveSession === "function"
+    ? await window.hasActiveSession()
+    : !!localStorage.getItem("token");
+
+  if (!hasSession) return null;
+
+  const res = await fetch("/me");
+  if (!res.ok) return null;
+
+  const me = await res.json();
+  window.currentViewer = me;
+  window.markActiveSession?.(true, me);
+  return me;
+}
+
 async function isMyProfileAsync() {
   const params = new URLSearchParams(window.location.search);
   const tag = window.__profileTag || params.get("tag");
 
-  const token = localStorage.getItem("token");
-  if (!token) return false;
-
   try {
-    const res = await fetch("/me", {
-      headers: {
-        Authorization: "Bearer " + token
-      }
-    });
-
-    if (!res.ok) return false;
-
-    const me = await res.json();
+    const me = await getCurrentViewerProfile();
+    if (!me) return false;
 
     if (!tag) return true;
 
@@ -28,20 +34,9 @@ async function handleProfileUI() {
   const params = new URLSearchParams(window.location.search);
   const tag = window.__profileTag || params.get("tag");
 
-  const token = localStorage.getItem("token");
-  if (!token) return;
-
   try {
-    const res = await fetch("/me", {
-      headers: {
-        Authorization: "Bearer " + token
-      }
-    });
-
-    if (!res.ok) return;
-
-    const me = await res.json();
-    window.currentViewer = me;
+    const me = await getCurrentViewerProfile();
+    if (!me) return;
 
     const isMy =
       !tag || tag.toLowerCase() === (me.username_tag || "").toLowerCase();
@@ -87,7 +82,11 @@ async function handleProfileUI() {
 }
 
 async function initProfilePageFull() {
-  if (!localStorage.getItem("token")) {
+  const hasSession = typeof window.hasActiveSession === "function"
+    ? await window.hasActiveSession()
+    : !!localStorage.getItem("token");
+
+  if (!hasSession) {
     navigate("/login");
     return;
   }

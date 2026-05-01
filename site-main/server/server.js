@@ -17,6 +17,8 @@ const JWT_SECRET = String(process.env.JWT_SECRET || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const TELEGRAM_AUTH_BOT_USERNAME = String(process.env.TELEGRAM_AUTH_BOT_USERNAME || "ritmoriaauthBot").trim();
 const SUPPORT_BOT_USERNAME = String(process.env.SUPPORT_BOT_USERNAME || "ritmoriasupportBOT").trim();
+const AUTH_COOKIE_NAME = "ritmoria_token";
+const AUTH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
@@ -41,23 +43,125 @@ const allowedCorsOrigins = new Set([
   "http://127.0.0.1:3000"
 ].filter(Boolean));
 
-function auth(req, res, next) {
-  const header = req.headers.authorization;
+function getAuthCookieDomain() {
+  try {
+    const hostname = new URL(APP_BASE_URL).hostname;
+    if (!hostname || hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+      return undefined;
+    }
+    return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
+  } catch {
+    return undefined;
+  }
+}
 
-  if (!header) {
+const AUTH_COOKIE_DOMAIN = getAuthCookieDomain();
+const AUTH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "lax",
+  path: "/",
+  maxAge: AUTH_COOKIE_MAX_AGE,
+  ...(AUTH_COOKIE_DOMAIN ? { domain: AUTH_COOKIE_DOMAIN } : {})
+};
+const AUTH_COOKIE_CLEAR_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "lax",
+  path: "/",
+  ...(AUTH_COOKIE_DOMAIN ? { domain: AUTH_COOKIE_DOMAIN } : {})
+};
+
+function setAuthCookie(res, token) {
+  res.cookie(AUTH_COOKIE_NAME, token, AUTH_COOKIE_OPTIONS);
+}
+
+function clearAuthCookie(res) {
+  res.clearCookie(AUTH_COOKIE_NAME, AUTH_COOKIE_CLEAR_OPTIONS);
+}
+
+function parseCookieHeader(cookieHeader) {
+  const parsed = {};
+  String(cookieHeader || "")
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .forEach((chunk) => {
+      const separatorIndex = chunk.indexOf("=");
+      if (separatorIndex <= 0) return;
+
+      const key = chunk.slice(0, separatorIndex).trim();
+      const value = chunk.slice(separatorIndex + 1).trim();
+      if (!key) return;
+
+      try {
+        parsed[key] = decodeURIComponent(value);
+      } catch {
+        parsed[key] = value;
+      }
+    });
+
+  return parsed;
+}
+
+function normalizeAuthTokenValue(value) {
+  const token = String(value || "").trim();
+  if (!token) return null;
+
+  const lowered = token.toLowerCase();
+  if (lowered === "null" || lowered === "undefined" || lowered === "cookie-session") {
+    return null;
+  }
+
+  return token;
+}
+
+function getBearerTokenFromHeader(headerValue) {
+  const header = String(headerValue || "").trim();
+  if (!/^Bearer\s+/i.test(header)) {
+    return null;
+  }
+
+  return normalizeAuthTokenValue(header.replace(/^Bearer\s+/i, "").trim());
+}
+
+function getAuthCookieToken(req) {
+  const cookies = parseCookieHeader(req.headers.cookie);
+  return normalizeAuthTokenValue(cookies[AUTH_COOKIE_NAME]);
+}
+
+function getVerifiedRequestAuth(req) {
+  const headerToken = getBearerTokenFromHeader(req.headers.authorization);
+  const cookieToken = getAuthCookieToken(req);
+  const candidates = [headerToken, cookieToken].filter(Boolean);
+  let lastError = null;
+
+  for (const candidate of candidates) {
+    try {
+      return {
+        token: candidate,
+        decoded: jwt.verify(candidate, JWT_SECRET)
+      };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (lastError) {
+    return { error: lastError };
+  }
+
+  return null;
+}
+
+function auth(req, res, next) {
+  const authResult = getVerifiedRequestAuth(req);
+  if (!authResult?.decoded) {
     return res.status(401).json({ error: "Нет токена" });
   }
 
-  const token = header.split(" ")[1];
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    req.user = decoded;
-    touchUserLastSeen(decoded.id).finally(() => next());
-  } catch (err) {
-    return res.status(401).json({ error: "Неверный токен" });
-  }
+  req.user = authResult.decoded;
+  touchUserLastSeen(authResult.decoded.id).finally(() => next());
 }
 
 
@@ -133,6 +237,7 @@ const PUBLIC_ERROR_MESSAGES = {
   unauthorized: "Нужно войти в аккаунт.",
   no_token: "Нужно войти в аккаунт.",
   invalid_token: "Сессия устарела. Войди в аккаунт заново.",
+  invalid_username_tag: "Username содержит недопустимые символы.",
   "Нет токена": "Нужно войти в аккаунт.",
   "Неверный токен": "Сессия устарела. Войди в аккаунт заново.",
   "No file uploaded": "Сначала выбери файл.",
@@ -341,6 +446,24 @@ function signAppToken(user) {
     JWT_SECRET,
     { expiresIn: "7d" }
   );
+}
+
+function buildSessionUser(user) {
+  return {
+    id: Number(user?.id || 0) || 0,
+    username: String(user?.username || ""),
+    username_tag: String(user?.username_tag || ""),
+    avatar: String(user?.avatar || "/images/default-avatar.jpg"),
+    role: String(user?.role || "user")
+  };
+}
+
+function normalizeUsernameTagInput(value) {
+  return String(value ?? "").trim().replace(/^@+/, "");
+}
+
+function isValidUsernameTag(value) {
+  return /^[\p{L}\p{N}._-]{3,32}$/u.test(String(value || "").trim());
 }
 
 function verifyTelegramAuth(data) {
@@ -1173,7 +1296,6 @@ async function approveTelegramAuthRequest(requestToken, telegramProfile = {}) {
   }
 
   const user = await findOrCreateTelegramUser(telegramProfile);
-  const appToken = signAppToken(user);
 
   await pool.query(
     `
@@ -1183,7 +1305,7 @@ async function approveTelegramAuthRequest(requestToken, telegramProfile = {}) {
         telegram_chat_id = $3,
         telegram_username = $4,
         approved_user_id = $5,
-        app_token = $6,
+        app_token = NULL,
         resolved_at = now(),
         error = NULL
     WHERE request_token = $1
@@ -1193,12 +1315,11 @@ async function approveTelegramAuthRequest(requestToken, telegramProfile = {}) {
       String(telegramProfile.id || ""),
       telegramProfile.id ? String(telegramProfile.id) : null,
       telegramProfile.username || null,
-      user.id,
-      appToken
+      user.id
     ]
   );
 
-  return { user, appToken };
+  return { user };
 }
 
 // ===== XP SYSTEM =====
@@ -1222,52 +1343,33 @@ app.use(cors({
       return callback(null, true);
     }
     return callback(null, false);
-  }
+  },
+  credentials: true
 }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "../public")));
 
 function authMiddleware(req, res, next) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
+  const authResult = getVerifiedRequestAuth(req);
+  if (!authResult?.decoded) {
     return res.status(401).json({ error: "no_token" });
   }
 
-  try {
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    req.user = decoded; // 🔥 ВАЖНО
-
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "invalid_token" });
-  }
+  req.user = authResult.decoded;
+  next();
 }
 
 function getUserIdFromToken(req) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  const authResult = getVerifiedRequestAuth(req);
+  if (!authResult?.decoded) {
     throw new Error("Unauthorized");
   }
 
-  const token = authHeader.split(" ")[1];
-  const decoded = jwt.verify(token, JWT_SECRET);
-  return decoded.id;
+  return authResult.decoded.id;
 }
 
 function getOptionalUserIdFromReq(req) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return null;
-
-  try {
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return decoded.id;
-  } catch {
-    return null;
-  }
+  return getVerifiedRequestAuth(req)?.decoded?.id || null;
 }
 
 async function touchUserLastSeen(userId) {
@@ -2740,25 +2842,20 @@ async function isAdmin(userId) {
 }
 
 async function getUserFromToken(req) {
-  const auth = req.headers.authorization;
-  if (!auth) return null;
-
-  const token = auth.split(" ")[1];
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    const result = await pool.query(
-      "SELECT id, role, is_banned FROM users WHERE id = $1",
-      [decoded.id]
-    );
-
-    touchUserLastSeen(decoded.id);
-
-    return result.rows[0];
-  } catch {
+  const authResult = getVerifiedRequestAuth(req);
+  if (!authResult?.decoded) {
     return null;
   }
+
+  const decoded = authResult.decoded;
+  const result = await pool.query(
+    "SELECT id, role, is_banned FROM users WHERE id = $1",
+    [decoded.id]
+  );
+
+  touchUserLastSeen(decoded.id);
+
+  return result.rows[0];
 }
 
 function normalizePlaylistTrackForStorage(track) {
@@ -3158,11 +3255,15 @@ app.get("/check-email/:email", async (req, res) => {
 });
 
 app.get("/check-tag/:tag", async (req, res) => {
-  const { tag } = req.params;
+  const normalizedTag = normalizeUsernameTagInput(req.params.tag);
+
+  if (!isValidUsernameTag(normalizedTag)) {
+    return res.json({ available: false, error: "invalid_username_tag" });
+  }
 
   const result = await pool.query(
     "SELECT 1 FROM users WHERE LOWER(username_tag) = LOWER($1)",
-    [tag]
+    [normalizedTag]
   );
 
   res.json({ available: result.rows.length === 0 });
@@ -3590,10 +3691,27 @@ app.get("/telegram-auth/status/:token", async (req, res) => {
       return res.status(404).json({ error: "Запрос не найден" });
     }
 
-    if (authRequest.status === "approved" && authRequest.app_token) {
+    if (authRequest.status === "approved" && authRequest.approved_user_id) {
+      const userRes = await pool.query(
+        `
+        SELECT id, username, username_tag, avatar, role
+        FROM users
+        WHERE id = $1
+        LIMIT 1
+        `,
+        [authRequest.approved_user_id]
+      );
+
+      if (!userRes.rows.length) {
+        return res.status(404).json({ error: "user_not_found" });
+      }
+
+      const user = userRes.rows[0];
+      setAuthCookie(res, signAppToken(user));
       return res.json({
         status: "approved",
-        token: authRequest.app_token
+        authenticated: true,
+        user: buildSessionUser(user)
       });
     }
 
@@ -3801,26 +3919,31 @@ app.post("/register", async (req, res) => {
     }
 
     const hash = await bcrypt.hash(cleanPassword, 10);
-    let baseTag = generateUsernameTag(username_tag || username);
-let finalUsernameTag = baseTag;
-let counter = 1;
+    const requestedTag = normalizeUsernameTagInput(username_tag);
+    if (requestedTag && !isValidUsernameTag(requestedTag)) {
+      return res.status(400).json({ error: "invalid_username_tag" });
+    }
 
-while (true) {
-  const check = await pool.query(
-    "SELECT id FROM users WHERE LOWER(username_tag) = LOWER($1)",
-    [finalUsernameTag]
-  );
+    let baseTag = requestedTag || generateUsernameTag(cleanUsername);
+    let finalUsernameTag = baseTag;
+    let counter = 1;
 
-  if (check.rows.length === 0) break;
+    while (true) {
+      const check = await pool.query(
+        "SELECT id FROM users WHERE LOWER(username_tag) = LOWER($1)",
+        [finalUsernameTag]
+      );
 
-  finalUsernameTag = baseTag + counter;
-  counter++;
-}
+      if (check.rows.length === 0) break;
 
-const result = await pool.query(
-  "INSERT INTO users (username,email,password,avatar,username_tag) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,username_tag,email,avatar",
-  [cleanUsername, cleanEmail, hash, "/images/default-avatar.jpg", finalUsernameTag]
-);
+      finalUsernameTag = baseTag + counter;
+      counter++;
+    }
+
+    const result = await pool.query(
+      "INSERT INTO users (username,email,password,avatar,username_tag) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,username_tag,email,avatar",
+      [cleanUsername, cleanEmail, hash, "/images/default-avatar.jpg", finalUsernameTag]
+    );
 
     await pool.query(
       `
@@ -4261,13 +4384,58 @@ app.post("/login", async (req, res) => {
     }
 
     const token = signAppToken(user);
+    setAuthCookie(res, token);
 
-    res.json({ token });
+    res.json({
+      success: true,
+      user: buildSessionUser(user)
+    });
 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Ошибка сервера" });
   }
+});
+
+app.get("/api/auth/session", async (req, res) => {
+  try {
+    const authResult = getVerifiedRequestAuth(req);
+    if (!authResult?.decoded) {
+      clearAuthCookie(res);
+      return res.status(401).json({ authenticated: false });
+    }
+
+    const userRes = await pool.query(
+      `
+      SELECT id, username, username_tag, avatar, role
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [authResult.decoded.id]
+    );
+
+    if (!userRes.rows.length) {
+      clearAuthCookie(res);
+      return res.status(401).json({ authenticated: false });
+    }
+
+    const user = userRes.rows[0];
+    touchUserLastSeen(user.id).catch(() => {});
+    res.json({
+      authenticated: true,
+      user: buildSessionUser(user)
+    });
+  } catch (err) {
+    console.error("AUTH SESSION ERROR:", err);
+    clearAuthCookie(res);
+    res.status(500).json({ authenticated: false, error: "session_check_failed" });
+  }
+});
+
+app.post("/logout", (req, res) => {
+  clearAuthCookie(res);
+  res.json({ success: true });
 });
 
 app.get("/api/profile", async (req, res) => {
@@ -4313,20 +4481,11 @@ app.get("/api/profile", async (req, res) => {
     }
 
     // 🔥 2. ЕСЛИ TAG НЕТ → ЭТО МОЙ ПРОФИЛЬ
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
+    const authResult = getVerifiedRequestAuth(req);
+    if (!authResult?.decoded) {
       return res.status(401).json({ error: "No token" });
     }
-
-    const token = authHeader.split(" ")[1];
-
-    let payload;
-    try {
-      payload = jwt.verify(token, JWT_SECRET);
-    } catch (e) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
+    const payload = authResult.decoded;
 
     const result = await pool.query(
       `
@@ -4392,10 +4551,14 @@ app.put("/update-profile", authMiddleware, async (req, res) => {
     const username =
       req.body.username !== undefined ? String(req.body.username).trim() : current.username;
 
-    const username_tag =
-      req.body.username_tag !== undefined
-        ? String(req.body.username_tag).trim()
-        : current.username_tag;
+    let username_tag = current.username_tag;
+    if (req.body.username_tag !== undefined) {
+      const requestedUsernameTag = normalizeUsernameTagInput(req.body.username_tag);
+      if (!isValidUsernameTag(requestedUsernameTag)) {
+        return res.status(400).json({ error: "invalid_username_tag" });
+      }
+      username_tag = requestedUsernameTag;
+    }
 
     const bio = req.body.bio !== undefined ? req.body.bio : current.bio;
     const avatar = req.body.avatar !== undefined ? req.body.avatar : current.avatar;
@@ -7473,15 +7636,7 @@ res.json({ liked: true, count: await getTrackLikesCount(), ...getXpPayload(xpSta
 
 app.get("/api/track-likes/:id", async (req, res) => {
   const trackId = req.params.id;
-  const token = req.headers.authorization?.split(" ")[1];
-
-  let userId = null;
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      userId = decoded.id;
-    } catch {}
-  }
+  const userId = getOptionalUserIdFromReq(req);
 
   const count = await pool.query(
     `SELECT COUNT(*) FROM track_likes WHERE track_id=$1`,
@@ -8873,9 +9028,13 @@ app.post("/telegram-login", async (req, res) => {
     }
 
     // создаём токен
-    const token = signAppToken(user.rows[0]);
+    const signedUser = user.rows[0];
+    setAuthCookie(res, signAppToken(signedUser));
 
-    res.json({ token });
+    res.json({
+      success: true,
+      user: buildSessionUser(signedUser)
+    });
 
   } catch (err) {
     console.log(err);

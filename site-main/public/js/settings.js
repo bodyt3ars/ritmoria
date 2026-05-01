@@ -886,13 +886,12 @@ async function deleteAccountWithoutEmail() {
 }
 
 async function performSettingsLogoutAfterDelete() {
-  localStorage.removeItem("token");
   localStorage.removeItem("userAvatar");
-  window.currentUser = null;
-  if (typeof window.loadNavbarUser === "function") {
-    await window.loadNavbarUser();
+  if (typeof window.performServerLogout === "function") {
+    await window.performServerLogout("/");
+    return;
   }
-  navigate("/");
+  window.location.assign("/");
 }
 
 function getAchievementDifficultyLabel(value) {

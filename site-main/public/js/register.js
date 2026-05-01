@@ -409,25 +409,14 @@ function initRegisterPage() {
             return;
           }
 
-          if (statusData.status === "approved" && statusData.token) {
+          if (statusData.status === "approved") {
             stopTelegramPolling();
-            localStorage.setItem("token", statusData.token);
-
-            if (window.refreshNavbarRealtimeState) {
-              await window.refreshNavbarRealtimeState();
+            window.markActiveSession?.(true, statusData.user || null);
+            if (typeof window.completeAuthTransition === "function") {
+              window.completeAuthTransition("/");
             } else {
-              if (window.loadNavbarUser) {
-                await window.loadNavbarUser();
-              }
-              if (window.loadNavbarNotifications) {
-                await window.loadNavbarNotifications();
-              }
-              if (window.loadNavbarMessagesBadge) {
-                await window.loadNavbarMessagesBadge();
-              }
+              window.location.assign("/");
             }
-
-            navigate("/");
             return;
           }
 

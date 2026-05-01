@@ -105,8 +105,11 @@ async function deleteAccount() {
       throw new Error();
     }
 
-    localStorage.removeItem("token");
-    navigate("/register");
+    if (typeof window.performServerLogout === "function") {
+      await window.performServerLogout("/register");
+    } else {
+      window.location.assign("/register");
+    }
 
   } catch {
     alert("Ошибка удаления аккаунта");
