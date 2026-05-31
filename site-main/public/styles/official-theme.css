@@ -1065,7 +1065,6 @@ select {
     display: none;
   }
 
-  .home-page .home-layout,
   .profile-page-container,
   .queue-page,
   .playlists-page,
@@ -1139,8 +1138,15 @@ body:has(.navbar.auth-navbar) .navbar {
 }
 
 @media (min-width: 1024px) {
-  .navbar .navbar-link[data-page="submit"],
+  .navbar .navbar-links > .navbar-link[data-page] {
+    display: none;
+  }
+
   .navbar .navbar-telegram-link {
+    display: inline-flex;
+  }
+
+  .navbar .navbar-indicator {
     display: none;
   }
 }
@@ -1183,7 +1189,8 @@ body:has(.navbar.auth-navbar) .navbar {
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(240px, 300px);
   gap: 24px;
   max-width: 1360px;
-  padding-top: 96px;
+  margin-top: 0;
+  padding-top: 72px;
 }
 
 .home-page .home-panel-title,
@@ -1355,10 +1362,17 @@ body:has(.navbar.auth-navbar) .navbar {
 }
 
 .home-page .home-artist-card {
+  min-height: 66px;
   padding: 12px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
   color: var(--text-main);
+}
+
+.home-page .home-artist-left {
+  min-width: 0;
+  flex: 1;
+  gap: 12px;
 }
 
 .home-page .home-right-panel {
@@ -1376,6 +1390,15 @@ body:has(.navbar.auth-navbar) .navbar {
   box-shadow: none;
 }
 
+.home-page .home-artist-rank {
+  width: 42px;
+  min-width: 42px;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+  font-size: 13px;
+}
+
 .home-page .home-artist-card img,
 .home-page .home-post-header img,
 .profile-follow-avatar,
@@ -1384,17 +1407,36 @@ body:has(.navbar.auth-navbar) .navbar {
   border-radius: 6px;
 }
 
+.home-page .home-artist-card img {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+}
+
+.home-page .home-artist-info {
+  min-width: 0;
+  gap: 3px;
+}
+
 .home-page .home-artist-status-online {
+  width: 10px;
+  height: 10px;
   background: #52d48a;
   box-shadow: 0 0 0 4px rgba(82, 212, 138, 0.1);
 }
 
 .home-page .home-artist-name {
   color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-page .home-artist-meta {
   color: var(--text-soft);
+  font-size: 12px;
 }
 
 .profile-avatar {
