@@ -1,0 +1,844 @@
+/* Official Ritmoria brand layer. Loaded last by the SPA router. */
+:root {
+  --brand-pink: #e3a0bd;
+  --brand-pink-strong: #f0b5cc;
+  --brand-pink-deep: #bd7196;
+  --brand-pink-soft: rgba(227, 160, 189, 0.16);
+  --brand-pink-line: rgba(227, 160, 189, 0.24);
+  --brand-ink: #291520;
+
+  --surface-0: #07080c;
+  --surface-1: rgba(13, 14, 20, 0.94);
+  --surface-2: rgba(18, 19, 27, 0.92);
+  --surface-3: rgba(25, 25, 34, 0.94);
+  --surface-muted: rgba(255, 255, 255, 0.045);
+  --surface-muted-strong: rgba(255, 255, 255, 0.075);
+
+  --line-soft: rgba(255, 255, 255, 0.075);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --text-main: #f8f1f5;
+  --text-soft: rgba(248, 241, 245, 0.74);
+  --text-muted: rgba(248, 241, 245, 0.54);
+
+  --radius-xl: 22px;
+  --radius-lg: 18px;
+  --radius-md: 13px;
+  --shadow-panel: 0 24px 70px rgba(0, 0, 0, 0.42);
+  --shadow-soft: 0 16px 42px rgba(0, 0, 0, 0.3);
+  --brand-gradient: linear-gradient(135deg, var(--brand-pink-strong), var(--brand-pink-deep));
+  --panel-gradient:
+    linear-gradient(180deg, rgba(23, 23, 31, 0.94), rgba(12, 13, 19, 0.96)),
+    radial-gradient(circle at 0% 0%, rgba(227, 160, 189, 0.12), transparent 34%);
+
+  --gp-judge-shell: rgba(18, 19, 27, 0.94);
+  --gp-judge-shell-2: rgba(11, 12, 17, 0.96);
+  --gp-judge-panel: rgba(255, 255, 255, 0.055);
+  --gp-judge-panel-2: rgba(255, 255, 255, 0.075);
+  --gp-judge-strong: var(--brand-pink-deep);
+  --gp-judge-strong-2: var(--brand-pink-strong);
+  --gp-judge-muted: var(--text-soft);
+  --gp-judge-border: var(--line-soft);
+  --gp-judge-track: rgba(255, 255, 255, 0.13);
+  --gp-min-shell: rgba(18, 19, 27, 0.96);
+  --gp-min-shell-2: rgba(10, 11, 16, 0.96);
+  --gp-min-panel: rgba(255, 255, 255, 0.055);
+  --gp-min-border: var(--line-soft);
+  --gp-min-muted: var(--text-soft);
+  --gp-min-track: rgba(255, 255, 255, 0.13);
+  --gp-min-accent: var(--brand-pink);
+  --gp-min-accent-strong: var(--brand-pink-strong);
+}
+
+html {
+  background: var(--surface-0);
+  scrollbar-color: rgba(227, 160, 189, 0.34) transparent;
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% -8%, rgba(227, 160, 189, 0.09), transparent 34%),
+    linear-gradient(180deg, #090a0f 0%, #07080c 46%, #0a0a0f 100%);
+  color: var(--text-main);
+  font-family: "IBM Plex Sans", "Oswald", sans-serif;
+  letter-spacing: -0.01em;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(227, 160, 189, 0.34);
+  color: #fff;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(227, 160, 189, 0.26);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(227, 160, 189, 0.44);
+}
+
+#background-video {
+  filter: blur(12px) brightness(0.34) saturate(0.72);
+  opacity: 0.72;
+}
+
+.video-background::after {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(227, 160, 189, 0.13), transparent 28%),
+    radial-gradient(circle at 78% 0%, rgba(255, 255, 255, 0.045), transparent 22%),
+    linear-gradient(180deg, rgba(7, 8, 12, 0.44), rgba(7, 8, 12, 0.92));
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgba(240, 181, 204, 0.62);
+  outline-offset: 3px;
+}
+
+.page-loader {
+  background: rgba(7, 8, 12, 0.76);
+}
+
+.spinner {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-top-color: var(--brand-pink-strong);
+}
+
+/* Navbar */
+.navbar {
+  top: 18px;
+  width: min(calc(100% - 48px), 1540px);
+  padding: 12px 20px;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(20, 20, 27, 0.94), rgba(12, 13, 19, 0.9)),
+    radial-gradient(circle at 8% 0%, rgba(227, 160, 189, 0.11), transparent 28%);
+  border: 1px solid var(--brand-pink-line);
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.navbar .navbar-logo {
+  border-radius: 14px;
+}
+
+.navbar .navbar-logo:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(227, 160, 189, 0.18);
+  box-shadow: none;
+}
+
+.navbar .navbar-logo-img {
+  filter: none;
+}
+
+.navbar .navbar-logo:hover .navbar-logo-img {
+  filter: drop-shadow(0 0 10px rgba(227, 160, 189, 0.18));
+}
+
+.navbar .navbar-logo-text {
+  background: none;
+  color: var(--text-main);
+  -webkit-text-fill-color: currentColor;
+  letter-spacing: 0.02em;
+}
+
+.navbar .navbar-logo-wrap::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--brand-pink);
+  box-shadow: 0 0 0 4px rgba(227, 160, 189, 0.12);
+}
+
+.navbar .navbar-search-input {
+  border-radius: 14px;
+  background: rgba(7, 8, 12, 0.54);
+  border: 1px solid var(--line-soft);
+  color: var(--text-main);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.navbar .navbar-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.navbar .navbar-search-icon,
+.navbar .navbar-search-highlight {
+  color: var(--brand-pink-strong);
+}
+
+.navbar .navbar-search-input:focus {
+  border-color: var(--brand-pink-line);
+  box-shadow: 0 0 0 4px rgba(227, 160, 189, 0.08);
+}
+
+.navbar .navbar-link,
+.navbar .navbar-nav a {
+  color: var(--text-soft);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+.navbar .navbar-link:hover,
+.navbar .navbar-nav a:hover,
+.navbar .navbar-link.active-link,
+.navbar .navbar-nav a.active-link {
+  color: #fff;
+}
+
+.navbar .navbar-indicator {
+  background: var(--brand-gradient);
+  box-shadow: 0 0 12px rgba(227, 160, 189, 0.28);
+}
+
+.navbar .navbar-search-results,
+.navbar .navbar-dropdown,
+.navbar .navbar-notifications-dropdown,
+.app-confirm-dialog {
+  border-radius: var(--radius-lg);
+  background: var(--panel-gradient);
+  border: 1px solid var(--brand-pink-line);
+  box-shadow: var(--shadow-panel);
+}
+
+.navbar .navbar-search-item:hover,
+.navbar .navbar-dropdown-item:hover,
+.navbar .navbar-notification-item:hover {
+  background: rgba(227, 160, 189, 0.09);
+}
+
+.navbar .navbar-notification-item.is-unread {
+  border-color: rgba(227, 160, 189, 0.28);
+  background: rgba(227, 160, 189, 0.1);
+}
+
+.navbar .navbar-notification-badge,
+.navbar .navbar-queue-dot,
+.navbar .navbar-mobile-toggle span {
+  background: var(--brand-pink-strong);
+}
+
+.navbar .navbar-avatar {
+  border: 1px solid rgba(227, 160, 189, 0.34);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+}
+
+/* Global surfaces */
+.home-page,
+.profile-page,
+.settings-page,
+.track-page,
+.queue-page,
+.playlists-page,
+.auth-page,
+.messages-page,
+.submit-page,
+.upload-page,
+.opens-page,
+.judge-page,
+.discover-page,
+.admin-page {
+  color: var(--text-main);
+}
+
+.home-page .home-panel-title,
+.home-page .home-feed-title,
+.settings-page-title,
+.queue-title,
+.playlists-page .playlists-header h1,
+.profile-posts-title h2,
+.profile-section-header h3,
+.track-page-info h1,
+.auth-card-title {
+  color: var(--text-main);
+  font-family: "Oswald", "IBM Plex Sans", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  text-shadow: none;
+}
+
+.home-page .home-layout {
+  max-width: 1460px;
+  gap: 32px;
+}
+
+.home-page .home-panel-title-decorated::before,
+.home-page .home-panel-title-decorated::after {
+  background: var(--brand-gradient);
+  box-shadow: none;
+}
+
+.home-page .home-news-block,
+.home-page .home-momentum-hero,
+.home-page .home-challenge-card,
+.home-page .home-focus-card,
+.home-page .home-for-you-card,
+.home-page .home-activity-card,
+.home-page .home-activity-block,
+.home-page .home-track-card,
+.home-page .home-post,
+.home-page .home-artist-card,
+.profile-page-card,
+.profile-tabs,
+.profile-page .post-card,
+.post-inline-comments-wrap,
+.profile-page .track-card,
+.profile-follow-modal,
+.profile-modal-content,
+.profile-post-modal-content,
+.profile-post-comments-modal-content,
+.settings-page-card,
+.settings-page-modal-content,
+.settings-communication-card,
+.track-page-card,
+.track-page-score-chip,
+.track-page-reaction-btn,
+.queue-section-nav,
+.queue-rating-controls,
+.queue-track-main,
+.playlists-page .playlist-card,
+.gp-queue-panel,
+.gp-playlist-modal-card,
+.gp-playlist-modal-card-small,
+.gp-context-menu,
+.auth-card,
+.auth-code-modal-content {
+  background: var(--panel-gradient);
+  border-color: var(--line-soft);
+  box-shadow: var(--shadow-soft);
+}
+
+.home-page .home-momentum-hero,
+.profile-page-card,
+.track-page-card,
+.settings-page-modal-content,
+.auth-card {
+  border-color: var(--brand-pink-line);
+  box-shadow: var(--shadow-panel);
+}
+
+.home-page .home-news-block,
+.home-page .home-momentum-hero,
+.home-page .home-challenge-card,
+.home-page .home-focus-card,
+.home-page .home-for-you-card,
+.home-page .home-activity-card,
+.home-page .home-activity-block,
+.home-page .home-track-card,
+.home-page .home-post,
+.profile-page-card,
+.profile-page .post-card,
+.profile-page .track-card,
+.settings-page-card,
+.track-page-card,
+.playlists-page .playlist-card,
+.queue-track-main {
+  border-radius: var(--radius-lg);
+}
+
+.home-page .home-track-card:hover,
+.home-page .home-post:hover,
+.home-page .home-artist-card:hover,
+.profile-page-card:hover,
+.profile-page .post-card:hover,
+.profile-page .track-card:hover,
+.settings-page-card:hover,
+.playlists-page .playlist-card:hover,
+.queue-track-main:hover {
+  transform: translateY(-2px);
+  border-color: rgba(227, 160, 189, 0.22);
+  box-shadow: var(--shadow-panel);
+}
+
+.home-page .home-momentum-kicker,
+.home-page .home-signal-pill,
+.home-page .home-for-you-chip,
+.home-page .home-activity-type,
+.profile-user-badge,
+.profile-place-badge,
+.profile-stat,
+.track-page-score-chip,
+.queue-status,
+.queue-track-score,
+.home-page .home-track-card-stats span,
+.home-page .home-artist-rank {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--line-soft);
+  color: var(--text-soft);
+  box-shadow: none;
+}
+
+.home-page .home-momentum-kicker,
+.home-page .home-for-you-chip,
+.home-page .home-activity-type,
+.profile-collective-kicker,
+.track-page-kicker,
+.gp-queue-kicker {
+  color: var(--brand-pink-strong);
+}
+
+.home-page .home-momentum-title,
+.home-page .home-for-you-stat strong,
+.profile-stat-number,
+.profile-page-info h2,
+.track-page-info h1,
+.gp-queue-title {
+  color: #fff;
+}
+
+.home-page .home-momentum-text,
+.home-page .home-for-you-text,
+.home-page .home-for-you-list,
+.home-page .home-activity-copy,
+.profile-bio,
+.profile-stat-label,
+.profile-username-tag,
+.track-page-info h2,
+.track-page-score-chip span,
+.queue-track-title,
+.home-page .home-post-time,
+.home-page .home-track-card-artist,
+.playlists-page .playlist-card-meta {
+  color: var(--text-soft);
+}
+
+/* Controls */
+.home-page .home-for-you-action,
+.home-page .home-activity-link,
+.home-page .home-create-post button,
+.home-page .home-comment-form button,
+.profile-main-btn,
+.profile-section-cta-btn,
+.profile-create-post-btn,
+.profile-create-track-btn,
+.profile-save-inline-btn,
+.profile-primary-btn,
+.profile-media-select-btn,
+.settings-switch input:checked + .settings-switch-slider,
+.track-page-reaction-like.active,
+.queue-section-nav-btn.is-active,
+.queue-rating-tab.is-active,
+.queue-admin-btn:not(.queue-admin-btn-danger),
+.queue-admin-btn-primary,
+.playlists-page .playlist-card-play-btn i,
+.playlists-page .playlists-create-btn:hover,
+.auth-submit-btn,
+.auth-code-btn-confirm,
+.tg-btn,
+.gp-btn-play,
+.gp-queue-tab.active,
+.gp-queue-add-current,
+.gp-queue-track:hover .gp-queue-track-play,
+.gp-queue-track.is-current .gp-queue-track-play,
+.app-confirm-btn-primary {
+  background: var(--brand-gradient);
+  border-color: rgba(240, 181, 204, 0.34);
+  color: #24131d;
+  box-shadow: 0 14px 32px rgba(227, 160, 189, 0.18);
+}
+
+.profile-main-btn,
+.profile-section-cta-btn,
+.profile-create-post-btn,
+.profile-create-track-btn,
+.auth-submit-btn,
+.tg-btn,
+.gp-btn-play,
+.gp-btn-play.playing,
+.app-confirm-btn-primary {
+  color: #22121a;
+  font-weight: 700;
+}
+
+.home-page .home-for-you-action:hover,
+.home-page .home-activity-link:hover,
+.home-page .home-create-post button:hover,
+.home-page .home-comment-form button:hover,
+.profile-main-btn:hover,
+.profile-section-cta-btn:hover,
+.profile-create-post-btn:hover,
+.profile-create-track-btn:hover,
+.profile-primary-btn:hover,
+.profile-media-select-btn:hover,
+.auth-submit-btn:hover,
+.tg-btn:hover,
+.gp-btn-play:hover,
+.gp-btn-play.playing,
+.app-confirm-btn-primary:hover {
+  background: linear-gradient(135deg, #f4c0d4, #c77c9f);
+  border-color: rgba(240, 181, 204, 0.42);
+  color: #22121a;
+  box-shadow: 0 18px 38px rgba(227, 160, 189, 0.22);
+}
+
+.profile-secondary-btn,
+.profile-icon-btn,
+.profile-cancel-inline-btn,
+.auth-telegram-btn,
+.auth-code-btn-cancel,
+.queue-admin-btn,
+.playlists-page .playlists-create-btn,
+.gp-icon-btn,
+.gp-control-btn,
+.gp-add-btn,
+.gp-hide,
+.gp-volume-toggle,
+.gp-context-item,
+.gp-playlist-create-btn,
+.gp-playlist-cancel,
+.track-thread-action,
+.track-thread-reply-cancel {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--line-soft);
+  color: var(--text-main);
+  box-shadow: none;
+}
+
+.profile-secondary-btn:hover,
+.profile-icon-btn:hover,
+.auth-telegram-btn:hover,
+.queue-admin-btn:hover,
+.playlists-page .playlists-create-btn:hover,
+.gp-icon-btn:hover,
+.gp-control-btn:hover,
+.gp-add-btn:hover,
+.gp-context-item:hover,
+.gp-playlist-create-btn:hover,
+.track-thread-action:hover {
+  background: rgba(227, 160, 189, 0.1);
+  border-color: rgba(227, 160, 189, 0.22);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+input,
+textarea,
+select,
+.auth-input,
+.auth-code-input,
+.profile-field input,
+.profile-field textarea,
+.profile-post-textarea,
+.profile-modal-content input,
+.profile-modal-content textarea,
+.profile-post-modal-content input,
+.profile-post-modal-content textarea,
+.profile-username-edit input,
+.post-comment-input,
+.gp-playlist-search,
+.home-page .home-comment-form input {
+  background: rgba(7, 8, 12, 0.46);
+  border: 1px solid var(--line-soft);
+  color: var(--text-main);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.auth-input:focus,
+.auth-code-input:focus,
+.profile-field input:focus,
+.profile-field textarea:focus,
+.profile-post-textarea:focus,
+.profile-modal-content input:focus,
+.profile-modal-content textarea:focus,
+.profile-post-modal-content input:focus,
+.profile-post-modal-content textarea:focus,
+.gp-playlist-search:focus {
+  border-color: var(--brand-pink-line);
+  box-shadow: 0 0 0 4px rgba(227, 160, 189, 0.08);
+  outline: none;
+}
+
+/* Profile */
+.profile-page {
+  --profile-pink: var(--brand-pink);
+  --profile-pink-soft: var(--brand-pink-soft);
+  --profile-rose: var(--brand-pink-strong);
+  --profile-violet: var(--brand-pink-deep);
+  --profile-panel: var(--panel-gradient);
+}
+
+.profile-avatar {
+  border-color: rgba(227, 160, 189, 0.3);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+}
+
+.profile-username-tag,
+.profile-user-badge-name,
+.profile-collective-member-role,
+.profile-follow-item:hover .profile-follow-action,
+.follow-item:hover .follow-action,
+.profile-close-btn:hover,
+.profile-tab-btn.active,
+.profile-stat:hover .profile-stat-number {
+  color: var(--brand-pink-strong);
+}
+
+.profile-stat::after,
+.profile-upload-bar,
+.rank-xp-fill {
+  background: var(--brand-gradient);
+}
+
+.profile-tabs::after,
+.profile-page .post-card::before,
+.home-page .home-post::before,
+.home-page .home-artist-card::before {
+  opacity: 0;
+}
+
+.profile-tab-btn.active {
+  background: rgba(227, 160, 189, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(227, 160, 189, 0.18);
+}
+
+.profile-cover-label:hover,
+.profile-file-input:hover {
+  border-color: var(--brand-pink-line);
+  background: rgba(227, 160, 189, 0.08);
+}
+
+/* Auth */
+.auth-page {
+  --auth-card-top: rgba(23, 23, 31, 0.95);
+  --auth-card-bottom: rgba(12, 13, 19, 0.98);
+  --auth-text: var(--text-main);
+  --auth-muted: var(--text-soft);
+  --auth-soft: var(--text-muted);
+  --auth-pink: var(--brand-pink);
+  --auth-pink-strong: var(--brand-pink-deep);
+  font-family: "IBM Plex Sans", "Oswald", sans-serif;
+}
+
+.auth-card-subtitle,
+.auth-label,
+.auth-status,
+.auth-error,
+.auth-switch,
+.auth-telegram-text,
+.auth-telegram-status,
+.auth-telegram-manual,
+.auth-code-modal-content p {
+  font-family: "IBM Plex Sans", sans-serif;
+}
+
+.auth-switch a,
+.auth-telegram-manual,
+.settings-page-card i,
+.track-page-artist-linkable:hover,
+.home-page .home-track-card-title:hover,
+.home-page .home-track-card-artist-link:hover {
+  color: var(--brand-pink-strong);
+}
+
+/* Player */
+.global-player {
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(18, 19, 27, 0.96), rgba(10, 11, 16, 0.96)),
+    radial-gradient(circle at 0% 0%, rgba(227, 160, 189, 0.1), transparent 30%);
+  border: 1px solid var(--brand-pink-line);
+  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.48);
+}
+
+.global-player::before,
+.global-player::after,
+.gp-cover-wrap::before {
+  opacity: 0;
+}
+
+.global-player[data-playing="1"] .gp-cover {
+  animation: none;
+}
+
+.gp-title,
+.gp-playlist-modal-title,
+.gp-queue-title {
+  color: var(--text-main);
+}
+
+.gp-artist,
+.gp-time,
+.gp-playlist-item-count,
+.gp-queue-section-title,
+.gp-queue-track-artist {
+  color: var(--text-soft);
+}
+
+.gp-progress,
+.gp-volume {
+  background: linear-gradient(
+    90deg,
+    var(--brand-pink) 0,
+    var(--brand-pink) var(--gp-range-fill, 0%),
+    rgba(255, 255, 255, 0.13) var(--gp-range-fill, 0%),
+    rgba(255, 255, 255, 0.13) 100%
+  );
+}
+
+.gp-progress::-webkit-slider-thumb,
+.gp-volume::-webkit-slider-thumb {
+  border-color: var(--brand-pink);
+}
+
+.gp-progress::-moz-range-thumb,
+.gp-volume::-moz-range-thumb {
+  border-color: var(--brand-pink);
+}
+
+.gp-icon-btn.active,
+.gp-control-btn.active,
+.gp-playlist-item.active,
+.gp-playlist-item-fixed.active,
+.track-thread-react.active-like {
+  background: rgba(227, 160, 189, 0.14);
+  border-color: rgba(227, 160, 189, 0.28);
+  color: #fff;
+}
+
+/* Track, queue and playlists */
+.track-page-top {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
+    radial-gradient(circle at 0% 0%, rgba(227, 160, 189, 0.11), transparent 34%);
+  border-color: var(--line-soft);
+}
+
+.track-page-cover-wrap::before,
+.playlists-page .playlists-cover-favorites {
+  background:
+    radial-gradient(circle at 30% 22%, rgba(240, 181, 204, 0.28), transparent 34%),
+    linear-gradient(145deg, #24131d, #111219 58%, #090a0e);
+}
+
+.track-page-reaction-like.active i,
+.track-page-reaction-like.active span,
+.queue-section-nav-btn.is-active,
+.queue-rating-tab.is-active,
+.gp-queue-tab.active,
+.gp-queue-add-current,
+.gp-queue-track:hover .gp-queue-track-play,
+.gp-queue-track.is-current .gp-queue-track-play {
+  color: #24131d;
+}
+
+.queue-status.queue-status-open {
+  color: #8ee0aa;
+  border-color: rgba(142, 224, 170, 0.3);
+}
+
+.queue-status.queue-status-closed,
+.queue-status.queue-status-paused {
+  color: #ff9aa8;
+  border-color: rgba(255, 154, 168, 0.3);
+}
+
+.queue-admin-btn-danger,
+.profile-danger-btn,
+.app-confirm-modal.is-danger .app-confirm-btn-primary {
+  background: rgba(255, 100, 128, 0.12);
+  border-color: rgba(255, 100, 128, 0.28);
+  color: #ffc1cc;
+  box-shadow: none;
+}
+
+.playlists-page .playlist-card:hover {
+  border-color: var(--brand-pink-line);
+}
+
+/* Modals and utility overlays */
+.app-confirm-modal,
+.auth-code-modal,
+.profile-modal,
+.profile-post-modal,
+#followModal,
+.settings-page-modal {
+  background:
+    linear-gradient(180deg, rgba(7, 8, 12, 0.78), rgba(7, 8, 12, 0.86)),
+    radial-gradient(circle at top, rgba(227, 160, 189, 0.12), transparent 34%);
+}
+
+.app-confirm-icon,
+.profile-editor-dropzone,
+.profile-cover-label,
+.profile-file-input,
+.profile-tags-input,
+.track-thread-comment,
+.track-thread-empty,
+.track-thread-reply-badge,
+.gp-queue-track,
+.gp-queue-empty,
+.gp-playlist-item,
+.gp-playlist-empty,
+.home-page .home-comment,
+.home-page .home-comment-btn {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--line-soft);
+}
+
+.xp-toast {
+  background: var(--brand-gradient);
+  color: #24131d;
+  box-shadow: 0 14px 34px rgba(227, 160, 189, 0.2);
+}
+
+.rank-up-backdrop {
+  background:
+    radial-gradient(circle at center, rgba(227, 160, 189, 0.16), transparent 34%),
+    rgba(7, 8, 12, 0.9);
+}
+
+.rank-up-box {
+  background: var(--panel-gradient);
+  border-color: var(--brand-pink-line);
+  box-shadow: var(--shadow-panel);
+}
+
+.rank-up-glow,
+.rank-up-burst {
+  background: radial-gradient(circle, rgba(227, 160, 189, 0.18), transparent 72%);
+}
+
+.rank-up-gain {
+  background: rgba(227, 160, 189, 0.13);
+  border-color: var(--brand-pink-line);
+}
+
+@media (max-width: 820px) {
+  .navbar {
+    width: calc(100% - 28px);
+    top: 12px;
+    padding: 10px 14px;
+  }
+
+  .home-page .home-layout {
+    gap: 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .navbar {
+    width: calc(100% - 18px);
+    border-radius: 16px;
+  }
+
+  .global-player {
+    border-radius: 16px;
+  }
+}
