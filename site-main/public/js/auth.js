@@ -16,9 +16,9 @@
   function writeSessionValue(key, value) {
     try {
       if (value === null || value === undefined || value === "") {
-        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
       } else {
-        localStorage.setItem(key, String(value));
+        sessionStorage.setItem(key, String(value));
       }
     } catch {}
   }
@@ -44,24 +44,9 @@
 
   function readCachedSessionFlag() {
     try {
-      return localStorage.getItem(SESSION_ACTIVE_KEY) === "1";
+      return sessionStorage.getItem(SESSION_ACTIVE_KEY) === "1";
     } catch {
       return false;
-    }
-  }
-
-  function readCachedUser() {
-    try {
-      const id = localStorage.getItem(SESSION_USER_ID_KEY) || "";
-      const usernameTag = localStorage.getItem(SESSION_USER_TAG_KEY) || "";
-      if (!id && !usernameTag) return null;
-
-      return {
-        id,
-        username_tag: usernameTag
-      };
-    } catch {
-      return null;
     }
   }
 
@@ -108,7 +93,7 @@
       authState.user?.id ||
       (() => {
         try {
-          return localStorage.getItem(SESSION_USER_ID_KEY);
+          return sessionStorage.getItem(SESSION_USER_ID_KEY);
         } catch {
           return null;
         }
@@ -123,7 +108,7 @@
       authState.user?.username_tag ||
       (() => {
         try {
-          return localStorage.getItem(SESSION_USER_TAG_KEY);
+          return sessionStorage.getItem(SESSION_USER_TAG_KEY);
         } catch {
           return null;
         }
@@ -162,10 +147,8 @@
     window.location.assign(redirectPath);
   }
 
-  authState.active = readCachedSessionFlag();
-  authState.user = authState.active ? readCachedUser() : null;
-  authState.checked = false;
-  hasActiveSession({ force: true }).catch(() => {});
+  setCachedSession(readCachedSessionFlag(), null);
+  hasActiveSession().catch(() => {});
 
   try {
     const nativeGetItem = localStorage.getItem.bind(localStorage);
