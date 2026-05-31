@@ -1,0 +1,116 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-card-title">Регистрация</h1>
+    <p class="auth-card-subtitle">
+      Создай аккаунт вручную или войди через Telegram
+    </p>
+
+    <form id="registerForm" class="auth-form">
+      <label class="auth-label" for="username">Имя</label>
+      <input
+        id="username"
+        class="auth-input"
+        type="text"
+        placeholder="Твоё имя"
+      >
+
+      <label class="auth-label" for="usernameTag">Username</label>
+      <input
+        id="usernameTag"
+        class="auth-input"
+        type="text"
+        placeholder="@username"
+      >
+      <div id="tagStatus" class="auth-status"></div>
+
+      <label class="auth-label" for="email">Email</label>
+      <input
+        id="email"
+        class="auth-input"
+        type="email"
+        placeholder="Введите email"
+      >
+      <div id="emailStatus" class="auth-status"></div>
+
+      <label class="auth-label" for="password">Пароль</label>
+      <input
+        id="password"
+        class="auth-input"
+        type="password"
+        placeholder="Минимум 8 символов"
+      >
+
+      <label class="auth-label" for="password2">Повтори пароль</label>
+      <input
+        id="password2"
+        class="auth-input"
+        type="password"
+        placeholder="Повтори пароль"
+      >
+
+      <div id="error" class="auth-error"></div>
+
+      <button type="submit" class="auth-submit-btn">Зарегистрироваться</button>
+
+      <p class="auth-switch">
+        Уже есть аккаунт? <a href="/login">Войти</a>
+      </p>
+
+      <div class="auth-telegram">
+        <p class="auth-telegram-text">Можно также через Telegram</p>
+
+        <button type="button" id="telegramAuthBtn" class="auth-telegram-btn">
+          <i class="fa-brands fa-telegram"></i>
+          <span>Продолжить через Telegram</span>
+        </button>
+
+        <p id="telegramAuthStatus" class="auth-telegram-status"></p>
+
+        <a
+          id="telegramAuthLink"
+          class="auth-telegram-manual auth-hidden"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Открыть бота вручную
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <div id="codeModal" class="auth-code-modal auth-hidden">
+    <div class="auth-code-modal-content">
+      <h3>Подтверждение</h3>
+      <p>Мы отправили код на твой email. Введи его ниже.</p>
+
+      <input
+        id="codeInput"
+        class="auth-code-input"
+        type="text"
+        placeholder="000000"
+        maxlength="6"
+      >
+
+      <div id="codeError" class="auth-error"></div>
+
+      <div class="auth-code-actions">
+        <button
+          type="button"
+          id="confirmCodeBtn"
+          class="auth-code-btn auth-code-btn-confirm"
+        >
+          Подтвердить
+        </button>
+
+        <button
+          type="button"
+          id="cancelCodeBtn"
+          class="auth-code-btn auth-code-btn-cancel"
+        >
+          Отмена
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

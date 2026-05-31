@@ -1,0 +1,26 @@
+<div class="queue-page">
+  <div class="queue-section-nav" aria-label="Разделы очереди">
+    <button type="button" class="queue-section-nav-btn is-active" onclick="navigate('/queue')">Очередь</button>
+    <button type="button" class="queue-section-nav-btn" onclick="navigate('/queue/battles')">Баттлы</button>
+  </div>
+
+  <div class="queue-header">
+    <h1 class="queue-title">Очередь треков</h1>
+    <div id="queueStatusText" class="queue-status">загрузка...</div>
+  </div>
+
+  <div id="adminControls" class="queue-admin queue-hidden">
+    <button id="openQueue" class="queue-admin-btn">Открыть</button>
+    <button id="pauseQueue" class="queue-admin-btn">Пауза</button>
+    <button id="resumeQueue" class="queue-admin-btn">Возобновить</button>
+    <button id="closeQueue" class="queue-admin-btn queue-admin-btn-danger">Закрыть</button>
+  </div>
+
+  <div id="queueRatingControls" class="queue-rating-controls queue-hidden" aria-label="Переключатель рейтинга">
+    <button type="button" class="queue-rating-tab is-active" data-rating-view="total">Общие</button>
+    <button type="button" class="queue-rating-tab" data-rating-view="judge">Судьи</button>
+    <button type="button" class="queue-rating-tab" data-rating-view="user">Пользователи</button>
+  </div>
+
+  <div id="queueList" class="queue-list"></div>
+</div>

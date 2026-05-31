@@ -1,0 +1,57 @@
+<div class="auth-page">
+
+  <div class="auth-card">
+    <h1 class="auth-card-title">Вход</h1>
+    <p class="auth-card-subtitle">Войди по email, username или через Telegram</p>
+
+    <form id="loginForm" class="auth-form">
+
+      <label class="auth-label">Email или @username</label>
+      <input
+        id="email"
+        class="auth-input"
+        type="text"
+        placeholder="email или @username"
+      >
+
+      <label class="auth-label">Пароль</label>
+      <input
+        type="password"
+        id="password"
+        class="auth-input"
+        placeholder="Введите пароль"
+      >
+
+      <div id="error" class="auth-error"></div>
+
+      <button type="submit" class="auth-submit-btn">Войти</button>
+
+      <p class="auth-switch">
+        Нет аккаунта? <a href="/register">Зарегистрироваться</a>
+      </p>
+
+      <div class="auth-telegram">
+        <p class="auth-telegram-text">Можно также через Telegram</p>
+
+        <button type="button" id="telegramAuthBtn" class="auth-telegram-btn">
+          <i class="fa-brands fa-telegram"></i>
+          <span>Войти через Telegram</span>
+        </button>
+
+        <p id="telegramAuthStatus" class="auth-telegram-status"></p>
+
+        <a
+          id="telegramAuthLink"
+          class="auth-telegram-manual auth-hidden"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Открыть бота вручную
+        </a>
+      </div>
+
+    </form>
+  </div>
+
+</div>
