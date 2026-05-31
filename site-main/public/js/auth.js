@@ -16,9 +16,9 @@
   function writeSessionValue(key, value) {
     try {
       if (value === null || value === undefined || value === "") {
-        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
       } else {
-        sessionStorage.setItem(key, String(value));
+        localStorage.setItem(key, String(value));
       }
     } catch {}
   }
@@ -44,9 +44,24 @@
 
   function readCachedSessionFlag() {
     try {
-      return sessionStorage.getItem(SESSION_ACTIVE_KEY) === "1";
+      return localStorage.getItem(SESSION_ACTIVE_KEY) === "1";
     } catch {
       return false;
+    }
+  }
+
+  function readCachedUser() {
+    try {
+      const id = localStorage.getItem(SESSION_USER_ID_KEY) || "";
+      const usernameTag = localStorage.getItem(SESSION_USER_TAG_KEY) || "";
+      if (!id && !usernameTag) return null;
+
+      return {
+        id,
+        username_tag: usernameTag
+      };
+    } catch {
+      return null;
     }
   }
 
@@ -93,7 +108,7 @@
       authState.user?.id ||
       (() => {
         try {
-          return sessionStorage.getItem(SESSION_USER_ID_KEY);
+          return localStorage.getItem(SESSION_USER_ID_KEY);
         } catch {
           return null;
         }
@@ -108,7 +123,7 @@
       authState.user?.username_tag ||
       (() => {
         try {
-          return sessionStorage.getItem(SESSION_USER_TAG_KEY);
+          return localStorage.getItem(SESSION_USER_TAG_KEY);
         } catch {
           return null;
         }
@@ -147,8 +162,10 @@
     window.location.assign(redirectPath);
   }
 
-  setCachedSession(readCachedSessionFlag(), null);
-  hasActiveSession().catch(() => {});
+  authState.active = readCachedSessionFlag();
+  authState.user = authState.active ? readCachedUser() : null;
+  authState.checked = false;
+  hasActiveSession({ force: true }).catch(() => {});
 
   try {
     const nativeGetItem = localStorage.getItem.bind(localStorage);
