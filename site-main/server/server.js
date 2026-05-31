@@ -3152,6 +3152,7 @@ app.get("/me", auth, async (req, res) => {
     users.avatar,
     users.role,
     users.email,
+    COALESCE(users.xp, 0)::int AS xp,
     users.collective_id,
     mc.name AS collective_name,
     COALESCE(users.notifications_enabled, true) AS notifications_enabled,

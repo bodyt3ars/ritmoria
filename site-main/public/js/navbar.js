@@ -8,6 +8,14 @@ let navbarRealtimeInitialized = false;
 let navbarRealtimeLoopInterval = null;
 let collectiveInviteDecisionResolver = null;
 
+const NAVBAR_RANK_TIERS = [
+  { rank: 1, rankName: "Новичок", minXp: 0 },
+  { rank: 2, rankName: "Слушатель", minXp: 500 },
+  { rank: 3, rankName: "Артист", minXp: 2000 },
+  { rank: 4, rankName: "Хитмейкер", minXp: 6000 },
+  { rank: 5, rankName: "Легенда", minXp: 15000 }
+];
+
 function setNavbarBadgeState(badge, count) {
   if (!badge) return;
   const numericCount = Number(count || 0);
@@ -32,6 +40,72 @@ async function hasNavbarSession() {
 function buildNavbarProfilePath(tag) {
   const safeTag = String(tag || "").trim();
   return safeTag ? `/${encodeURIComponent(safeTag)}` : "/profile";
+}
+
+function getNavbarRankState(rankStateOrXp = 0) {
+  if (
+    rankStateOrXp &&
+    typeof rankStateOrXp === "object" &&
+    typeof rankStateOrXp.rank !== "undefined" &&
+    typeof rankStateOrXp.progress !== "undefined"
+  ) {
+    return {
+      ...rankStateOrXp,
+      xp: Number(rankStateOrXp.xp || 0),
+      rank: Number(rankStateOrXp.rank || 1),
+      progress: Math.max(0, Math.min(100, Number(rankStateOrXp.progress || 0))),
+      nextLevel: rankStateOrXp.nextLevel === null ? null : Number(rankStateOrXp.nextLevel || 0),
+      isMaxRank: Boolean(rankStateOrXp.isMaxRank || rankStateOrXp.nextLevel === null)
+    };
+  }
+
+  const xp = Math.max(0, Number(rankStateOrXp || 0));
+  let currentTier = NAVBAR_RANK_TIERS[0];
+
+  NAVBAR_RANK_TIERS.forEach((tier) => {
+    if (xp >= tier.minXp) currentTier = tier;
+  });
+
+  const nextTier = NAVBAR_RANK_TIERS.find((tier) => tier.minXp > currentTier.minXp) || null;
+  const nextLevel = nextTier ? nextTier.minXp : null;
+  const progress = nextTier
+    ? Math.max(0, Math.min(100, ((xp - currentTier.minXp) / (nextLevel - currentTier.minXp)) * 100))
+    : 100;
+
+  return {
+    xp,
+    rank: currentTier.rank,
+    rankName: currentTier.rankName,
+    nextRankName: nextTier?.rankName || "MAX",
+    nextLevel,
+    progress,
+    isMaxRank: !nextTier
+  };
+}
+
+function updateSidebarRank(rankStateOrXp = 0) {
+  const rankState = getNavbarRankState(rankStateOrXp);
+  const currentTier = NAVBAR_RANK_TIERS.find((tier) => tier.rank === rankState.rank);
+  const nextTier = NAVBAR_RANK_TIERS.find((tier) => tier.minXp > (currentTier?.minXp ?? 0));
+  const title = document.getElementById("sidebarRankTitle");
+  const xpText = document.getElementById("sidebarRankXp");
+  const fill = document.getElementById("sidebarRankFill");
+
+  if (title) {
+    title.textContent = rankState.isMaxRank
+      ? `${rankState.rankName} -> MAX`
+      : `${rankState.rankName} -> ${rankState.nextRankName || nextTier?.rankName || "Следующий ранг"}`;
+  }
+  if (xpText) {
+    xpText.textContent = rankState.isMaxRank || rankState.nextLevel === null
+      ? `${rankState.xp} XP / MAX`
+      : `${rankState.xp} XP / ${rankState.nextLevel}`;
+  }
+  if (fill) {
+    fill.style.width = `${rankState.progress}%`;
+  }
+
+  return rankState;
 }
 
 function setNavbarEmptyState(list) {
@@ -369,6 +443,7 @@ async function loadNavbarUser() {
 
   if (!(await hasNavbarSession())) {
     navAvatar.src = "/images/default-avatar.jpg";
+    updateSidebarRank(0);
     navGuest.classList.remove("navbar-hidden");
     navUser.classList.add("navbar-hidden");
     navMessagesLink?.classList.add("navbar-hidden");
@@ -390,6 +465,7 @@ async function loadNavbarUser() {
     const user = await res.json();
     window.currentUser = user;
     window.markActiveSession?.(true, user);
+    updateSidebarRank(user.rank_state || user.xp || 0);
 
     navAvatar.src = user.avatar
       ? `${user.avatar}?t=${Date.now()}`
@@ -411,6 +487,7 @@ async function loadNavbarUser() {
   } catch (err) {
     console.error("Navbar user error:", err);
     window.clearAuthClientState?.();
+    updateSidebarRank(0);
 
     navAvatar.src = "/images/default-avatar.jpg";
     navGuest.classList.remove("navbar-hidden");
@@ -1019,4 +1096,5 @@ if (!navbarRealtimeInitialized) {
 window.highlightActivePage = highlightActivePage;
 window.loadNavbar = loadNavbar;
 window.loadNavbarUser = loadNavbarUser;
+window.updateSidebarRank = updateSidebarRank;
 window.refreshNavbarRealtimeState = refreshNavbarRealtimeState;

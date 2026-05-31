@@ -516,6 +516,7 @@ async function applyXPAndCheckRank(xpGained, newXP, nextRankState = null) {
   }
 
   updateRankUI(after);
+  window.updateSidebarRank?.(after);
 
   if (after.rank > before.rank) {
     showRankUp(after, before, xpGained);
