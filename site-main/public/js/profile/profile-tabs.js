@@ -1,4 +1,6 @@
 function switchTab(tab) {
+  const tabs = document.querySelector(".profile-tabs");
+
   document.querySelectorAll(".profile-tab-content").forEach((el) => {
     el.classList.remove("active");
   });
@@ -9,6 +11,18 @@ function switchTab(tab) {
 
   document.getElementById(`${tab}Tab`)?.classList.add("active");
   document.querySelector(`.profile-tab-btn[data-tab="${tab}"]`)?.classList.add("active");
+  updateProfileTabIndicator();
+  requestAnimationFrame(updateProfileTabIndicator);
+
+  if (tabs) {
+    tabs.classList.remove("is-switching");
+    void tabs.offsetWidth;
+    tabs.classList.add("is-switching");
+    clearTimeout(tabs.__profileTabSwitchTimer);
+    tabs.__profileTabSwitchTimer = setTimeout(() => {
+      tabs.classList.remove("is-switching");
+    }, 640);
+  }
 
   togglePostButton(tab);
   if (tab === "reposts" && typeof loadReposts === "function") {
@@ -18,6 +32,20 @@ function switchTab(tab) {
     loadMentions();
   }
   handleProfileUI();
+}
+
+function updateProfileTabIndicator() {
+  const tabs = document.querySelector(".profile-tabs");
+  const active = tabs?.querySelector(".profile-tab-btn.active");
+  if (!tabs || !active) return;
+  if (active.offsetWidth < 8) {
+    tabs.style.setProperty("--profile-tab-indicator-opacity", "0");
+    return;
+  }
+
+  tabs.style.setProperty("--profile-tab-left", `${active.offsetLeft}px`);
+  tabs.style.setProperty("--profile-tab-width", `${active.offsetWidth}px`);
+  tabs.style.setProperty("--profile-tab-indicator-opacity", "1");
 }
 
 function initTabs() {
@@ -30,6 +58,7 @@ function initTabs() {
   });
 
   switchTab("posts");
+  window.addEventListener("resize", updateProfileTabIndicator);
 }
 
 function togglePostButton(tab) {
@@ -46,3 +75,4 @@ function togglePostButton(tab) {
 
 window.switchTab = switchTab;
 window.initTabs = initTabs;
+window.updateProfileTabIndicator = updateProfileTabIndicator;
