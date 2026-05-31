@@ -42,6 +42,7 @@ let discoverLastTrackId = null;
 let discoverRenderToken = 0;
 let discoverSwipeUnlockTimer = null;
 let discoverPointerEventsBound = false;
+let discoverDragSafetyTimer = null;
 
 const DISCOVER_VOLUME_KEY = "discoverVolume";
 const DISCOVER_MUTED_KEY = "discoverMuted";
@@ -393,6 +394,35 @@ function resetSwipeBackgrounds() {
   }
 }
 
+function clearDiscoverDragSafetyTimer() {
+  if (!discoverDragSafetyTimer) return;
+  clearTimeout(discoverDragSafetyTimer);
+  discoverDragSafetyTimer = null;
+}
+
+function releaseDiscoverPointerCapture(pointerId = discoverPointerId) {
+  if (!discoverCard || pointerId === null || pointerId === undefined) return;
+
+  try {
+    if (discoverCard.hasPointerCapture?.(pointerId)) {
+      discoverCard.releasePointerCapture(pointerId);
+    }
+  } catch {}
+}
+
+function cancelDiscoverDrag(reset = true) {
+  clearDiscoverDragSafetyTimer();
+  discoverDragging = false;
+  const pointerId = discoverPointerId;
+  discoverPointerId = null;
+  discoverDeltaX = 0;
+  releaseDiscoverPointerCapture(pointerId);
+
+  if (reset) {
+    resetDraggedCard();
+  }
+}
+
 function setSwipeBackgroundByDelta(deltaX) {
   const strength = Math.min(Math.abs(deltaX) / 160, 1);
 
@@ -571,8 +601,13 @@ function renderDiscoverCards() {
       </div>
     `;
 
+    discoverCard.style.transition = "none";
+    discoverCard.style.transform = "translate3d(0,0,0) rotate(0deg)";
+    discoverCard.style.opacity = "1";
+    discoverCard.style.pointerEvents = "";
     discoverNextCard.innerHTML = "";
     discoverNextCard.classList.add("is-hidden");
+    resetSwipeBackgrounds();
     pauseAndClearDiscoverAudio();
 
     if (!discoverIsLoading) {
@@ -594,6 +629,7 @@ function renderDiscoverCards() {
   discoverCard.style.transition = "none";
   discoverCard.style.transform = "translate3d(0,0,0) rotate(0deg)";
   discoverCard.style.opacity = "1";
+  discoverCard.style.pointerEvents = "";
 
   requestAnimationFrame(() => {
     if (!discoverCard || renderToken !== discoverRenderToken) return;
@@ -799,9 +835,16 @@ async function swipeCurrentTrack(direction, options = {}) {
     skipPlaylistSave = false
   } = options;
 
+  clearDiscoverDragSafetyTimer();
+  discoverDragging = false;
+  const swipePointerId = discoverPointerId;
+  discoverPointerId = null;
+  discoverDeltaX = 0;
+  releaseDiscoverPointerCapture(swipePointerId);
   discoverSwipeLocked = true;
   clearTimeout(discoverSwipeUnlockTimer);
 
+  discoverCard.style.pointerEvents = "none";
   discoverCard.style.transition = "transform 0.30s ease, opacity 0.30s ease";
   discoverCard.style.transform =
     direction === "right"
@@ -845,6 +888,9 @@ async function swipeCurrentTrack(direction, options = {}) {
       playCurrentDiscoverTrack();
     } finally {
       discoverSwipeLocked = false;
+      if (discoverCard) {
+        discoverCard.style.pointerEvents = "";
+      }
     }
   }, 260);
 
@@ -853,9 +899,7 @@ async function swipeCurrentTrack(direction, options = {}) {
 
     console.warn("discover swipe fallback unlock");
     discoverSwipeLocked = false;
-    discoverDragging = false;
-    discoverPointerId = null;
-    resetDraggedCard();
+    cancelDiscoverDrag(false);
     renderDiscoverCards();
   }, 900);
 
@@ -865,6 +909,8 @@ async function swipeCurrentTrack(direction, options = {}) {
 function resetDraggedCard() {
   if (!discoverCard) return;
 
+  discoverCard.style.pointerEvents = "";
+  discoverCard.style.opacity = "1";
   discoverCard.style.transition = "transform 0.22s ease, box-shadow 0.18s ease";
   discoverCard.style.transform = "translate3d(0,0,0) rotate(0deg)";
   resetSwipeBackgrounds();
@@ -884,16 +930,35 @@ function handlePointerDown(e) {
     return;
   }
 
+  e.preventDefault();
   discoverDragging = true;
   discoverPointerId = e.pointerId;
   discoverStartX = e.clientX;
   discoverDeltaX = 0;
   discoverCard.style.transition = "none";
+
+  try {
+    discoverCard.setPointerCapture?.(e.pointerId);
+  } catch {}
+
+  clearDiscoverDragSafetyTimer();
+  discoverDragSafetyTimer = setTimeout(() => {
+    if (!discoverDragging) return;
+
+    if (discoverDeltaX > 150) {
+      swipeCurrentTrack("right");
+    } else if (discoverDeltaX < -150) {
+      swipeCurrentTrack("left");
+    } else {
+      cancelDiscoverDrag();
+    }
+  }, 3500);
 }
 
 function handlePointerMove(e) {
-  if (!discoverDragging || e.pointerId !== discoverPointerId || !discoverCard) return;
+  if (discoverSwipeLocked || !discoverDragging || e.pointerId !== discoverPointerId || !discoverCard) return;
 
+  e.preventDefault();
   discoverDeltaX = e.clientX - discoverStartX;
 
   discoverCard.style.transform = `translate3d(${discoverDeltaX}px, 0, 0) rotate(${discoverDeltaX * 0.06}deg)`;
@@ -905,8 +970,11 @@ function handlePointerEnd(e) {
   if (!discoverDragging) return;
   if (e?.pointerId !== undefined && discoverPointerId !== null && e.pointerId !== discoverPointerId) return;
 
+  clearDiscoverDragSafetyTimer();
   discoverDragging = false;
+  const pointerId = discoverPointerId;
   discoverPointerId = null;
+  releaseDiscoverPointerCapture(e?.pointerId ?? pointerId);
 
   if (discoverDeltaX > 150) {
     swipeCurrentTrack("right");
@@ -922,6 +990,7 @@ function bindDiscoverCardEvents() {
 
   discoverCard.dataset.bound = "1";
   discoverCard.addEventListener("pointerdown", handlePointerDown);
+  discoverCard.addEventListener("lostpointercapture", handlePointerEnd);
 }
 
 function bindDiscoverPointerEvents() {
@@ -930,6 +999,7 @@ function bindDiscoverPointerEvents() {
   window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", handlePointerEnd);
   window.addEventListener("pointercancel", handlePointerEnd);
+  window.addEventListener("blur", cancelDiscoverDrag);
   discoverPointerEventsBound = true;
 }
 
@@ -937,6 +1007,7 @@ function unbindDiscoverCardEvents() {
   if (!discoverCard || discoverCard.dataset.bound !== "1") return;
 
   discoverCard.removeEventListener("pointerdown", handlePointerDown);
+  discoverCard.removeEventListener("lostpointercapture", handlePointerEnd);
   delete discoverCard.dataset.bound;
 }
 
@@ -946,6 +1017,7 @@ function unbindDiscoverPointerEvents() {
   window.removeEventListener("pointermove", handlePointerMove);
   window.removeEventListener("pointerup", handlePointerEnd);
   window.removeEventListener("pointercancel", handlePointerEnd);
+  window.removeEventListener("blur", cancelDiscoverDrag);
   discoverPointerEventsBound = false;
 }
 
@@ -1204,6 +1276,7 @@ window.initDiscoverPage = function () {
 };
 
 window.destroyDiscoverPage = function () {
+  cancelDiscoverDrag(false);
   unbindDiscoverCardEvents();
   unbindDiscoverPointerEvents();
 
