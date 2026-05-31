@@ -958,8 +958,14 @@ function highlightActivePage() {
   else if (path.includes("playlists")) page = "playlists";
   else if (path.includes("submit")) page = "submit";
   else if (path.includes("queue")) page = "queue";
+  else if (path.includes("opens")) page = "opens";
   else if (path.includes("discover")) page = "discover";
   else if (path.includes("battle")) page = "battle";
+
+  const sidebarLinks = document.querySelectorAll(".app-sidebar-link, .app-sidebar-upload");
+  sidebarLinks.forEach((link) => {
+    link.classList.toggle("active-link", link.dataset.page === page);
+  });
 
   const nav = document.querySelector(".navbar-links");
   if (!nav) return;
