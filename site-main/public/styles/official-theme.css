@@ -1746,3 +1746,7 @@ body:has(.navbar.auth-navbar) .navbar {
     height: 88px;
   }
 }
+
+body.messages-mode .messages-page {
+  margin-top: 0 !important;
+}

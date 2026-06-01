@@ -12,7 +12,8 @@ let messagesState = {
   attachmentFile: null,
   createAvatarFile: null,
   editAvatarFile: null,
-  livePollInterval: null
+  livePollInterval: null,
+  isSending: false
 };
 
 function msgEscape(value) {
@@ -49,6 +50,40 @@ function formatConversationTime(value) {
     day: "2-digit",
     month: "2-digit"
   });
+}
+
+function formatConversationPreview(item = {}) {
+  const text = String(item.last_message_text || "").trim();
+  if (text) return text;
+
+  const attachmentType = String(item.last_message_attachment_type || "");
+  const attachmentName = String(item.last_message_attachment_name || "");
+
+  if (attachmentType.startsWith("image/")) return "Фото";
+  if (attachmentType.startsWith("video/")) return "Видео";
+  if (attachmentType.startsWith("audio/")) return "Аудио";
+  if (attachmentName) return `Файл: ${attachmentName}`;
+
+  return "Диалог пуст";
+}
+
+function setMessagesSendPending(isPending) {
+  messagesState.isSending = Boolean(isPending);
+  const sendBtn = document.getElementById("sendMessageBtn");
+  const input = document.getElementById("messageComposer");
+  if (!sendBtn) return;
+
+  sendBtn.disabled = messagesState.isSending || Boolean(input?.disabled);
+  sendBtn.setAttribute("aria-busy", messagesState.isSending ? "true" : "false");
+  const label = sendBtn.querySelector("span");
+  if (label) label.textContent = messagesState.isSending ? "Отправка" : "Отправить";
+}
+
+function resizeMessageComposer() {
+  const input = document.getElementById("messageComposer");
+  if (!input) return;
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, 132)}px`;
 }
 
 function formatConversationMonth(value) {
@@ -197,7 +232,7 @@ function applyConversationPermissions() {
 
   const blocked = Boolean(currentConversation?.peer_blocked);
   input.disabled = blocked;
-  sendBtn.disabled = blocked;
+  sendBtn.disabled = blocked || messagesState.isSending;
   input.placeholder = blocked
     ? "Сообщения от этого пользователя отключены"
     : "Напиши сообщение";
@@ -903,7 +938,7 @@ async function loadConversations() {
               <div class="messages-conversation-time">${formatConversationTime(item.last_message_created_at || item.last_message_at)}</div>
             </div>
             <div class="messages-conversation-preview-row">
-              <div class="messages-conversation-preview">${msgEscape(item.last_message_text || "Диалог пуст")}</div>
+              <div class="messages-conversation-preview">${msgEscape(formatConversationPreview(item))}</div>
               <div class="messages-conversation-flags">
                 ${Number(item.unread_count || 0) > 0 ? `<span class="messages-conversation-unread">${item.unread_count}</span>` : ""}
                 ${item.is_pinned ? `<span class="messages-conversation-pin"><i class="fa-solid fa-thumbtack"></i></span>` : ""}
@@ -1057,18 +1092,22 @@ async function openConversation(conversationId) {
         </button>
         <div class="messages-chat-head-actions">
           ${currentConversation.conversation_type === "group" ? `
-            <button type="button" class="messages-send-btn" id="messagesConversationInviteHeadBtn">
-              Пригласить
+            <button type="button" class="messages-chat-pref-btn messages-chat-primary-btn" id="messagesConversationInviteHeadBtn">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>Пригласить</span>
             </button>
             <button type="button" class="messages-chat-pref-btn" id="messagesConversationInfoBtn">
-              Управление
+              <i class="fa-solid fa-sliders"></i>
+              <span>Управление</span>
             </button>
           ` : ""}
           <button type="button" class="messages-chat-pref-btn" id="messagesPinToggle">
-            ${currentConversation.is_pinned ? "Открепить" : "Закрепить"}
+            <i class="fa-solid fa-thumbtack"></i>
+            <span>${currentConversation.is_pinned ? "Открепить" : "Закрепить"}</span>
           </button>
           <button type="button" class="messages-chat-pref-btn ${currentConversation.peer_blocked ? "is-danger" : ""} ${currentConversation.conversation_type === "direct" ? "" : "messages-hidden"}" id="messagesBlockToggle">
-            ${currentConversation.peer_blocked ? "Включить сообщения" : "Отключить сообщения"}
+            <i class="fa-solid ${currentConversation.peer_blocked ? "fa-lock-open" : "fa-bell-slash"}"></i>
+            <span>${currentConversation.peer_blocked ? "Включить сообщения" : "Отключить сообщения"}</span>
           </button>
         </div>
       </div>
@@ -1144,6 +1183,7 @@ async function sendMessage() {
   const input = document.getElementById("messageComposer");
   const attachmentInput = document.getElementById("messageAttachmentInput");
   if (!token || !input || !messagesState.activeConversationId) return;
+  if (messagesState.isSending) return;
   const text = input.value.trim();
   if (!text && !messagesState.forwardMessage && !messagesState.attachmentFile) return;
 
@@ -1159,27 +1199,35 @@ async function sendMessage() {
     formData.append("attachment", messagesState.attachmentFile);
   }
 
-  const res = await fetch(`/api/messages/conversations/${messagesState.activeConversationId}`, {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + token
-    },
-    body: formData
-  });
+  setMessagesSendPending(true);
+  try {
+    const res = await fetch(`/api/messages/conversations/${messagesState.activeConversationId}`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token
+      },
+      body: formData
+    });
 
-  if (!res.ok) {
-    alert("Не удалось отправить сообщение");
-    return;
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(payload.message || "Не удалось отправить сообщение");
+      return;
+    }
+
+    input.value = "";
+    resizeMessageComposer();
+    messagesState.replyToMessage = null;
+    messagesState.forwardMessage = null;
+    messagesState.attachmentFile = null;
+    if (attachmentInput) attachmentInput.value = "";
+    updateAttachmentName();
+    setComposerMeta();
+    await openConversation(messagesState.activeConversationId);
+  } finally {
+    setMessagesSendPending(false);
+    applyConversationPermissions();
   }
-
-  input.value = "";
-  messagesState.replyToMessage = null;
-  messagesState.forwardMessage = null;
-  messagesState.attachmentFile = null;
-  if (attachmentInput) attachmentInput.value = "";
-  updateAttachmentName();
-  setComposerMeta();
-  await openConversation(messagesState.activeConversationId);
 }
 
 async function toggleMessageReaction(messageId, emoji) {
@@ -1679,6 +1727,8 @@ window.initMessagesPage = async function initMessagesPage() {
     return;
   }
 
+  document.body.classList.add("messages-mode");
+
   const searchInput = document.getElementById("messageUserSearch");
   searchInput?.addEventListener("input", () => searchMessageUsers(searchInput.value));
   searchInput?.addEventListener("blur", () => {
@@ -1707,6 +1757,9 @@ window.initMessagesPage = async function initMessagesPage() {
     updateAttachmentName();
     setComposerMeta();
   });
+  const composerInput = document.getElementById("messageComposer");
+  composerInput?.addEventListener("input", resizeMessageComposer);
+  resizeMessageComposer();
   document.getElementById("messagesCreateAvatarInput")?.addEventListener("change", (e) => {
     messagesState.createAvatarFile = e.target?.files?.[0] || null;
     setCreateAvatarPreview(messagesState.createAvatarFile);
@@ -1768,4 +1821,9 @@ window.initMessagesPage = async function initMessagesPage() {
   }
 
   startMessagesLivePolling();
+};
+
+window.destroyMessagesPage = function destroyMessagesPage() {
+  clearMessagesLivePolling();
+  document.body.classList.remove("messages-mode");
 };

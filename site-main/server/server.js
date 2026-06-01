@@ -9447,6 +9447,9 @@ app.get("/api/messages/conversations", auth, async (req, res) => {
         COALESCE(pref.is_muted, false) AS peer_muted,
         COALESCE(pref.is_blocked, false) AS peer_blocked,
         last_message.text AS last_message_text,
+        last_message.attachment_url AS last_message_attachment_url,
+        last_message.attachment_type AS last_message_attachment_type,
+        last_message.attachment_name AS last_message_attachment_name,
         last_message.created_at AS last_message_created_at,
         COALESCE(unread.unread_count, 0)::int AS unread_count
       FROM direct_conversations dc
@@ -9474,7 +9477,7 @@ app.get("/api/messages/conversations", auth, async (req, res) => {
        AND pref.target_user_id = peer.id
        AND dc.conversation_type = 'direct'
       LEFT JOIN LATERAL (
-        SELECT dm.text, dm.created_at
+        SELECT dm.text, dm.attachment_url, dm.attachment_type, dm.attachment_name, dm.created_at
         FROM direct_messages dm
         WHERE dm.conversation_id = dc.id
         ORDER BY dm.created_at DESC
@@ -10201,13 +10204,18 @@ app.get("/api/messages/conversations/:id", auth, async (req, res) => {
               GROUP BY dmr.message_id, dmr.emoji
             ) AS reaction_row
           ), '[]'::json) AS reactions
-        FROM direct_messages dm
+        FROM (
+          SELECT *
+          FROM direct_messages
+          WHERE conversation_id = $1
+          ORDER BY created_at DESC
+          LIMIT 250
+        ) dm
         JOIN users u ON u.id = dm.sender_id
         LEFT JOIN direct_messages reply_dm ON reply_dm.id = dm.reply_to_message_id
         LEFT JOIN users reply_user ON reply_user.id = reply_dm.sender_id
         LEFT JOIN direct_messages forwarded_dm ON forwarded_dm.id = dm.forwarded_from_message_id
         LEFT JOIN users forwarded_user ON forwarded_user.id = forwarded_dm.sender_id
-        WHERE dm.conversation_id = $1
         ORDER BY dm.created_at ASC
         `,
         [conversationId]
