@@ -10,7 +10,6 @@ let discoverAudio = null;
 let discoverPlayBtn = null;
 let discoverLikeBtn = null;
 let discoverDislikeBtn = null;
-let discoverSaveBtn = null;
 let discoverBackBtn = null;
 let discoverProgress = null;
 let discoverProgressTrack = null;
@@ -722,16 +721,6 @@ async function saveLikedDiscoverTrack(trackId) {
   return added;
 }
 
-async function saveCurrentDiscoverTrackToPlaylist() {
-  const current = getCurrentTrack();
-  if (!current) return;
-
-  await swipeCurrentTrack("right", {
-    skipAction: true,
-    skipPlaylistSave: false
-  });
-}
-
 async function loadDiscoverTracks(options = {}) {
   const { append = false, preserveIndex = false, silent = false } = options;
 
@@ -1146,12 +1135,6 @@ function bindDiscoverButtonEvents() {
     discoverLikeBtn.onclick = () => swipeCurrentTrack("right");
   }
 
-  if (discoverSaveBtn) {
-    discoverSaveBtn.onclick = () => {
-      saveCurrentDiscoverTrackToPlaylist();
-    };
-  }
-
   if (discoverDislikeBtn) {
     discoverDislikeBtn.onclick = () => swipeCurrentTrack("left");
   }
@@ -1213,7 +1196,6 @@ window.initDiscoverPage = function () {
   discoverPlayBtn = discoverRoot.querySelector(".discover-btn-play");
   discoverLikeBtn = discoverRoot.querySelector(".discover-btn-like");
   discoverDislikeBtn = discoverRoot.querySelector(".discover-btn-dislike");
-  discoverSaveBtn = discoverRoot.querySelector(".discover-btn-save");
   discoverBackBtn = discoverRoot.querySelector(".discover-btn-back");
   discoverProgress = discoverRoot.querySelector("#progressFill");
   discoverProgressTrack = discoverRoot.querySelector("#discoverProgressTrack");
@@ -1238,7 +1220,6 @@ window.initDiscoverPage = function () {
     !discoverPlayBtn ||
     !discoverLikeBtn ||
     !discoverDislikeBtn ||
-    !discoverSaveBtn ||
     !discoverBackBtn ||
     !discoverProgress ||
     !discoverProgressTrack ||
@@ -1332,7 +1313,6 @@ window.destroyDiscoverPage = function () {
   if (discoverPlayBtn) discoverPlayBtn.onclick = null;
   if (discoverLikeBtn) discoverLikeBtn.onclick = null;
   if (discoverDislikeBtn) discoverDislikeBtn.onclick = null;
-  if (discoverSaveBtn) discoverSaveBtn.onclick = null;
   if (discoverBackBtn) discoverBackBtn.onclick = null;
   if (discoverVolumeRange) discoverVolumeRange.oninput = null;
   if (discoverVolumeIcon) discoverVolumeIcon.onclick = null;
@@ -1356,7 +1336,6 @@ window.destroyDiscoverPage = function () {
   discoverPlayBtn = null;
   discoverLikeBtn = null;
   discoverDislikeBtn = null;
-  discoverSaveBtn = null;
   discoverBackBtn = null;
   discoverProgress = null;
   discoverProgressTrack = null;

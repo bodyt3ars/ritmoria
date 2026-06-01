@@ -418,12 +418,6 @@ body.discover-mode *::-webkit-scrollbar {
   box-shadow: 0 10px 24px rgba(215,124,171,0.28);
 }
 
-.discover-btn-save {
-  background: linear-gradient(135deg, rgba(255,255,255,0.11), rgba(255,255,255,0.06));
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 10px 24px rgba(10, 8, 14, 0.24);
-}
-
 .discover-playlist-wrap {
   position: relative;
   min-width: 0;
