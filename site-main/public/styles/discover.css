@@ -269,11 +269,12 @@ body.discover-mode *::-webkit-scrollbar {
 
 .discover-progress {
   position: relative;
+  max-width: 1240px;
   height: 6px;
   border-radius: 999px;
   overflow: hidden;
   background: rgba(255,255,255,0.12);
-  margin-bottom: 10px;
+  margin: 0 auto 10px;
   cursor: pointer;
 }
 
@@ -286,8 +287,10 @@ body.discover-mode *::-webkit-scrollbar {
 }
 
 .discover-player-controls {
+  max-width: 1240px;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
 }
@@ -661,6 +664,12 @@ body.discover-mode *::-webkit-scrollbar {
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 0 14px rgba(255,255,255,0.28);
+}
+
+@media (min-width: 1024px) {
+  body.discover-mode .discover-player {
+    left: 208px;
+  }
 }
 
 @media (max-width: 768px), (pointer: coarse) {
