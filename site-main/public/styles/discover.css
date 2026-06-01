@@ -425,7 +425,8 @@ body.discover-mode *::-webkit-scrollbar {
 
 .discover-playlist-panel {
   position: absolute;
-  right: 0;
+  left: 0;
+  right: auto;
   bottom: calc(100% + 12px);
   width: min(360px, calc(100vw - 32px));
   padding: 16px;
@@ -435,6 +436,7 @@ body.discover-mode *::-webkit-scrollbar {
   box-shadow: 0 22px 52px rgba(0,0,0,0.42);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+  z-index: 42;
 }
 
 .discover-hidden {
