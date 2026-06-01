@@ -37,6 +37,7 @@ let discoverMuted = false;
 let discoverInited = false;
 let discoverSwipeLocked = false;
 let discoverIsLoading = false;
+let discoverAuthRequired = false;
 let discoverPreloadAudio = null;
 let discoverLastTrackId = null;
 let discoverRenderToken = 0;
@@ -587,7 +588,26 @@ function renderDiscoverCards() {
       return renderDiscoverCards();
     }
 
-    discoverCard.innerHTML = `
+    discoverCard.innerHTML = discoverAuthRequired ? `
+      <div class="discover-card-content discover-card-auth">
+        <div class="discover-cover-wrap discover-auth-cover">
+          <div class="discover-auth-icon">
+            <i class="fa-solid fa-user-lock"></i>
+          </div>
+          <div class="discover-card-badge discover-card-badge-soft">Нужен аккаунт</div>
+        </div>
+
+        <div class="discover-track-info">
+          <h2>Войди или зарегистрируйся</h2>
+          <p class="discover-artist">Чтобы свайпать треки, сохранять лайки и собирать плейлисты</p>
+        </div>
+
+        <div class="discover-auth-actions">
+          <button type="button" class="discover-auth-btn discover-auth-btn-primary" data-discover-auth="register">Регистрация</button>
+          <button type="button" class="discover-auth-btn" data-discover-auth="login">Вход</button>
+        </div>
+      </div>
+    ` : `
       <div class="discover-card-content">
         <div class="discover-cover-wrap">
           <div class="discover-cover discover-cover-loading"></div>
@@ -610,7 +630,7 @@ function renderDiscoverCards() {
     resetSwipeBackgrounds();
     pauseAndClearDiscoverAudio();
 
-    if (!discoverIsLoading) {
+    if (!discoverAuthRequired && !discoverIsLoading) {
       loadDiscoverTracks({ silent: true });
     }
     return;
@@ -727,6 +747,13 @@ async function loadDiscoverTracks(options = {}) {
 
     if (!res.ok) {
       console.error("discover status", res.status);
+      if (res.status === 401 || res.status === 403) {
+        discoverAuthRequired = true;
+        discoverTracks = [];
+        discoverCurrentTrack = 0;
+        renderDiscoverCards();
+        return;
+      }
 
       if (!silent && discoverTracks.length === 0) {
         renderDiscoverCards();
@@ -735,6 +762,7 @@ async function loadDiscoverTracks(options = {}) {
     }
 
     const data = await res.json();
+    discoverAuthRequired = false;
 
     const normalized = shuffleArray(
       (Array.isArray(data) ? data : [])
@@ -787,6 +815,7 @@ async function loadDiscoverTracks(options = {}) {
 }
 
 function maybeLoadMoreDiscoverTracks() {
+  if (discoverAuthRequired) return;
   const remaining = discoverTracks.length - discoverCurrentTrack - 1;
 
   if (remaining <= 3) {
@@ -1249,6 +1278,17 @@ window.initDiscoverPage = function () {
   renderDiscoverPlaylistOptions();
 
   discoverRoot.onclick = (event) => {
+    const authButton = event.target.closest("[data-discover-auth]");
+    if (authButton) {
+      const target = authButton.dataset.discoverAuth === "register" ? "/register" : "/login";
+      if (typeof navigate === "function") {
+        navigate(target);
+      } else {
+        window.location.href = target;
+      }
+      return;
+    }
+
     if (!event.target.closest(".discover-playlist-wrap")) {
       closeDiscoverPlaylistPanel();
     }
