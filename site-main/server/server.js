@@ -4125,7 +4125,7 @@ app.post("/change-email-send-code", auth, async (req, res) => {
     return res.status(400).json({ error: "email_already_used" });
   }
 
-  const code = await createEmailVerificationCode({
+  const verification = await createEmailVerificationCode({
     email: normalizedEmail,
     purpose: "change_email",
     userId
@@ -4133,23 +4133,23 @@ app.post("/change-email-send-code", auth, async (req, res) => {
 
   try {
     if (!resend) {
-      return res.json({ success: true });
+      return res.json({ success: true, verificationId: verification.verificationId });
     }
 
-    await resend.emails.send({
-      from: "Rhytmoria <no-reply@ritmoria.com>",
+    await sendEmailOrLog({
       to: normalizedEmail,
       subject: "Смена почты",
+      logLabel: "CHANGE EMAIL CODE",
       html: `
         <div style="background:#0b0b12;padding:40px;text-align:center;color:white;">
           <h2>Смена почты</h2>
           <p>Ваш код:</p>
-          <h1>${code}</h1>
+          <h1>${verification.code}</h1>
         </div>
       `
     });
 
-    res.json({ success: true });
+    res.json({ success: true, verificationId: verification.verificationId });
 
   } catch (err) {
     console.log(err);
