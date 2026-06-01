@@ -23,6 +23,11 @@ body.discover-mode {
   padding-bottom: 0 !important;
 }
 
+html:has(body.discover-mode) {
+  height: 100%;
+  overflow: hidden;
+}
+
 body.discover-mode #app {
   height: 100vh;
   overflow: hidden;
@@ -87,8 +92,8 @@ body.discover-mode *::-webkit-scrollbar {
 .discover-card-stack {
   position: relative;
   width: min(100%, 360px);
-  height: min(52vh, 560px);
-  min-height: 400px;
+  height: clamp(430px, calc(100vh - 260px), 600px);
+  min-height: 0;
 }
 
 .discover-track-card {
@@ -142,28 +147,31 @@ body.discover-mode *::-webkit-scrollbar {
 .discover-card-content {
   position: relative;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   padding: 18px;
-  gap: 16px;
+  gap: 14px;
 }
 
 .discover-cover-wrap {
   position: relative;
+  min-height: 0;
+  align-self: stretch;
 }
 
 .discover-cover {
   background-color: rgba(0,0,0,0.4);
   width: 100%;
-  aspect-ratio: 1 / 1;
-max-height: 300px;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
   border-radius: 26px;
   background:
     linear-gradient(135deg, rgba(255, 138, 181, 0.90), rgba(176, 116, 151, 0.90));
   background-size: contain;
-background-position: center;
-background-repeat: no-repeat;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.16),
     0 18px 42px rgba(0,0,0,0.30);
@@ -201,15 +209,21 @@ background-repeat: no-repeat;
 .discover-track-info {
   text-align: center;
   padding: 2px 8px 4px;
+  min-width: 0;
 }
 
 .discover-track-info h2 {
   margin: 0 0 8px;
-  font-size: 38px;
-  line-height: 1.02;
+  font-size: clamp(26px, 4.4vh, 38px);
+  line-height: 1.04;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   word-break: break-word;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .discover-artist {
@@ -225,6 +239,8 @@ background-repeat: no-repeat;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
+  min-height: 30px;
+  overflow: hidden;
 }
 
 .discover-chip {
@@ -665,8 +681,8 @@ background-repeat: no-repeat;
 
   .discover-card-stack {
     width: min(100%, 390px);
-    height: min(60vh, 620px);
-    min-height: 490px;
+    height: clamp(430px, calc(100vh - 292px), 620px);
+    min-height: 0;
   }
 
   .discover-track-info h2 {
@@ -707,8 +723,8 @@ background-repeat: no-repeat;
   .discover-card-stack {
     width: 100%;
     max-width: 350px;
-    height: min(58vh, 560px);
-    min-height: 440px;
+    height: clamp(390px, calc(100vh - 278px), 560px);
+    min-height: 0;
   }
 
   .discover-card-content {
