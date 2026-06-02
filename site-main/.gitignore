@@ -1,4 +1,23 @@
 .env
-node_modules
+node_modules/
 server-out.log
 server-err.log
+
+# Local Electron build outputs
+dist-desktop*/
+dist/
+out/
+release/
+
+# Packaged desktop artifacts
+*.exe
+*.msi
+*.zip
+*.7z
+*.blockmap
+latest.yml
+builder-debug.yml
+
+# Local preview/browser scratch
+.chrome*/
+preview-*.png

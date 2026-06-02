@@ -12,6 +12,7 @@
   const PLAYER_RECENT_KEY = "ritmoria_player_recent";
   const PLAYER_QUEUE_SOURCE_TAGS_KEY = "ritmoria_player_queue_source_tags";
   const MAX_RECENT_TRACKS = 30;
+  const DEFAULT_PLAYER_VOLUME = 0.2;
 
   let playerReady = false;
   let audioEl = null;
@@ -674,14 +675,11 @@
     const raw = Number(localStorage.getItem(VOLUME_KEY));
     if (Number.isFinite(raw)) {
       if (raw <= 0) {
-        const lastAudible = Number(localStorage.getItem(LAST_VOLUME_KEY));
-        if (!Number.isFinite(lastAudible) || lastAudible <= 0) {
-          return 0.4;
-        }
+        return DEFAULT_PLAYER_VOLUME;
       }
       return Math.max(0, Math.min(1, raw));
     }
-    return 0.4;
+    return DEFAULT_PLAYER_VOLUME;
   }
 
   function getLastAudibleVolume() {
@@ -689,7 +687,7 @@
     if (Number.isFinite(raw) && raw > 0) {
       return Math.max(0.05, Math.min(1, raw));
     }
-    return 0.4;
+    return DEFAULT_PLAYER_VOLUME;
   }
 
   function isRepeatEnabled() {
@@ -767,7 +765,7 @@
                 <i class="fa-solid fa-volume-high"></i>
               </button>
 
-              <input id="gp-volume" class="gp-volume" type="range" min="0" max="1" step="0.01" value="0.4">
+              <input id="gp-volume" class="gp-volume" type="range" min="0" max="1" step="0.01" value="0.2">
             </div>
 
             <button id="gp-hide" class="gp-hide" type="button" title="Скрыть плеер">✕</button>

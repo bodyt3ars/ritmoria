@@ -2,8 +2,12 @@
   "name": "music-platform",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "electron/main.js",
   "scripts": {
+    "electron:dev": "electron .",
+    "electron:build": "electron-builder --win",
+    "electron:build:web": "electron-builder --win nsis-web",
+    "electron:pack": "electron-builder --win --dir",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -20,5 +24,57 @@
     "nodemailer": "^8.0.3",
     "pg": "^8.20.0",
     "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "electron": "^31.7.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.ritmoria.desktop",
+    "productName": "Ritmoria",
+    "executableName": "Ritmoria",
+    "asar": false,
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
+    "directories": {
+      "output": "dist-desktop-web"
+    },
+    "files": [
+      "electron/**/*",
+      "public/**/*",
+      "!public/uploads/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis-web",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/images/icon.ico"
+    },
+    "nsis": {
+      "installerIcon": "public/images/icon.ico",
+      "uninstallerIcon": "public/images/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ритмория"
+    },
+    "nsisWeb": {
+      "installerIcon": "public/images/icon.ico",
+      "uninstallerIcon": "public/images/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://ritmoria.com/download/"
+    }
   }
 }
