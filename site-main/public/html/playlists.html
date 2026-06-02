@@ -6,6 +6,18 @@
       <button class="playlists-create-btn" type="button">+ Создать плейлист</button>
     </div>
 
+    <div class="playlists-controls">
+      <div class="playlists-tabs" role="tablist" aria-label="Разделы плейлистов">
+        <button class="playlists-tab active" type="button" data-playlists-tab="mine">Мои плейлисты</button>
+        <button class="playlists-tab" type="button" data-playlists-tab="public">Публичные плейлисты</button>
+      </div>
+
+      <label class="playlists-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" id="playlistSearch" placeholder="Поиск плейлиста по названию" autocomplete="off" />
+      </label>
+    </div>
+
     <div class="playlists-grid"></div>
   </section>
 
@@ -29,6 +41,7 @@
             <i class="fa-solid fa-pen"></i>
           </button>
         </div>
+        <div class="playlists-view-badges" id="viewBadges"></div>
         <p id="viewCount">0 треков</p>
       </div>
     </div>

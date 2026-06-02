@@ -2917,6 +2917,7 @@ function normalizePlaylistsForStorage(playlists) {
       ? "Любимые треки"
       : (String(item.name || "").trim() || current.name || "Без названия");
     current.system = isFavorites || !!item.system;
+    current.public = !isFavorites && (item.public === true || item.is_public === true);
     current.cover = String(item.cover || current.cover || "").trim();
 
     const existingTrackKeys = new Set(
@@ -2966,6 +2967,7 @@ function normalizePlaylistsForStorage(playlists) {
       id: playlist.id,
       name: String(playlist.name || "").trim() || "Без названия",
       system: !!playlist.system,
+      public: !!playlist.public,
       cover: String(playlist.cover || "").trim(),
       tracks: Array.isArray(playlist.tracks) ? playlist.tracks : []
     });
@@ -3231,6 +3233,73 @@ app.put("/api/playlists", auth, async (req, res) => {
   } catch (err) {
     console.error("PLAYLISTS SAVE ERROR:", err);
     res.status(500).json({ error: "playlists_save_failed" });
+  }
+});
+
+app.get("/api/public-playlists", async (req, res) => {
+  try {
+    const search = String(req.query.search || "").trim();
+    const result = await pool.query(
+      `
+      WITH expanded AS (
+        SELECT
+          up.user_id,
+          up.updated_at,
+          u.username,
+          u.username_tag,
+          u.avatar,
+          playlist
+        FROM user_playlists up
+        JOIN users u ON u.id = up.user_id
+        CROSS JOIN LATERAL jsonb_array_elements(up.playlists_json) AS playlist
+      )
+      SELECT
+        user_id,
+        updated_at,
+        username,
+        username_tag,
+        avatar,
+        playlist
+      FROM expanded
+      WHERE playlist->>'public' = 'true'
+        AND COALESCE(playlist->>'system', 'false') <> 'true'
+        AND (
+          $1 = ''
+          OR LOWER(COALESCE(playlist->>'name', '')) LIKE '%' || LOWER($1) || '%'
+        )
+      ORDER BY updated_at DESC, COALESCE(playlist->>'name', '') ASC
+      LIMIT 80
+      `,
+      [search]
+    );
+
+    const playlists = result.rows
+      .map((row) => {
+        const playlist = normalizePlaylistsForStorage([row.playlist])
+          .find((item) => item.id !== "favorites");
+
+        if (!playlist || !playlist.public) return null;
+
+        return {
+          ...playlist,
+          id: `public_${Number(row.user_id || 0)}_${playlist.id}`,
+          source_playlist_id: playlist.id,
+          owner: {
+            id: Number(row.user_id || 0),
+            username: row.username || row.username_tag || "Пользователь",
+            username_tag: row.username_tag || "",
+            avatar: row.avatar || ""
+          },
+          updated_at: row.updated_at,
+          tracks_count: Array.isArray(playlist.tracks) ? playlist.tracks.length : 0
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ playlists });
+  } catch (err) {
+    console.error("PUBLIC PLAYLISTS LOAD ERROR:", err);
+    res.status(500).json({ error: "public_playlists_load_failed" });
   }
 });
 

@@ -6,6 +6,8 @@ window.initPlaylistsPage = async function () {
 
   const grid = root.querySelector(".playlists-grid");
   const createBtn = root.querySelector(".playlists-create-btn");
+  const tabs = Array.from(root.querySelectorAll(".playlists-tab"));
+  const searchInput = document.getElementById("playlistSearch");
 
   const modal = document.getElementById("playlistModal");
   const overlay = root.querySelector(".playlists-modal-overlay");
@@ -19,6 +21,7 @@ window.initPlaylistsPage = async function () {
 
   const viewTitle = document.getElementById("viewTitle");
   const viewCount = document.getElementById("viewCount");
+  const viewBadges = document.getElementById("viewBadges");
   const viewCover = document.getElementById("viewCover");
   const playlistCoverEditWrap = document.getElementById("playlistCoverEditWrap");
   const playlistRenameBtn = document.getElementById("playlistRenameBtn");
@@ -30,6 +33,7 @@ window.initPlaylistsPage = async function () {
   if (
     !grid ||
     !createBtn ||
+    !searchInput ||
     !modal ||
     !overlay ||
     !saveBtn ||
@@ -40,6 +44,7 @@ window.initPlaylistsPage = async function () {
     !backBtn ||
     !viewTitle ||
     !viewCount ||
+    !viewBadges ||
     !viewCover ||
     !playlistCoverEditWrap ||
     !playlistRenameBtn ||
@@ -52,7 +57,13 @@ window.initPlaylistsPage = async function () {
   }
 
   let currentPlaylistIndex = null;
+  let currentExternalPlaylistId = null;
   let coverTargetIndex = null;
+  let activePlaylistsTab = "mine";
+  let playlistSearchQuery = "";
+  let publicPlaylists = [];
+  let publicPlaylistsLoading = false;
+  const externalPlaylistsById = new Map();
   const durationProbeCache = new Set();
   const favoritesCoverMarkup = `
     <div class="playlists-favorites-cover-core">
@@ -185,6 +196,7 @@ window.initPlaylistsPage = async function () {
         id: "favorites",
         name: "Любимые треки",
         system: true,
+        public: false,
         cover: "",
         tracks: []
       };
@@ -194,6 +206,7 @@ window.initPlaylistsPage = async function () {
 
     favorites.name = "Любимые треки";
     favorites.system = true;
+    favorites.public = false;
     favorites.tracks = Array.isArray(favorites.tracks) ? favorites.tracks : [];
 
     const others = list.filter((p) => p && p.id !== "favorites");
@@ -202,6 +215,7 @@ window.initPlaylistsPage = async function () {
       id: p.id || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: p.name || "Без названия",
       system: !!p.system,
+      public: p.system ? false : (p.public === true || p.is_public === true),
       cover: p.cover || "",
       tracks: Array.isArray(p.tracks) ? p.tracks : []
     }))];
@@ -309,7 +323,7 @@ window.initPlaylistsPage = async function () {
   }
 
   function getPlaylistById(playlistId) {
-    return getPlaylists().find((p) => p.id === playlistId) || null;
+    return getPlaylists().find((p) => p.id === playlistId) || externalPlaylistsById.get(String(playlistId)) || null;
   }
 
   function getFavoritesPlaylist() {
@@ -336,6 +350,7 @@ window.initPlaylistsPage = async function () {
       id: `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: trimmed,
       system: false,
+      public: false,
       cover: "",
       tracks: []
     };
@@ -363,6 +378,17 @@ window.initPlaylistsPage = async function () {
     const playlists = getPlaylists();
     const next = playlists.filter((p) => p.id !== playlistId);
     savePlaylists(next);
+    return true;
+  }
+
+  function setPlaylistPublic(playlistId, isPublic) {
+    const playlists = getPlaylists();
+    const playlist = playlists.find((p) => p.id === playlistId);
+
+    if (!playlist || playlist.system) return false;
+
+    playlist.public = Boolean(isPublic);
+    savePlaylists(playlists);
     return true;
   }
 
@@ -490,7 +516,79 @@ window.initPlaylistsPage = async function () {
     });
   }
 
-  function renderTrackRow(track, playlistId, index) {
+  function getFilteredOwnPlaylists() {
+    const query = playlistSearchQuery.toLowerCase();
+    const playlists = getPlaylists();
+    if (!query) return playlists;
+
+    return playlists.filter((playlist) =>
+      String(playlist?.name || "").toLowerCase().includes(query)
+    );
+  }
+
+  function getFilteredPublicPlaylists() {
+    const query = playlistSearchQuery.toLowerCase();
+    if (!query) return publicPlaylists;
+
+    return publicPlaylists.filter((playlist) =>
+      String(playlist?.name || "").toLowerCase().includes(query)
+    );
+  }
+
+  async function loadPublicPlaylists() {
+    publicPlaylistsLoading = true;
+    renderPlaylists();
+
+    try {
+      const params = new URLSearchParams();
+      if (playlistSearchQuery) params.set("search", playlistSearchQuery);
+      params.set("_ts", String(Date.now()));
+
+      const res = await fetch(`/api/public-playlists?${params.toString()}`, {
+        cache: "no-store"
+      });
+
+      if (!res.ok) throw new Error("public_playlists_failed");
+
+      const data = await res.json();
+      publicPlaylists = Array.isArray(data.playlists) ? data.playlists : [];
+      externalPlaylistsById.clear();
+      publicPlaylists.forEach((playlist) => {
+        if (playlist?.id) {
+          externalPlaylistsById.set(String(playlist.id), playlist);
+        }
+      });
+    } catch (err) {
+      console.error("loadPublicPlaylists error", err);
+      publicPlaylists = [];
+    } finally {
+      publicPlaylistsLoading = false;
+      renderPlaylists();
+    }
+  }
+
+  function schedulePublicPlaylistsLoad() {
+    window.clearTimeout(window.__playlistsPublicSearchTimer);
+    window.__playlistsPublicSearchTimer = window.setTimeout(() => {
+      if (activePlaylistsTab === "public") {
+        loadPublicPlaylists();
+      }
+    }, 240);
+  }
+
+  function renderPlaylistVisibilityBadge(playlist) {
+    if (playlist?.system) {
+      return `<span class="playlists-badge playlists-badge-muted"><i class="fa-solid fa-star"></i> Системный</span>`;
+    }
+
+    if (playlist?.public) {
+      return `<span class="playlists-badge playlists-badge-public"><i class="fa-solid fa-globe"></i> Публичный</span>`;
+    }
+
+    return `<span class="playlists-badge playlists-badge-private"><i class="fa-solid fa-lock"></i> Приватный</span>`;
+  }
+
+  function renderTrackRow(track, playlistId, index, { canEdit = true } = {}) {
     const cover = track.cover || "/images/default-cover.jpg";
     const duration = formatTime(track.duration || 0);
     const addedDate = formatAddedDate(track.addedAt);
@@ -538,20 +636,22 @@ window.initPlaylistsPage = async function () {
         <div class="playlist-track-right">
           <div class="playlist-track-duration">${duration}</div>
 
-          <button
-            class="playlist-track-remove-btn"
-            type="button"
-            onclick="window.__removeTrackFromPlaylistView('${escapeHtml(playlistId)}', ${Number(track.id)})"
-            aria-label="Удалить трек"
-          >
-            <i class="fa-regular fa-trash-can"></i>
-          </button>
+          ${canEdit ? `
+            <button
+              class="playlist-track-remove-btn"
+              type="button"
+              onclick="window.__removeTrackFromPlaylistView('${escapeHtml(playlistId)}', ${Number(track.id)})"
+              aria-label="Удалить трек"
+            >
+              <i class="fa-regular fa-trash-can"></i>
+            </button>
+          ` : ""}
         </div>
       </div>
     `;
   }
 
-  function renderPlaylistTracks(playlist) {
+  function renderPlaylistTracks(playlist, { canEdit = true } = {}) {
     if (!playlist) return;
 
     hydratePlaylistDurations(playlist);
@@ -606,7 +706,7 @@ window.initPlaylistsPage = async function () {
         </div>
 
         <div class="playlist-tracks-list">
-          ${playlist.tracks.map((track, index) => renderTrackRow(track, playlist.id, index)).join("")}
+          ${playlist.tracks.map((track, index) => renderTrackRow(track, playlist.id, index, { canEdit })).join("")}
         </div>
       </div>
     `;
@@ -614,15 +714,34 @@ window.initPlaylistsPage = async function () {
 
   function updatePlaylistView() {
     const playlists = getPlaylists();
-    const playlist = playlists[currentPlaylistIndex];
+    const externalPlaylist = currentExternalPlaylistId
+      ? externalPlaylistsById.get(String(currentExternalPlaylistId))
+      : null;
+    const playlist = externalPlaylist || playlists[currentPlaylistIndex];
+    const canEditPlaylist = !externalPlaylist && !playlist?.system;
 
     if (!playlist) return;
 
     viewTitle.textContent = playlist.name;
     viewCount.textContent = `${getPlaylistTrackCount(playlist)} треков • ${formatPlaylistDuration(getPlaylistDuration(playlist))}`;
-    playlistRenameBtn.classList.toggle("playlists-hidden", !!playlist.system);
-    playlistCoverBtn.classList.toggle("playlists-hidden", !!playlist.system);
-    playlistCoverEditWrap.classList.toggle("is-editable", !playlist.system);
+    playlistRenameBtn.classList.toggle("playlists-hidden", !canEditPlaylist);
+    playlistCoverBtn.classList.toggle("playlists-hidden", !canEditPlaylist);
+    playlistCoverEditWrap.classList.toggle("is-editable", canEditPlaylist);
+    viewBadges.innerHTML = `
+      ${renderPlaylistVisibilityBadge(playlist)}
+      ${canEditPlaylist ? `
+        <button class="playlists-visibility-toggle" type="button" onclick="window.__togglePlaylistVisibility('${escapeHtml(playlist.id)}')">
+          <i class="fa-solid ${playlist.public ? "fa-lock" : "fa-globe"}"></i>
+          ${playlist.public ? "Сделать приватным" : "Сделать публичным"}
+        </button>
+      ` : ""}
+      ${externalPlaylist?.owner ? `
+        <span class="playlists-badge playlists-badge-owner">
+          <i class="fa-regular fa-user"></i>
+          ${escapeHtml(externalPlaylist.owner.username || externalPlaylist.owner.username_tag || "Автор")}
+        </span>
+      ` : ""}
+    `;
 
     if (playlist.id === "favorites") {
       viewCover.className = "playlists-cover playlists-cover-large playlists-cover-favorites";
@@ -638,7 +757,7 @@ window.initPlaylistsPage = async function () {
       viewCover.innerHTML = "";
     }
 
-    renderPlaylistTracks(playlist);
+    renderPlaylistTracks(playlist, { canEdit: canEditPlaylist });
   }
 
   function renderEmptyState() {
@@ -656,15 +775,53 @@ window.initPlaylistsPage = async function () {
   }
 
   function renderPlaylists() {
-    const playlists = getPlaylists();
+    tabs.forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.playlistsTab === activePlaylistsTab);
+    });
+
+    createBtn.classList.toggle("playlists-hidden", activePlaylistsTab !== "mine");
     grid.innerHTML = "";
 
-    if (!playlists.length) {
+    if (activePlaylistsTab === "public" && publicPlaylistsLoading) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+          <h3>Загружаем публичные плейлисты</h3>
+          <p>Собираем подборки пользователей</p>
+        </div>
+      `;
+      return;
+    }
+
+    const ownPlaylists = getFilteredOwnPlaylists().map((playlist) => ({
+      playlist,
+      index: getPlaylists().findIndex((item) => item.id === playlist.id),
+      isExternal: false
+    }));
+    const publicItems = getFilteredPublicPlaylists().map((playlist, index) => ({
+      playlist,
+      index,
+      isExternal: true
+    }));
+    const items = activePlaylistsTab === "public" ? publicItems : ownPlaylists;
+
+    if (!items.length && activePlaylistsTab === "mine" && !playlistSearchQuery) {
       renderEmptyState();
       return;
     }
 
-    playlists.forEach((playlist, index) => {
+    if (!items.length) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+          <h3>Ничего не найдено</h3>
+          <p>${activePlaylistsTab === "public" ? "Попробуй другое название публичного плейлиста" : "Попробуй другое название среди своих плейлистов"}</p>
+        </div>
+      `;
+      return;
+    }
+
+    items.forEach(({ playlist, index, isExternal }) => {
       const count = getPlaylistTrackCount(playlist);
       const activeTrack = getActivePlaylistTrack(playlist);
       const isPlaylistPlaying = !!activeTrack && !!window.getGlobalPlayerState?.()?.isPlaying;
@@ -674,43 +831,50 @@ window.initPlaylistsPage = async function () {
       card.style.animationDelay = `${index * 0.06}s`;
 
       card.innerHTML = `
-        <div class="playlist-menu">
-          <button class="playlists-menu-btn" type="button" aria-label="Настройки плейлиста">
-            <span class="menu-dots">
-              <span></span>
-              <span></span>
-              <span></span>
-            </span>
-          </button>
+        ${!isExternal ? `
+          <div class="playlist-menu">
+            <button class="playlists-menu-btn" type="button" aria-label="Настройки плейлиста">
+              <span class="menu-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </button>
 
-          <div class="playlists-menu-dropdown playlists-hidden">
-            ${
-              playlist.system
-                ? `
-                  <button class="playlists-menu-item system-label" type="button" disabled>
-                    <span class="menu-icon">⭐</span>
-                    <span>Системный плейлист</span>
-                  </button>
-                `
-                : `
-                  <button class="playlists-menu-item rename" type="button">
-                    <span class="menu-icon">✏️</span>
-                    <span>Изменить название</span>
-                  </button>
+            <div class="playlists-menu-dropdown playlists-hidden">
+              ${
+                playlist.system
+                  ? `
+                    <button class="playlists-menu-item system-label" type="button" disabled>
+                      <span class="menu-icon"><i class="fa-solid fa-star"></i></span>
+                      <span>Системный плейлист</span>
+                    </button>
+                  `
+                  : `
+                    <button class="playlists-menu-item visibility-action" type="button">
+                      <span class="menu-icon"><i class="fa-solid ${playlist.public ? "fa-lock" : "fa-globe"}"></i></span>
+                      <span>${playlist.public ? "Сделать приватным" : "Сделать публичным"}</span>
+                    </button>
 
-                  <button class="playlists-menu-item cover-action" type="button">
-                    <span class="menu-icon">🖼</span>
-                    <span>Изменить обложку</span>
-                  </button>
+                    <button class="playlists-menu-item rename" type="button">
+                      <span class="menu-icon"><i class="fa-solid fa-pen"></i></span>
+                      <span>Изменить название</span>
+                    </button>
 
-                  <button class="playlists-menu-item delete" type="button">
-                    <span class="menu-icon">🗑</span>
-                    <span>Удалить</span>
-                  </button>
-                `
-            }
+                    <button class="playlists-menu-item cover-action" type="button">
+                      <span class="menu-icon"><i class="fa-regular fa-image"></i></span>
+                      <span>Изменить обложку</span>
+                    </button>
+
+                    <button class="playlists-menu-item delete" type="button">
+                      <span class="menu-icon"><i class="fa-regular fa-trash-can"></i></span>
+                      <span>Удалить</span>
+                    </button>
+                  `
+              }
+            </div>
           </div>
-        </div>
+        ` : ""}
 
         <div class="playlist-card-cover-wrap">
           ${getCoverMarkup(playlist)}
@@ -722,20 +886,25 @@ window.initPlaylistsPage = async function () {
             <i class="fa-solid ${isPlaylistPlaying ? "fa-pause" : "fa-play"}"></i>
           </button>
         </div>
+        <div class="playlist-card-meta-row">
+          ${renderPlaylistVisibilityBadge(playlist)}
+        </div>
         <h3>${escapeHtml(playlist.name)}</h3>
-        <p>${count} треков</p>
+        <p>${count} треков${isExternal && playlist.owner?.username ? ` • ${escapeHtml(playlist.owner.username)}` : ""}</p>
       `;
 
       const menu = card.querySelector(".playlist-menu");
       const menuBtn = card.querySelector(".playlists-menu-btn");
       const dropdown = card.querySelector(".playlists-menu-dropdown");
+      const visibilityBtn = card.querySelector(".visibility-action");
       const renameBtn = card.querySelector(".rename");
       const coverBtn = card.querySelector(".cover-action");
       const deleteBtn = card.querySelector(".delete");
       const coverPlayBtn = card.querySelector(".playlist-card-play-btn");
 
       card.addEventListener("click", () => {
-        openPlaylist(index);
+        if (isExternal) openPublicPlaylist(playlist.id);
+        else openPlaylist(index);
       });
 
       coverPlayBtn?.addEventListener("click", (e) => {
@@ -757,6 +926,18 @@ window.initPlaylistsPage = async function () {
 
       dropdown?.addEventListener("click", (e) => {
         e.stopPropagation();
+      });
+
+      visibilityBtn?.addEventListener("click", () => {
+        setPlaylistPublic(playlist.id, !playlist.public);
+        closeAllMenus();
+        renderPlaylists();
+        if (currentPlaylistIndex === index) {
+          updatePlaylistView();
+        }
+        if (activePlaylistsTab === "public") {
+          loadPublicPlaylists();
+        }
       });
 
       renameBtn?.addEventListener("click", () => {
@@ -800,6 +981,17 @@ window.initPlaylistsPage = async function () {
 
   function openPlaylist(index) {
     currentPlaylistIndex = index;
+    currentExternalPlaylistId = null;
+    updatePlaylistView();
+
+    playlistsScreen.classList.add("playlists-hidden");
+    playlistView.classList.remove("playlists-hidden");
+    closeAllMenus();
+  }
+
+  function openPublicPlaylist(playlistId) {
+    currentPlaylistIndex = null;
+    currentExternalPlaylistId = playlistId;
     updatePlaylistView();
 
     playlistsScreen.classList.add("playlists-hidden");
@@ -809,6 +1001,7 @@ window.initPlaylistsPage = async function () {
 
   function closePlaylistView() {
     currentPlaylistIndex = null;
+    currentExternalPlaylistId = null;
     playlistView.classList.add("playlists-hidden");
     playlistsScreen.classList.remove("playlists-hidden");
   }
@@ -929,6 +1122,15 @@ window.initPlaylistsPage = async function () {
     alert("Эту кнопку докрутим следующим шагом.");
   };
 
+  window.__togglePlaylistVisibility = function (playlistId) {
+    const playlist = getPlaylistById(playlistId);
+    if (!playlist || playlist.system) return;
+
+    setPlaylistPublic(playlistId, !playlist.public);
+    renderPlaylists();
+    updatePlaylistView();
+  };
+
   window.__togglePlaylistFavorites = function (playlistId) {
     const playlist = getPlaylistById(playlistId);
     const firstTrack = playlist?.tracks?.[0];
@@ -1024,6 +1226,27 @@ window.initPlaylistsPage = async function () {
     if (!e.target.closest(".playlist-menu")) {
       closeAllMenus();
     }
+  });
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const nextTab = tab.dataset.playlistsTab || "mine";
+      if (nextTab === activePlaylistsTab) return;
+
+      activePlaylistsTab = nextTab;
+      closePlaylistView();
+      renderPlaylists();
+
+      if (activePlaylistsTab === "public") {
+        loadPublicPlaylists();
+      }
+    });
+  });
+
+  searchInput.addEventListener("input", () => {
+    playlistSearchQuery = searchInput.value.trim();
+    renderPlaylists();
+    schedulePublicPlaylistsLoad();
   });
 
   window.addEventListener("ritmoria:global-player-track-change", () => {

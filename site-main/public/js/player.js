@@ -86,6 +86,7 @@
         id: "favorites",
         name: "Любимые треки",
         system: true,
+        public: false,
         cover: "",
         tracks: []
       };
@@ -94,6 +95,7 @@
 
     favorites.name = "Любимые треки";
     favorites.system = true;
+    favorites.public = false;
     favorites.tracks = Array.isArray(favorites.tracks) ? favorites.tracks : [];
 
     const others = list.filter((p) => p && p.id !== "favorites");
@@ -104,6 +106,7 @@
         id: p.id || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         name: p.name || "Без названия",
         system: !!p.system,
+        public: p.system ? false : (p.public === true || p.is_public === true),
         cover: p.cover || "",
         tracks: Array.isArray(p.tracks) ? p.tracks : []
       }))
@@ -159,11 +162,13 @@
       const fallbackName = String(secondaryPlaylist?.name || "").trim();
       const preferredCover = String(playlist.cover || "").trim();
       const fallbackCover = String(secondaryPlaylist?.cover || "").trim();
+      const isPublic = !isFavorites && (playlist.public === true || secondaryPlaylist?.public === true);
 
       merged.set(playlistId, {
         id: playlistId,
         name: isFavorites ? "Любимые треки" : (preferredName || fallbackName || "Без названия"),
         system: isFavorites || !!playlist.system || !!secondaryPlaylist?.system,
+        public: isPublic,
         cover: preferredCover || fallbackCover || "",
         tracks: mergeTracks(playlist.tracks, secondaryPlaylist?.tracks)
       });
