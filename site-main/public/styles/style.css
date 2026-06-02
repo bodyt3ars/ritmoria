@@ -845,6 +845,86 @@
   margin-top: 10px;
 }
 
+.home-page .home-posts-shell .post-card.home-recommendation-unseen {
+  border-color: rgba(255, 183, 219, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 16px 36px rgba(0, 0, 0, 0.22);
+}
+
+.home-page .home-recommendation-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -2px 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 207, 231, 0.08);
+}
+
+.home-page .home-recommendation-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 190, 222, 0.24);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(64, 42, 66, 0.86), rgba(31, 23, 39, 0.9)),
+    radial-gradient(circle at top left, rgba(255, 144, 200, 0.18), transparent 52%);
+  color: #ffe7f1;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.home-page .home-recommendation-pill i {
+  color: #ff9ccc;
+  font-size: 11px;
+}
+
+.home-page .home-recommendation-signal {
+  min-width: 0;
+  color: rgba(255, 231, 240, 0.56);
+  font-size: 12px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-page .home-recommendations-more {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 4px;
+  border: 1px solid rgba(255, 184, 220, 0.18);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(36, 27, 43, 0.92), rgba(17, 14, 25, 0.96)),
+    radial-gradient(circle at top, rgba(255, 140, 198, 0.14), transparent 58%);
+  color: #ffe9f2;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.home-page .home-recommendations-more:hover,
+.home-page .home-recommendations-more:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255, 205, 230, 0.34);
+  background:
+    linear-gradient(180deg, rgba(54, 35, 58, 0.94), rgba(23, 16, 31, 0.98)),
+    radial-gradient(circle at top, rgba(255, 150, 205, 0.18), transparent 58%);
+}
+
+.home-page .home-recommendations-more:disabled {
+  opacity: 0.72;
+  cursor: wait;
+  transform: none;
+}
+
 .home-page .home-posts-shell .video-player {
   position: relative;
   cursor: pointer;
@@ -1014,6 +1094,16 @@
 }
 
 @media (max-width: 768px), (pointer: coarse) {
+  .home-page .home-recommendation-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .home-page .home-recommendation-signal {
+    width: 100%;
+  }
+
   .home-page .home-posts-shell .volume {
     display: none;
   }

@@ -6493,6 +6493,148 @@ async function getHomeForYou(viewerId) {
   };
 }
 
+async function getRecommendedPosts(viewerId, { limit = 18, offset = 0 } = {}) {
+  const safeLimit = Math.min(30, Math.max(6, Number(limit) || 18));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
+  return pool.query(
+    `
+    WITH post_metrics AS (
+      SELECT
+        posts.*,
+        COALESCE(users.username, users.username_tag, 'Без имени') AS username,
+        users.avatar,
+        users.username_tag,
+        COALESCE(views.views_count, 0) AS views_count,
+        COALESCE(reactions.likes_count, 0) AS likes_count,
+        COALESCE(reactions.dislikes_count, 0) AS dislikes_count,
+        COALESCE(comments.comments_count, 0) AS comments_count,
+        COALESCE(reposts.reposts_count, 0) AS reposts_count,
+        COALESCE(recent.recent_actions_count, 0) AS recent_actions_count,
+        my_reaction.reaction AS my_reaction,
+        COALESCE(my_repost.reposted, false) AS reposted,
+        COALESCE(my_view.viewed, false) AS viewed_by_me,
+        CASE
+          WHEN $1::int IS NOT NULL AND follows.following_id IS NOT NULL THEN true
+          ELSE false
+        END AS follows_author,
+        RANDOM() AS random_seed
+      FROM posts
+      JOIN users ON users.id = posts.user_id
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS views_count
+        FROM post_views
+        WHERE post_views.post_id = posts.id
+      ) views ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          COUNT(*) FILTER (WHERE reaction = 'like')::int AS likes_count,
+          COUNT(*) FILTER (WHERE reaction = 'dislike')::int AS dislikes_count
+        FROM post_reactions
+        WHERE post_reactions.post_id = posts.id
+      ) reactions ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS comments_count
+        FROM post_comments
+        WHERE post_comments.post_id = posts.id
+      ) comments ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS reposts_count
+        FROM post_reposts
+        WHERE post_reposts.post_id = posts.id
+      ) reposts ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS recent_actions_count
+        FROM (
+          SELECT created_at FROM post_reactions WHERE post_id = posts.id
+          UNION ALL
+          SELECT created_at FROM post_comments WHERE post_id = posts.id
+          UNION ALL
+          SELECT created_at FROM post_reposts WHERE post_id = posts.id
+        ) recent_actions
+        WHERE recent_actions.created_at >= now() - interval '48 hours'
+      ) recent ON true
+      LEFT JOIN post_reactions my_reaction
+        ON my_reaction.post_id = posts.id
+       AND my_reaction.user_id = $1
+      LEFT JOIN LATERAL (
+        SELECT true AS reposted
+        FROM post_reposts
+        WHERE post_reposts.post_id = posts.id
+          AND post_reposts.user_id = $1
+        LIMIT 1
+      ) my_repost ON true
+      LEFT JOIN LATERAL (
+        SELECT true AS viewed
+        FROM post_views
+        WHERE post_views.post_id = posts.id
+          AND post_views.user_id = $1
+        LIMIT 1
+      ) my_view ON true
+      LEFT JOIN follows
+        ON follows.follower_id = $1
+       AND follows.following_id = posts.user_id
+      WHERE COALESCE(posts.is_archived, false) = false
+    ),
+    scored_posts AS (
+      SELECT
+        post_metrics.*,
+        (
+          CASE WHEN COALESCE(is_pinned, false) THEN 30 ELSE 0 END
+          + CASE WHEN follows_author THEN 22 ELSE 0 END
+          + CASE WHEN $1::int IS NOT NULL AND NOT viewed_by_me THEN 24 ELSE 0 END
+          + CASE WHEN $1::int IS NOT NULL AND user_id = $1 THEN -32 ELSE 0 END
+          + CASE WHEN viewed_by_me THEN -10 ELSE 0 END
+          + LEAST(38, likes_count * 5)
+          - LEAST(18, dislikes_count * 4)
+          + LEAST(34, comments_count * 7)
+          + LEAST(28, reposts_count * 8)
+          + LEAST(22, recent_actions_count * 6)
+          + LEAST(18, FLOOR(views_count::numeric / 4)::int)
+          + LEAST(
+              24,
+              FLOOR(
+                ((likes_count + comments_count * 2 + reposts_count * 2 - dislikes_count)::numeric
+                / GREATEST(views_count, 1)) * 18
+              )::int
+            )
+          + CASE WHEN media_url IS NOT NULL AND media_url <> '' THEN 8 ELSE 0 END
+          + CASE WHEN media_type = 'video' THEN 8 WHEN media_type = 'image' THEN 5 ELSE 0 END
+          + GREATEST(0, 22 - FLOOR(EXTRACT(EPOCH FROM (now() - created_at)) / 3600 / 8)::int)
+          + FLOOR(RANDOM() * 14)::int
+        ) AS recommendation_score,
+        CASE
+          WHEN follows_author THEN 'Автор, за которым ты следишь'
+          WHEN recent_actions_count >= 4 THEN 'Сейчас активно обсуждают'
+          WHEN comments_count >= 3 THEN 'Живое обсуждение'
+          WHEN reposts_count >= 2 THEN 'Часто репостят'
+          WHEN media_type = 'video' THEN 'Видео в ленте'
+          WHEN likes_count >= 5 THEN 'Набирает реакции'
+          WHEN created_at >= now() - interval '24 hours' THEN 'Свежий пост'
+          WHEN NOT viewed_by_me THEN 'Новое для тебя'
+          ELSE 'Может зайти'
+        END AS recommendation_reason
+      FROM post_metrics
+    ),
+    diversified_posts AS (
+      SELECT
+        scored_posts.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY scored_posts.user_id
+          ORDER BY scored_posts.recommendation_score DESC, scored_posts.random_seed ASC
+        ) AS author_slot
+      FROM scored_posts
+    )
+    SELECT *
+    FROM diversified_posts
+    WHERE author_slot <= 2
+    ORDER BY recommendation_score DESC, random_seed ASC
+    LIMIT $2 OFFSET $3
+    `,
+    [viewerId, safeLimit, safeOffset]
+  );
+}
+
 app.get("/api/home", async (req, res) => {
   try {
     res.set({
@@ -6526,138 +6668,7 @@ app.get("/api/home", async (req, res) => {
         `
       ),
       getHomeTopTracksSnapshot(),
-      pool.query(
-        `
-        WITH scored_posts AS (
-          SELECT
-            posts.*,
-            COALESCE(users.username, users.username_tag, 'Без имени') AS username,
-            users.avatar,
-            users.username_tag,
-            (
-              SELECT COUNT(*)::int
-              FROM post_views
-              WHERE post_views.post_id = posts.id
-            ) AS views_count,
-            (
-              SELECT COUNT(*)::int
-              FROM post_reactions
-              WHERE post_reactions.post_id = posts.id AND post_reactions.reaction = 'like'
-            ) AS likes_count,
-            (
-              SELECT COUNT(*)::int
-              FROM post_reactions
-              WHERE post_reactions.post_id = posts.id AND post_reactions.reaction = 'dislike'
-            ) AS dislikes_count,
-            (
-              SELECT COUNT(*)::int
-              FROM post_comments
-              WHERE post_comments.post_id = posts.id
-            ) AS comments_count,
-            (
-              SELECT reaction
-              FROM post_reactions
-              WHERE post_reactions.post_id = posts.id AND post_reactions.user_id = $1
-              LIMIT 1
-            ) AS my_reaction,
-            EXISTS(
-              SELECT 1
-              FROM post_reposts
-              WHERE post_reposts.post_id = posts.id
-                AND post_reposts.user_id = $1
-            ) AS reposted,
-            RANDOM() AS random_seed,
-            (
-              CASE
-                WHEN COALESCE(posts.is_pinned, false) THEN 38
-                ELSE 0
-              END
-              +
-              CASE
-                WHEN $1::int IS NOT NULL AND EXISTS(
-                  SELECT 1
-                  FROM follows f
-                  WHERE f.follower_id = $1
-                    AND f.following_id = posts.user_id
-                ) THEN 18
-                ELSE 0
-              END
-              +
-              CASE
-                WHEN $1::int IS NOT NULL AND NOT EXISTS(
-                  SELECT 1
-                  FROM post_views pv
-                  WHERE pv.post_id = posts.id
-                    AND pv.user_id = $1
-                ) THEN 26
-                ELSE 0
-              END
-              +
-              CASE
-                WHEN posts.user_id = $1 THEN -24
-                ELSE 0
-              END
-              +
-              LEAST(42, COALESCE((
-                SELECT COUNT(*)::int * 6
-                FROM post_reactions pr
-                WHERE pr.post_id = posts.id
-                  AND pr.reaction = 'like'
-              ), 0))
-              -
-              LEAST(16, COALESCE((
-                SELECT COUNT(*)::int * 4
-                FROM post_reactions pr
-                WHERE pr.post_id = posts.id
-                  AND pr.reaction = 'dislike'
-              ), 0))
-              +
-              LEAST(30, COALESCE((
-                SELECT COUNT(*)::int * 7
-                FROM post_comments pc
-                WHERE pc.post_id = posts.id
-              ), 0))
-              +
-              LEAST(24, COALESCE((
-                SELECT COUNT(*)::int * 8
-                FROM post_reposts rep
-                WHERE rep.post_id = posts.id
-              ), 0))
-              +
-              LEAST(18, COALESCE((
-                SELECT FLOOR(COUNT(*)::numeric / 3)::int
-                FROM post_views pv
-                WHERE pv.post_id = posts.id
-              ), 0))
-              +
-              GREATEST(
-                0,
-                20 - FLOOR(EXTRACT(EPOCH FROM (now() - posts.created_at)) / 3600 / 9)::int
-              )
-              +
-              FLOOR(RANDOM() * 26)::int
-            ) AS recommendation_score
-          FROM posts
-          JOIN users ON users.id = posts.user_id
-          WHERE COALESCE(posts.is_archived, false) = false
-        ),
-        diversified_posts AS (
-          SELECT
-            scored_posts.*,
-            ROW_NUMBER() OVER (
-              PARTITION BY scored_posts.user_id
-              ORDER BY scored_posts.recommendation_score DESC, scored_posts.random_seed ASC
-            ) AS author_slot
-          FROM scored_posts
-        )
-        SELECT *
-        FROM diversified_posts
-        WHERE author_slot <= 2
-        ORDER BY recommendation_score DESC, random_seed ASC
-        LIMIT 18
-        `,
-        [viewerId]
-      ),
+      getRecommendedPosts(viewerId, { limit: 18 }),
       pool.query(
         `
         SELECT
@@ -6859,6 +6870,31 @@ app.get("/api/home", async (req, res) => {
   } catch (err) {
     console.error("HOME API ERROR:", err);
     res.status(500).json({ error: "home_load_failed" });
+  }
+});
+
+app.get("/api/recommendations/posts", async (req, res) => {
+  try {
+    res.set({
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+      "Surrogate-Control": "no-store"
+    });
+
+    const viewerId = getOptionalUserIdFromReq(req);
+    const limit = Math.min(24, Math.max(6, Number(req.query.limit) || 12));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const result = await getRecommendedPosts(viewerId, { limit, offset });
+
+    res.json({
+      posts: result.rows,
+      nextOffset: offset + result.rows.length,
+      hasMore: result.rows.length === limit
+    });
+  } catch (err) {
+    console.error("POST RECOMMENDATIONS API ERROR:", err);
+    res.status(500).json({ error: "post_recommendations_failed" });
   }
 });
 

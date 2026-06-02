@@ -9,6 +9,13 @@ function homeEscapeHtml(value) {
 
 let homeQueueTimerInterval = null;
 let homeQueueStateMeta = null;
+let homeRecommendationsState = {
+  posts: [],
+  nextOffset: 0,
+  hasMore: false,
+  loading: false
+};
+let homeRecommendationsObserver = null;
 
 function formatHomeCount(value) {
   return new Intl.NumberFormat("ru-RU").format(Math.max(0, Number(value || 0)));
@@ -540,7 +547,74 @@ function renderHomeSpotlightTracks(tracks = []) {
   `).join("");
 }
 
-function renderHomePosts(posts = []) {
+function normalizeHomeRecommendedPost(post = {}) {
+  return {
+    ...post,
+    likes_count: Number(post.likes_count || 0),
+    dislikes_count: Number(post.dislikes_count || 0),
+    comments_count: Number(post.comments_count || 0),
+    views_count: Number(post.views_count || 0),
+    reposts_count: Number(post.reposts_count || 0),
+    recommendation_reason: post.recommendation_reason || "Может зайти"
+  };
+}
+
+function decorateHomeRecommendedPosts(posts = []) {
+  const postsById = new Map(posts.map((post) => [String(post.id), post]));
+
+  document.querySelectorAll("#homeFeedPosts .post-card").forEach((card) => {
+    const post = postsById.get(String(card.dataset.postId || ""));
+    if (!post || card.querySelector(".home-recommendation-meta")) return;
+
+    const meta = document.createElement("div");
+    meta.className = "home-recommendation-meta";
+    meta.innerHTML = `
+      <span class="home-recommendation-pill">
+        <i class="fa-solid fa-sparkles"></i>
+        ${homeEscapeHtml(post.recommendation_reason || "Может зайти")}
+      </span>
+      <span class="home-recommendation-signal">
+        ${formatHomeCount(post.likes_count)} реакций · ${formatHomeCount(post.comments_count)} комм. · ${formatHomeCount(post.views_count)} просмотров
+      </span>
+    `;
+
+    card.prepend(meta);
+    card.classList.toggle("home-recommendation-unseen", post.viewed_by_me === false);
+  });
+}
+
+function syncHomeRecommendationsMoreButton() {
+  const button = document.getElementById("homeRecommendationsMore");
+  if (!button) return;
+
+  button.hidden = !homeRecommendationsState.hasMore && !homeRecommendationsState.loading;
+  button.disabled = !!homeRecommendationsState.loading;
+  button.innerHTML = homeRecommendationsState.loading
+    ? `<i class="fa-solid fa-circle-notch fa-spin"></i> Загружаем`
+    : `<i class="fa-solid fa-chevron-down"></i> Ещё рекомендации`;
+}
+
+function ensureHomeRecommendationsObserver() {
+  const button = document.getElementById("homeRecommendationsMore");
+  if (!button || !("IntersectionObserver" in window)) return;
+
+  if (homeRecommendationsObserver) {
+    homeRecommendationsObserver.disconnect();
+  }
+
+  homeRecommendationsObserver = new IntersectionObserver((entries) => {
+    const entry = entries[0];
+    if (entry?.isIntersecting && homeRecommendationsState.hasMore && !homeRecommendationsState.loading) {
+      loadMoreHomeRecommendations();
+    }
+  }, {
+    rootMargin: "360px 0px"
+  });
+
+  homeRecommendationsObserver.observe(button);
+}
+
+function renderHomePosts(posts = [], { reset = true, hasMore = null } = {}) {
   const container = document.getElementById("homeFeedPosts");
   if (!container) return;
 
@@ -549,11 +623,29 @@ function renderHomePosts(posts = []) {
     return;
   }
 
+  const normalizedPosts = (Array.isArray(posts) ? posts : []).map(normalizeHomeRecommendedPost);
+  if (reset) {
+    homeRecommendationsState.posts = normalizedPosts;
+    homeRecommendationsState.nextOffset = normalizedPosts.length;
+  } else {
+    const knownIds = new Set(homeRecommendationsState.posts.map((post) => Number(post.id)));
+    const freshPosts = normalizedPosts.filter((post) => !knownIds.has(Number(post.id)));
+    homeRecommendationsState.posts = [...homeRecommendationsState.posts, ...freshPosts];
+    homeRecommendationsState.nextOffset = homeRecommendationsState.posts.length;
+  }
+
+  homeRecommendationsState.hasMore = hasMore === null
+    ? normalizedPosts.length >= 12
+    : Boolean(hasMore);
+
   window.setPostsRenderContext({
     containerId: "homeFeedPosts",
-    posts,
+    posts: homeRecommendationsState.posts,
     isMyProfile: false
   });
+
+  decorateHomeRecommendedPosts(homeRecommendationsState.posts);
+  syncHomeRecommendationsMoreButton();
 }
 
 function renderHomeArtists(artists = []) {
@@ -691,10 +783,59 @@ function bindHomeSpotlightCarousel() {
   row._updateHomeSpotlightArrows?.();
 }
 
+async function loadMoreHomeRecommendations() {
+  if (homeRecommendationsState.loading || !homeRecommendationsState.hasMore) return;
+
+  const button = document.getElementById("homeRecommendationsMore");
+  const headers = localStorage.getItem("token")
+    ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    : {};
+
+  homeRecommendationsState.loading = true;
+  syncHomeRecommendationsMoreButton();
+
+  try {
+    const params = new URLSearchParams({
+      offset: String(homeRecommendationsState.nextOffset),
+      limit: "12",
+      _ts: String(Date.now())
+    });
+    const res = await fetch(`/api/recommendations/posts?${params.toString()}`, {
+      cache: "no-store",
+      headers
+    });
+
+    if (!res.ok) throw new Error("recommendations_more_failed");
+
+    const data = await res.json();
+    renderHomePosts(data.posts || [], {
+      reset: false,
+      hasMore: Boolean(data.hasMore)
+    });
+    homeRecommendationsState.nextOffset = Number(data.nextOffset || homeRecommendationsState.posts.length);
+  } catch (err) {
+    console.error("loadMoreHomeRecommendations error:", err);
+    if (button) {
+      button.hidden = false;
+      button.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Повторить`;
+    }
+  } finally {
+    homeRecommendationsState.loading = false;
+    syncHomeRecommendationsMoreButton();
+  }
+}
+
 function bindHomeInteractions(homeData) {
   if (typeof window.initPostUiBindings === "function") {
     window.initPostUiBindings();
   }
+
+  const moreRecommendationsBtn = document.getElementById("homeRecommendationsMore");
+  if (moreRecommendationsBtn && moreRecommendationsBtn.dataset.bound !== "1") {
+    moreRecommendationsBtn.dataset.bound = "1";
+    moreRecommendationsBtn.addEventListener("click", loadMoreHomeRecommendations);
+  }
+  ensureHomeRecommendationsObserver();
 
   document.querySelectorAll("[data-home-artist-tag]").forEach((el) => {
     if (el.dataset.artistBound === "1") return;
