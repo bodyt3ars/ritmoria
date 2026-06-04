@@ -23,6 +23,10 @@ const DEFAULT_SEO = {
   image: "https://ritmoria.com/images/logo.png"
 };
 
+function i18nT(key, fallback = "") {
+  return window.RitmoriaI18n?.t?.(key, fallback) || fallback || key;
+}
+
 function upsertMeta(selector, attribute, value) {
   if (!value) return;
 
@@ -46,21 +50,21 @@ function setCanonical(url) {
 }
 
 function setSeoMeta({
-  title = DEFAULT_SEO.title,
-  description = DEFAULT_SEO.description,
+  title = i18nT("seo.defaultTitle", DEFAULT_SEO.title),
+  description = i18nT("seo.defaultDescription", DEFAULT_SEO.description),
   canonical = DEFAULT_SEO.canonical,
   image = DEFAULT_SEO.image
 } = {}) {
   document.title = title;
   upsertMeta('meta[name="description"]', "name", description);
-  upsertMeta('meta[name="keywords"]', "name", "Ритмория, РИТМОРИЯ, ritmoria, музыка, треки, артисты, музыкальная платформа, опены, стрим");
+  upsertMeta('meta[name="keywords"]', "name", i18nT("seo.keywords", "Ритмория, РИТМОРИЯ, ritmoria, музыка, треки, артисты, музыкальная платформа, опены, стрим"));
   upsertMeta('meta[name="robots"]', "name", "index, follow, max-image-preview:large");
   upsertMeta('meta[property="og:title"]', "property", title);
   upsertMeta('meta[property="og:description"]', "property", description);
   upsertMeta('meta[property="og:url"]', "property", canonical);
   upsertMeta('meta[property="og:image"]', "property", image);
-  upsertMeta('meta[property="og:site_name"]', "property", "РИТМОРИЯ");
-  upsertMeta('meta[property="og:locale"]', "property", "ru_RU");
+  upsertMeta('meta[property="og:site_name"]', "property", i18nT("seo.siteName", "РИТМОРИЯ"));
+  upsertMeta('meta[property="og:locale"]', "property", window.RitmoriaI18n?.getLanguage?.() === "en" ? "en_US" : "ru_RU");
   upsertMeta('meta[name="twitter:title"]', "name", title);
   upsertMeta('meta[name="twitter:description"]', "name", description);
   upsertMeta('meta[name="twitter:image"]', "name", image);
@@ -191,6 +195,7 @@ function runAfterPaint(cb) {
 }
 
 function finishRender(app) {
+  window.RitmoriaI18n?.apply?.(app);
   bindSpaLinks(document);
 
   setTimeout(() => {
@@ -328,8 +333,8 @@ export async function renderPage(path) {
   // INDEX
   if (routePath === "/" || routePath === "/index") {
     setSeoMeta({
-      title: "Ритмория — музыкальная платформа для артистов",
-      description: "Ритмория — музыкальная платформа для артистов, треков, опенов, стримов и общения вокруг новой музыки.",
+      title: i18nT("seo.defaultTitle", "Ритмория — музыкальная платформа для артистов"),
+      description: i18nT("seo.defaultDescription", "Ритмория — музыкальная платформа для артистов, треков, опенов, стримов и общения вокруг новой музыки."),
       canonical: "https://ritmoria.com/"
     });
     app.style.opacity = "0";

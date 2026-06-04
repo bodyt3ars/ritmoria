@@ -9,12 +9,22 @@ let navbarRealtimeLoopInterval = null;
 let collectiveInviteDecisionResolver = null;
 
 const NAVBAR_RANK_TIERS = [
-  { rank: 1, rankName: "Новичок", minXp: 0 },
-  { rank: 2, rankName: "Слушатель", minXp: 500 },
-  { rank: 3, rankName: "Артист", minXp: 2000 },
-  { rank: 4, rankName: "Хитмейкер", minXp: 6000 },
-  { rank: 5, rankName: "Легенда", minXp: 15000 }
+  { rank: 1, rankName: "Новичок", rankKey: "rank.newbie", minXp: 0 },
+  { rank: 2, rankName: "Слушатель", rankKey: "rank.listener", minXp: 500 },
+  { rank: 3, rankName: "Артист", rankKey: "rank.artist", minXp: 2000 },
+  { rank: 4, rankName: "Хитмейкер", rankKey: "rank.hitmaker", minXp: 6000 },
+  { rank: 5, rankName: "Легенда", rankKey: "rank.legend", minXp: 15000 }
 ];
+
+function navbarT(key, fallback = "") {
+  return window.RitmoriaI18n?.t?.(key, fallback) || fallback || key;
+}
+
+function getNavbarRankName(tierOrState, fallback = "") {
+  if (!tierOrState) return fallback;
+  const key = tierOrState.rankKey || NAVBAR_RANK_TIERS.find((tier) => tier.rank === Number(tierOrState.rank))?.rankKey;
+  return key ? navbarT(key, tierOrState.rankName || fallback) : (tierOrState.rankName || fallback);
+}
 
 function setNavbarBadgeState(badge, count) {
   if (!badge) return;
@@ -53,6 +63,11 @@ function getNavbarRankState(rankStateOrXp = 0) {
       ...rankStateOrXp,
       xp: Number(rankStateOrXp.xp || 0),
       rank: Number(rankStateOrXp.rank || 1),
+      rankKey: rankStateOrXp.rankKey || NAVBAR_RANK_TIERS.find((tier) => tier.rank === Number(rankStateOrXp.rank || 1))?.rankKey || "",
+      nextRankKey: rankStateOrXp.nextRankKey ||
+        NAVBAR_RANK_TIERS.find((tier) => tier.minXp === Number(rankStateOrXp.nextLevel || 0))?.rankKey ||
+        NAVBAR_RANK_TIERS.find((tier) => tier.rankName === rankStateOrXp.nextRankName)?.rankKey ||
+        "",
       progress: Math.max(0, Math.min(100, Number(rankStateOrXp.progress || 0))),
       nextLevel: rankStateOrXp.nextLevel === null ? null : Number(rankStateOrXp.nextLevel || 0),
       isMaxRank: Boolean(rankStateOrXp.isMaxRank || rankStateOrXp.nextLevel === null)
@@ -75,8 +90,10 @@ function getNavbarRankState(rankStateOrXp = 0) {
   return {
     xp,
     rank: currentTier.rank,
-    rankName: currentTier.rankName,
-    nextRankName: nextTier?.rankName || "MAX",
+    rankName: getNavbarRankName(currentTier),
+    rankKey: currentTier.rankKey,
+    nextRankName: nextTier ? getNavbarRankName(nextTier) : "MAX",
+    nextRankKey: nextTier?.rankKey || "",
     nextLevel,
     progress,
     isMaxRank: !nextTier
@@ -92,9 +109,13 @@ function updateSidebarRank(rankStateOrXp = 0) {
   const fill = document.getElementById("sidebarRankFill");
 
   if (title) {
+    const currentRankName = getNavbarRankName(rankState, rankState.rankName);
+    const nextRankName = rankState.nextRankKey
+      ? navbarT(rankState.nextRankKey, rankState.nextRankName)
+      : (rankState.nextRankName || getNavbarRankName(nextTier, navbarT("rank.next", "Следующий ранг")));
     title.textContent = rankState.isMaxRank
-      ? `${rankState.rankName} -> MAX`
-      : `${rankState.rankName} -> ${rankState.nextRankName || nextTier?.rankName || "Следующий ранг"}`;
+      ? `${currentRankName} -> MAX`
+      : `${currentRankName} -> ${nextRankName}`;
   }
   if (xpText) {
     xpText.textContent = rankState.isMaxRank || rankState.nextLevel === null
@@ -112,7 +133,8 @@ function setNavbarEmptyState(list) {
   if (!list) return;
   const empty = document.createElement("div");
   empty.className = "navbar-notification-empty";
-  empty.textContent = "Пока пусто";
+  empty.dataset.i18n = "nav.empty";
+  empty.textContent = navbarT("nav.empty", "Пока пусто");
   list.replaceChildren(empty);
 }
 
@@ -191,17 +213,18 @@ function ensureAppConfirmModal() {
         <i class="fa-solid fa-triangle-exclamation"></i>
       </div>
       <div class="app-confirm-copy">
-        <h3 id="appConfirmTitle" class="app-confirm-title">Подтвердите действие</h3>
-        <p id="appConfirmText" class="app-confirm-text">Вы уверены?</p>
+        <h3 id="appConfirmTitle" class="app-confirm-title" data-i18n="modal.confirmTitle">Подтвердите действие</h3>
+        <p id="appConfirmText" class="app-confirm-text" data-i18n="modal.confirmText">Вы уверены?</p>
       </div>
       <div class="app-confirm-actions">
-        <button type="button" id="appConfirmCancel" class="app-confirm-btn app-confirm-btn-secondary">Отмена</button>
-        <button type="button" id="appConfirmOk" class="app-confirm-btn app-confirm-btn-primary">Подтвердить</button>
+        <button type="button" id="appConfirmCancel" class="app-confirm-btn app-confirm-btn-secondary" data-i18n="modal.cancel">Отмена</button>
+        <button type="button" id="appConfirmOk" class="app-confirm-btn app-confirm-btn-primary" data-i18n="modal.confirm">Подтвердить</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(modal);
+  window.RitmoriaI18n?.apply?.(modal);
 
   const resolveConfirm = (value) => {
     modal.classList.remove("active");
@@ -229,10 +252,10 @@ function ensureAppConfirmModal() {
 }
 
 function showAppConfirm({
-  title = "Подтвердите действие",
-  text = "Вы уверены?",
-  confirmText = "Подтвердить",
-  cancelText = "Отмена",
+  title = navbarT("modal.confirmTitle", "Подтвердите действие"),
+  text = navbarT("modal.confirmText", "Вы уверены?"),
+  confirmText = navbarT("modal.confirm", "Подтвердить"),
+  cancelText = navbarT("modal.cancel", "Отмена"),
   danger = false
 } = {}) {
   ensureAppConfirmModal();
@@ -341,6 +364,8 @@ async function loadNavbar() {
     const html = await res.text();
 
     container.innerHTML = html;
+    window.RitmoriaI18n?.initSwitchers?.(container);
+    window.RitmoriaI18n?.apply?.(container);
 
     const path = window.location.pathname;
     const isAuthPage = path.includes("login") || path.includes("register");
@@ -801,10 +826,10 @@ async function confirmLogout(e) {
   if (e) e.stopPropagation();
   closeNavbarProfileDropdown();
   const confirmed = await showAppConfirm({
-    title: "Выйти из аккаунта",
-    text: "Сессия завершится на этом устройстве.",
-    confirmText: "Выйти",
-    cancelText: "Остаться"
+    title: navbarT("modal.logoutTitle", "Выйти из аккаунта"),
+    text: navbarT("modal.logoutText", "Сессия завершится на этом устройстве."),
+    confirmText: navbarT("modal.logoutConfirm", "Выйти"),
+    cancelText: navbarT("modal.logoutCancel", "Остаться")
   });
   if (!confirmed) return;
   await performLogout();
@@ -878,7 +903,7 @@ function initSearch() {
       >
       <div class="navbar-search-info">
         <div class="navbar-search-name">${escapeSearchHtml(user.username || "No name")}</div>
-        <div class="navbar-search-meta">Исполнитель</div>
+        <div class="navbar-search-meta">${escapeSearchHtml(navbarT("nav.artist", "Исполнитель"))}</div>
       </div>
     </button>
   `;
@@ -895,7 +920,7 @@ function initSearch() {
           type="button"
           class="navbar-track-play"
           data-search-play-track='${escapeSearchHtml(JSON.stringify(track))}'
-          aria-label="Включить трек"
+          aria-label="${escapeSearchHtml(navbarT("nav.track", "Трек"))}"
         >
           <span class="navbar-track-play-circle">
             <span class="navbar-play-icon"></span>
@@ -905,7 +930,7 @@ function initSearch() {
       </div>
       <div class="navbar-search-info">
         <div class="navbar-search-name">${escapeSearchHtml(track.title || "Unknown track")}</div>
-        <div class="navbar-search-meta">Трек • ${escapeSearchHtml(renderTrackArtist(track))}</div>
+        <div class="navbar-search-meta">${escapeSearchHtml(navbarT("nav.track", "Трек"))} • ${escapeSearchHtml(renderTrackArtist(track))}</div>
       </div>
     </div>
   `;
@@ -920,7 +945,7 @@ function initSearch() {
 
     results.innerHTML = items.length
       ? items.join("")
-      : `<div class="navbar-search-empty">Ничего не найдено</div>`;
+      : `<div class="navbar-search-empty">${escapeSearchHtml(navbarT("nav.searchNothing", "Ничего не найдено"))}</div>`;
     results.classList.add("active");
   };
 
@@ -1068,6 +1093,10 @@ function highlightActivePage() {
   indicator.style.width = rect.width + "px";
   indicator.style.left = (rect.left - navRect.left) + "px";
 }
+
+window.addEventListener("ritmoria:language-change", () => {
+  updateSidebarRank(window.currentUser?.rank_state || window.currentUser?.xp || 0);
+});
 
 if (!navbarInitialized) {
   navbarInitialized = true;
