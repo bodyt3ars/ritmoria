@@ -107,6 +107,10 @@ html[data-theme] body {
     linear-gradient(180deg, var(--surface-0) 0%, #07080c 52%, var(--surface-0) 100%);
 }
 
+html[data-theme="rose"] body {
+  background: #07080c;
+}
+
 html[data-theme] ::selection {
   background: rgba(var(--theme-rgb), 0.34);
 }
@@ -124,6 +128,10 @@ html[data-theme] .video-background::after {
     radial-gradient(circle at 18% 12%, rgba(var(--theme-rgb), 0.13), transparent 28%),
     radial-gradient(circle at 78% 0%, rgba(var(--theme-strong-rgb), 0.045), transparent 22%),
     linear-gradient(180deg, rgba(7, 8, 12, 0.44), rgba(7, 8, 12, 0.92));
+}
+
+html[data-theme="rose"] .video-background::after {
+  background: rgba(7, 8, 12, 0.96);
 }
 
 html[data-theme] .navbar,
