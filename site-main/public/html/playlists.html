@@ -2,19 +2,19 @@
 
   <section class="playlists-screen" id="playlistsScreen">
     <div class="playlists-header">
-      <h1>Плейлисты</h1>
-      <button class="playlists-create-btn" type="button">+ Создать плейлист</button>
+      <h1 data-i18n-phrase="Плейлисты">Плейлисты</h1>
+      <button class="playlists-create-btn" type="button" data-i18n-phrase="+ Создать плейлист">+ Создать плейлист</button>
     </div>
 
     <div class="playlists-controls">
       <div class="playlists-tabs" role="tablist" aria-label="Разделы плейлистов">
-        <button class="playlists-tab active" type="button" data-playlists-tab="mine">Мои плейлисты</button>
-        <button class="playlists-tab" type="button" data-playlists-tab="public">Публичные плейлисты</button>
+        <button class="playlists-tab active" type="button" data-playlists-tab="mine" data-i18n-phrase="Мои плейлисты">Мои плейлисты</button>
+        <button class="playlists-tab" type="button" data-playlists-tab="public" data-i18n-phrase="Публичные плейлисты">Публичные плейлисты</button>
       </div>
 
       <label class="playlists-search">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="search" id="playlistSearch" placeholder="Поиск плейлиста по названию" autocomplete="off" />
+        <input type="search" id="playlistSearch" placeholder="Поиск плейлиста по названию" data-i18n-placeholder-phrase="Поиск плейлиста по названию" autocomplete="off" />
       </label>
     </div>
 
@@ -22,33 +22,33 @@
   </section>
 
   <section class="playlists-view playlists-hidden" id="playlistView">
-    <button class="playlists-back-btn" type="button">← Назад</button>
+    <button class="playlists-back-btn" type="button" data-i18n-phrase="← Назад">← Назад</button>
 
     <div class="playlists-view-header">
       <div class="playlists-cover-edit-wrap" id="playlistCoverEditWrap">
         <div class="playlists-cover playlists-cover-large" id="viewCover"></div>
         <button class="playlists-cover-edit-btn playlists-hidden" id="playlistCoverBtn" type="button">
           <i class="fa-regular fa-image"></i>
-          <span>Выбрать фото</span>
+          <span data-i18n-phrase="Выбрать фото">Выбрать фото</span>
         </button>
       </div>
 
       <div class="playlists-meta">
-        <p class="playlists-label">Плейлист</p>
+        <p class="playlists-label" data-i18n-phrase="Плейлист">Плейлист</p>
         <div class="playlists-title-row">
           <h2 id="viewTitle">Плейлист</h2>
-          <button class="playlists-title-edit-btn playlists-hidden" id="playlistRenameBtn" type="button" aria-label="Переименовать плейлист">
+          <button class="playlists-title-edit-btn playlists-hidden" id="playlistRenameBtn" type="button" aria-label="Переименовать плейлист" data-i18n-aria-phrase="Переименовать плейлист">
             <i class="fa-solid fa-pen"></i>
           </button>
         </div>
         <div class="playlists-view-badges" id="viewBadges"></div>
-        <p id="viewCount">0 треков</p>
+        <p id="viewCount" data-i18n-phrase="0 треков">0 треков</p>
       </div>
     </div>
 
     <div class="playlists-tracks-box">
       <div class="playlists-empty-tracks">
-        <p>Здесь пока нет треков</p>
+        <p data-i18n-phrase="Здесь пока нет треков">Здесь пока нет треков</p>
       </div>
     </div>
   </section>
@@ -57,18 +57,19 @@
     <div class="playlists-modal-overlay"></div>
 
     <div class="playlists-modal-content">
-      <h2>Новый плейлист</h2>
+      <h2 data-i18n-phrase="Новый плейлист">Новый плейлист</h2>
 
       <input
         type="text"
         id="playlistName"
         placeholder="Название плейлиста"
+        data-i18n-placeholder-phrase="Название плейлиста"
         maxlength="40"
       />
 
       <div class="playlists-modal-actions">
-        <button class="playlists-cancel-btn" type="button">Отмена</button>
-        <button class="playlists-save-btn" type="button">Создать</button>
+        <button class="playlists-cancel-btn" type="button" data-i18n-phrase="Отмена">Отмена</button>
+        <button class="playlists-save-btn" type="button" data-i18n-phrase="Создать">Создать</button>
       </div>
     </div>
   </div>

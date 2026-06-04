@@ -19,6 +19,11 @@ function setProfileComposerMode(active) {
   document.body.classList.toggle("profile-composer-open", Boolean(active));
 }
 
+function profileEditorPhrase(value) {
+  if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+  return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+}
+
 function openPostModal() {
   const modal = document.getElementById("postModal");
   if (modal) modal.style.display = "flex";
@@ -545,7 +550,7 @@ function openCreatePostModal() {
 
   const title = document.querySelector(".profile-post-modal-title");
   if (title) {
-    title.innerText = "Создать публикацию";
+    title.innerText = profileEditorPhrase("Создать публикацию");
   }
 
   modal.style.display = "flex";

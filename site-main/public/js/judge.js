@@ -35,6 +35,11 @@ function initJudgePage() {
   let scReady = false;
   let judgeCurrentUser = null;
 
+  function judgeT(value) {
+    if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+    return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+  }
+
   async function loadJudgeCurrentUser() {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -434,7 +439,7 @@ function initJudgePage() {
 
       const popup = document.createElement("div");
       popup.className = "rate-popup";
-      popup.textContent = "Оценка сохранена";
+      popup.textContent = judgeT("Оценка сохранена");
 
       document.body.appendChild(popup);
 

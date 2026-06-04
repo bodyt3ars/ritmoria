@@ -12,6 +12,17 @@ function opensEscapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function opensT(value) {
+  if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+  return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+}
+
+function formatOpenResponseCount(count) {
+  return window.RitmoriaI18n?.getLanguage?.() === "en"
+    ? `${count} responses`
+    : `${count} откликов`;
+}
+
 function formatOpenPlayerTime(seconds) {
   const safe = Math.max(0, Number(seconds || 0));
   const minutes = Math.floor(safe / 60);
@@ -39,7 +50,7 @@ function renderOpenCandidates(openItem) {
   if (!openItem.is_mine) return "";
   const candidates = Array.isArray(openItem.candidates) ? openItem.candidates : [];
   if (!candidates.length) {
-    return `<div class="opens-empty">Пока никто не откликнулся</div>`;
+    return `<div class="opens-empty">${opensT("Пока никто не откликнулся")}</div>`;
   }
 
   return `
@@ -52,10 +63,10 @@ function renderOpenCandidates(openItem) {
               <div class="opens-candidate-meta">@${opensEscapeHtml(candidate.username_tag || "")}</div>
             </div>
             ${candidate.status === "selected"
-              ? `<div class="opens-candidate-selected">Выбран</div>`
-              : `<button type="button" class="opens-select-btn" data-open-id="${openItem.id}" data-candidate-id="${candidate.user_id}">Выбрать</button>`}
+              ? `<div class="opens-candidate-selected">${opensT("Выбран")}</div>`
+              : `<button type="button" class="opens-select-btn" data-open-id="${openItem.id}" data-candidate-id="${candidate.user_id}">${opensT("Выбрать")}</button>`}
           </div>
-          <div class="opens-candidate-message">${opensEscapeHtml(candidate.message || "Без сообщения")}</div>
+          <div class="opens-candidate-message">${opensEscapeHtml(candidate.message || opensT("Без сообщения"))}</div>
         </div>
       `).join("")}
     </div>
@@ -73,7 +84,7 @@ function renderOpenCard(openItem) {
       <div class="opens-card-media">
         <div class="opens-audio-player" data-open-audio-player>
           <audio class="opens-audio-element" preload="metadata" src="${opensEscapeHtml(openItem.audio_url)}"></audio>
-          <button type="button" class="opens-audio-play" data-open-audio-play aria-label="Воспроизвести">
+          <button type="button" class="opens-audio-play" data-open-audio-play aria-label="${opensT("Воспроизвести")}">
             <i class="fa-solid fa-play"></i>
           </button>
           <div class="opens-audio-main">
@@ -84,7 +95,7 @@ function renderOpenCard(openItem) {
             </div>
             <input type="range" class="opens-audio-progress" data-open-audio-progress min="0" max="100" value="0">
           <div class="opens-audio-volume-row">
-              <button type="button" class="opens-audio-mute" data-open-audio-mute aria-label="Выключить звук">
+              <button type="button" class="opens-audio-mute" data-open-audio-mute aria-label="${opensT("Выключить звук")}">
                 <i class="fa-solid fa-volume-low"></i>
               </button>
               <input type="range" class="opens-audio-volume" data-open-audio-volume min="0" max="1" step="0.01" value="0.3">
@@ -98,12 +109,12 @@ function renderOpenCard(openItem) {
     <article class="opens-card" data-open-id="${openItem.id}">
       <div class="opens-card-head">
         <div>
-          <h3 class="opens-card-title">${opensEscapeHtml(openItem.title || "Опен")}</h3>
-          <div class="opens-card-owner">от <a href="/${opensEscapeHtml(openItem.username_tag || "")}" class="opens-card-owner-link" data-opens-profile="${opensEscapeHtml(openItem.username_tag || "")}">${opensEscapeHtml(openItem.username || openItem.username_tag || "user")}</a></div>
-          <div class="opens-card-meta">${openItem.status === "matched" ? "Участник уже выбран" : "Открыт для заявок"} · ${Number(openItem.candidates_count || 0)} откликов</div>
+          <h3 class="opens-card-title">${opensEscapeHtml(openItem.title || opensT("Опен"))}</h3>
+          <div class="opens-card-owner">${opensT("от")} <a href="/${opensEscapeHtml(openItem.username_tag || "")}" class="opens-card-owner-link" data-opens-profile="${opensEscapeHtml(openItem.username_tag || "")}">${opensEscapeHtml(openItem.username || openItem.username_tag || "user")}</a></div>
+          <div class="opens-card-meta">${openItem.status === "matched" ? opensT("Участник уже выбран") : opensT("Открыт для заявок")} · ${formatOpenResponseCount(Number(openItem.candidates_count || 0))}</div>
         </div>
       </div>
-      <div class="opens-card-description">${opensEscapeHtml(openItem.description || "Без описания")}</div>
+      <div class="opens-card-description">${opensEscapeHtml(openItem.description || opensT("Без описания"))}</div>
       ${media}
       ${audio}
       <div class="opens-card-tags">
@@ -111,10 +122,10 @@ function renderOpenCard(openItem) {
         ${openItem.looking_for ? `<span class="opens-chip">${opensEscapeHtml(openItem.looking_for)}</span>` : ""}
       </div>
       <div class="opens-card-actions">
-        ${isMine ? `<button type="button" class="opens-delete-btn" data-open-delete="${openItem.id}">Удалить опен</button>` : ""}
+        ${isMine ? `<button type="button" class="opens-delete-btn" data-open-delete="${openItem.id}">${opensT("Удалить опен")}</button>` : ""}
         ${!isMine && openItem.status === "open" ? `
-          <textarea class="opens-apply-message" placeholder="Напиши, почему именно ты залетишь сюда лучше всех"></textarea>
-          <button type="button" class="opens-apply-btn" data-open-apply="${openItem.id}">Предложить кандидатуру</button>
+          <textarea class="opens-apply-message" placeholder="${opensT("Напиши, почему именно ты залетишь сюда лучше всех")}"></textarea>
+          <button type="button" class="opens-apply-btn" data-open-apply="${openItem.id}">${opensT("Предложить кандидатуру")}</button>
         ` : ""}
       </div>
       ${renderOpenCandidates(openItem)}
@@ -154,17 +165,20 @@ async function loadOpens() {
 
   feed.innerHTML = opensState.items.length
     ? opensState.items.map(renderOpenCard).join("")
-    : `<div class="opens-empty">Пока опенов нет</div>`;
+    : `<div class="opens-empty">${opensT("Пока опенов нет")}</div>`;
 
   const myActivity = opensState.items.filter((item) => item.has_applied || Number(item.user_id) === Number(opensState.myUserId || 0));
   side.innerHTML = myActivity.length
     ? myActivity.map((item) => `
         <div class="opens-candidate-card">
-          <div><strong>${opensEscapeHtml(item.title || "Опен")}</strong></div>
-          <div class="opens-candidate-meta">${item.has_applied ? "Ты уже оставил заявку" : "Твой опен"}</div>
+          <div><strong>${opensEscapeHtml(item.title || opensT("Опен"))}</strong></div>
+          <div class="opens-candidate-meta">${item.has_applied ? opensT("Ты уже оставил заявку") : opensT("Твой опен")}</div>
         </div>
       `).join("")
-    : `<div class="opens-empty">Пока пусто</div>`;
+    : `<div class="opens-empty">${opensT("Пока пусто")}</div>`;
+
+  window.RitmoriaI18n?.apply?.(feed);
+  window.RitmoriaI18n?.apply?.(side);
 
   bindOpensInteractions();
 }
@@ -193,11 +207,11 @@ async function createOpen() {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (status) status.textContent = window.getApiErrorMessage?.(data, "Не удалось опубликовать опен") || "Не удалось опубликовать опен";
+    if (status) status.textContent = window.getApiErrorMessage?.(data, "Не удалось опубликовать опен") || opensT("Не удалось опубликовать опен");
     return;
   }
 
-  if (status) status.textContent = "Опен опубликован";
+  if (status) status.textContent = opensT("Опен опубликован");
   ["openTitle", "openDescription", "openGenre", "openLookingFor", "openSoundcloud"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
@@ -229,7 +243,7 @@ async function applyToOpen(openId, button) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert(window.getApiErrorMessage?.(data, "Не удалось отправить заявку") || "Не удалось отправить заявку");
+    alert(window.getApiErrorMessage?.(data, "Не удалось отправить заявку") || opensT("Не удалось отправить заявку"));
     return;
   }
 
@@ -250,7 +264,7 @@ async function selectCandidate(openId, candidateUserId) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert(window.getApiErrorMessage?.(data, "Не удалось выбрать участника") || "Не удалось выбрать участника");
+    alert(window.getApiErrorMessage?.(data, "Не удалось выбрать участника") || opensT("Не удалось выбрать участника"));
     return;
   }
   await loadOpens();
@@ -271,7 +285,7 @@ async function deleteOpen(openId) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert(window.getApiErrorMessage?.(data, "Не удалось удалить опен") || "Не удалось удалить опен");
+    alert(window.getApiErrorMessage?.(data, "Не удалось удалить опен") || opensT("Не удалось удалить опен"));
     return;
   }
 
@@ -340,7 +354,7 @@ function bindOpensInteractions() {
           ? "fa-solid fa-volume-xmark"
           : (audio.volume < 0.5 ? "fa-solid fa-volume-low" : "fa-solid fa-volume-high");
       }
-      muteBtn.setAttribute("aria-label", muted ? "Включить звук" : "Выключить звук");
+      muteBtn.setAttribute("aria-label", muted ? opensT("Включить звук") : opensT("Выключить звук"));
     };
 
     audio.volume = 0.3;
@@ -415,7 +429,7 @@ function updateSelectedOpenFiles() {
   const audioName = document.getElementById("openAudioName");
 
   if (audioName) {
-    audioName.textContent = audioInput?.files?.[0]?.name || "Файл не выбран";
+    audioName.textContent = audioInput?.files?.[0]?.name || opensT("Файл не выбран");
   }
 }
 

@@ -35,6 +35,17 @@
     return "guest";
   }
 
+  function playerT(value) {
+    if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+    return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+  }
+
+  function formatPlayerTrackCount(count) {
+    return window.RitmoriaI18n?.getLanguage?.() === "en"
+      ? `${count} tracks`
+      : `${count} треков`;
+  }
+
   function getPlaylistsStorageKey() {
     return `ritmoria_playlists_user_${getCurrentUserId()}`;
   }
@@ -63,7 +74,7 @@
 
     return {
       id: Number(track.id) || 0,
-      title: track.title || "Без названия",
+      title: track.title || playerT("Без названия"),
       artist: track.artist || "Unknown artist",
       artist_mentions: Array.isArray(track.artist_mentions) ? track.artist_mentions : [],
       cover: track.cover || "/images/default-cover.jpg",
@@ -105,7 +116,7 @@
       favorites,
       ...others.map((p) => ({
         id: p.id || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        name: p.name || "Без названия",
+        name: p.name || playerT("Без названия"),
         system: !!p.system,
         public: p.system ? false : (p.public === true || p.is_public === true),
         cover: p.cover || "",
@@ -167,7 +178,7 @@
 
       merged.set(playlistId, {
         id: playlistId,
-        name: isFavorites ? "Любимые треки" : (preferredName || fallbackName || "Без названия"),
+        name: isFavorites ? "Любимые треки" : (preferredName || fallbackName || playerT("Без названия")),
         system: isFavorites || !!playlist.system || !!secondaryPlaylist?.system,
         public: isPublic,
         cover: preferredCover || fallbackCover || "",
@@ -1246,12 +1257,12 @@
     function renderQueueTrack(track, options = {}) {
       const { index = 0, mode = "queue", current = false } = options;
       const cover = escapeHtml(track?.cover || "/images/default-cover.jpg");
-      const title = escapeHtml(track?.title || "Без названия");
+      const title = escapeHtml(track?.title || playerT("Без названия"));
       const artist = renderPlayerArtistMarkup(track, { clickable: true });
 
       return `
         <div class="gp-queue-track ${current ? "is-current" : ""}" data-queue-mode="${mode}" data-queue-index="${index}">
-          <button class="gp-queue-track-play" type="button" title="${current ? "Сейчас играет" : "Включить"}">
+          <button class="gp-queue-track-play" type="button" title="${current ? playerT("Сейчас играет") : playerT("Включить")}">
             <i class="fa-solid ${current ? "fa-volume-high" : "fa-play"}"></i>
           </button>
 
@@ -1263,7 +1274,7 @@
           </div>
 
           ${mode === "queue" ? `
-            <button class="gp-queue-track-remove" type="button" title="Убрать из очереди">
+            <button class="gp-queue-track-remove" type="button" title="${playerT("Убрать из очереди")}">
               <i class="fa-solid fa-xmark"></i>
             </button>
           ` : ""}
@@ -1286,26 +1297,26 @@
         queueContent.innerHTML = recent.length
           ? `
             <div class="gp-queue-section">
-              <div class="gp-queue-section-title">Недавно слушали</div>
+              <div class="gp-queue-section-title">${playerT("Недавно слушали")}</div>
               ${recent.map((track, index) => renderQueueTrack(track, { index, mode: "recent" })).join("")}
             </div>
           `
-          : `<div class="gp-queue-empty">История появится после прослушивания нескольких треков.</div>`;
+          : `<div class="gp-queue-empty">${playerT("История появится после прослушивания нескольких треков.")}</div>`;
       } else {
         queueContent.innerHTML = `
           <div class="gp-queue-section">
-            <div class="gp-queue-section-title">Сейчас играет</div>
-            ${current ? renderQueueTrack(current, { current: true, mode: "current" }) : `<div class="gp-queue-empty">Пока ничего не играет.</div>`}
+            <div class="gp-queue-section-title">${playerT("Сейчас играет")}</div>
+            ${current ? renderQueueTrack(current, { current: true, mode: "current" }) : `<div class="gp-queue-empty">${playerT("Пока ничего не играет.")}</div>`}
           </div>
 
           <div class="gp-queue-section">
             <div class="gp-queue-section-row">
-              <div class="gp-queue-section-title">Дальше</div>
-              ${queue.length ? `<button id="gp-queue-clear" class="gp-queue-clear" type="button">Очистить</button>` : ""}
+              <div class="gp-queue-section-title">${playerT("Дальше")}</div>
+              ${queue.length ? `<button id="gp-queue-clear" class="gp-queue-clear" type="button">${playerT("Очистить")}</button>` : ""}
             </div>
             ${queue.length
               ? queue.map((track, index) => renderQueueTrack(track, { index, mode: "queue" })).join("")
-              : `<div class="gp-queue-empty">Добавь треки через меню, и они появятся здесь.</div>`
+              : `<div class="gp-queue-empty">${playerT("Добавь треки через меню, и они появятся здесь.")}</div>`
             }
           </div>
         `;
@@ -1492,8 +1503,8 @@
           data-playlist-id="favorites"
         >
           <div class="gp-playlist-item-left">
-            <div class="gp-playlist-item-title">Любимые треки</div>
-            <div class="gp-playlist-item-count">${count} треков</div>
+            <div class="gp-playlist-item-title">${playerT("Любимые треки")}</div>
+            <div class="gp-playlist-item-count">${formatPlayerTrackCount(count)}</div>
           </div>
         </button>
       `;
@@ -1510,7 +1521,7 @@
       ensurePlaylistApi();
 
       if (!window.RitmoriaPlaylists) {
-        playlistList.innerHTML = `<div class="gp-playlist-empty">Система плейлистов не загружена</div>`;
+        playlistList.innerHTML = `<div class="gp-playlist-empty">${playerT("Система плейлистов не загружена")}</div>`;
         return;
       }
 
@@ -1527,7 +1538,7 @@
       });
 
       if (!filtered.length) {
-        playlistList.innerHTML = `<div class="gp-playlist-empty">Других плейлистов пока нет</div>`;
+        playlistList.innerHTML = `<div class="gp-playlist-empty">${playerT("Других плейлистов пока нет")}</div>`;
         return;
       }
 
@@ -1545,8 +1556,8 @@
               data-playlist-id="${playlist.id}"
             >
               <div class="gp-playlist-item-left">
-                <div class="gp-playlist-item-title">${playlist.name}</div>
-                <div class="gp-playlist-item-count">${count} треков</div>
+                <div class="gp-playlist-item-title">${escapeHtml(playlist.name)}</div>
+                <div class="gp-playlist-item-count">${formatPlayerTrackCount(count)}</div>
               </div>
             </button>
           `;

@@ -762,7 +762,60 @@
     "Приватный": "Private",
     "Дата добавления": "Date added",
     "Длительность": "Duration",
-    "Дополнительное действие": "More action"
+    "Дополнительное действие": "More action",
+    "Без названия": "Untitled",
+    "У тебя пока нет плейлистов": "You do not have any playlists yet",
+    "Создай первый и добавляй любимые треки": "Create the first one and add favorite tracks",
+    "Загружаем публичные плейлисты": "Loading public playlists",
+    "Собираем подборки пользователей": "Collecting user selections",
+    "Попробуй другое название публичного плейлиста": "Try another public playlist name",
+    "Попробуй другое название среди своих плейлистов": "Try another name among your playlists",
+    "Настройки плейлиста": "Playlist settings",
+    "Системный плейлист": "System playlist",
+    "Сделать приватным": "Make private",
+    "Сделать публичным": "Make public",
+    "Изменить название": "Rename",
+    "Изменить обложку": "Change cover",
+    "Удалить": "Delete",
+    "Удалить трек": "Delete track",
+    "Слушать плейлист": "Listen to playlist",
+    "от": "by",
+    "Регистрация": "Sign up",
+    "Вход": "Log in",
+    "Смена пароля": "Change password",
+    "Установка пароля": "Set password",
+    "Повторите пароль": "Repeat password",
+    "Сменить пароль": "Change password",
+    "Установить пароль": "Set password",
+    "У этого аккаунта пока нет пароля. Задай его один раз, и потом сможешь входить не только через Telegram.": "This account does not have a password yet. Set it once, then you can log in without Telegram too.",
+    "Смена почты": "Change email",
+    "Текущая почта:": "Current email:",
+    "не привязана": "not connected",
+    "Отправить код": "Send code",
+    "Код": "Code",
+    "Ошибка загрузки": "Loading failed",
+    "Настройки сохранены.": "Settings saved.",
+    "Настройки сохранены": "Settings saved",
+    "Введи текущий пароль": "Enter current password",
+    "Введи новый пароль": "Enter a new password",
+    "Новый пароль должен быть минимум 8 символов": "New password must be at least 8 characters",
+    "Неверный текущий пароль": "Wrong current password",
+    "У этого аккаунта пока нет пароля. Сначала установи его.": "This account has no password yet. Set one first.",
+    "Ошибка смены пароля": "Password change failed",
+    "Введи новую почту": "Enter a new email",
+    "Неверный формат почты": "Invalid email format",
+    "Код отправлен на почту": "Code sent to email",
+    "Профиль сохранён": "Profile saved"
+    ,
+    "Включить": "Play",
+    "Убрать из очереди": "Remove from queue",
+    "Недавно слушали": "Recently played",
+    "История появится после прослушивания нескольких треков.": "History will appear after you listen to a few tracks.",
+    "Пока ничего не играет.": "Nothing is playing yet.",
+    "Добавь треки через меню, и они появятся здесь.": "Add tracks through the menu and they will appear here.",
+    "Очистить": "Clear",
+    "Система плейлистов не загружена": "Playlist system is not loaded",
+    "Других плейлистов пока нет": "No other playlists yet"
   };
 
   function normalizeLanguage(language) {
@@ -788,12 +841,20 @@
     const ariaKey = element.dataset.i18nAriaLabel;
     const titleKey = element.dataset.i18nTitle;
     const altKey = element.dataset.i18nAlt;
+    const phrase = element.dataset.i18nPhrase;
+    const placeholderPhrase = element.dataset.i18nPlaceholderPhrase;
+    const titlePhrase = element.dataset.i18nTitlePhrase;
+    const ariaPhrase = element.dataset.i18nAriaPhrase;
 
     if (textKey) element.textContent = t(textKey, element.textContent);
     if (placeholderKey) element.setAttribute("placeholder", t(placeholderKey, element.getAttribute("placeholder") || ""));
     if (ariaKey) element.setAttribute("aria-label", t(ariaKey, element.getAttribute("aria-label") || ""));
     if (titleKey) element.setAttribute("title", t(titleKey, element.getAttribute("title") || ""));
     if (altKey) element.setAttribute("alt", t(altKey, element.getAttribute("alt") || ""));
+    if (phrase) element.textContent = currentLanguage === DEFAULT_LANGUAGE ? phrase : translatePhrase(phrase);
+    if (placeholderPhrase) element.setAttribute("placeholder", currentLanguage === DEFAULT_LANGUAGE ? placeholderPhrase : translatePhrase(placeholderPhrase));
+    if (titlePhrase) element.setAttribute("title", currentLanguage === DEFAULT_LANGUAGE ? titlePhrase : translatePhrase(titlePhrase));
+    if (ariaPhrase) element.setAttribute("aria-label", currentLanguage === DEFAULT_LANGUAGE ? ariaPhrase : translatePhrase(ariaPhrase));
   }
 
   function translatePhrase(value) {
@@ -927,7 +988,7 @@
     document.documentElement.lang = currentLanguage;
     document.documentElement.dataset.language = currentLanguage;
 
-    root.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-aria-label], [data-i18n-title], [data-i18n-alt]").forEach(translateElement);
+    root.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-aria-label], [data-i18n-title], [data-i18n-alt], [data-i18n-phrase], [data-i18n-placeholder-phrase], [data-i18n-title-phrase], [data-i18n-aria-phrase]").forEach(translateElement);
     root.querySelectorAll("[data-language-option]").forEach((button) => {
       const isActive = button.dataset.languageOption === currentLanguage;
       button.classList.toggle("active", isActive);

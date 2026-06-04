@@ -59,6 +59,11 @@ function initTrackPage() {
     { key: "memory_avg", label: "Запоминаемость" }
   ];
 
+  function trackT(value) {
+    if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+    return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+  }
+
   function formatTime(sec) {
     if (!sec || Number.isNaN(sec)) return "0:00";
     const m = Math.floor(sec / 60);
@@ -342,7 +347,7 @@ function initTrackPage() {
       row.className = "track-page-criterion-row";
 
       row.innerHTML = `
-        <div class="track-page-criterion-title">${c.label}</div>
+        <div class="track-page-criterion-title">${trackT(c.label)}</div>
         <div class="track-page-criterion-bar">
           <div class="track-page-criterion-fill" style="width:${percent}%"></div>
         </div>

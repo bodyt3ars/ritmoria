@@ -83,6 +83,17 @@ window.initPlaylistsPage = async function () {
       .replaceAll("'", "&#039;");
   }
 
+  function playlistsT(value) {
+    if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+    return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+  }
+
+  function formatTrackCount(count) {
+    return window.RitmoriaI18n?.getLanguage?.() === "en"
+      ? `${count} tracks`
+      : `${count} треков`;
+  }
+
   function formatTime(sec) {
     const safe = Number(sec) || 0;
     const m = Math.floor(safe / 60);
@@ -91,26 +102,30 @@ window.initPlaylistsPage = async function () {
   }
 
   function formatAddedDate(value) {
-    if (!value) return "Недавно";
+    if (!value) return playlistsT("Недавно");
 
     try {
       const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return "Недавно";
+      if (Number.isNaN(date.getTime())) return playlistsT("Недавно");
 
       const diffMs = Date.now() - date.getTime();
       const diffDays = Math.floor(diffMs / 86400000);
 
-      if (diffDays <= 0) return "Сегодня";
-      if (diffDays === 1) return "Вчера";
-      if (diffDays < 7) return `${diffDays} дн. назад`;
+      if (diffDays <= 0) return playlistsT("Сегодня");
+      if (diffDays === 1) return playlistsT("Вчера");
+      if (diffDays < 7) {
+        return window.RitmoriaI18n?.getLanguage?.() === "en"
+          ? `${diffDays} days ago`
+          : `${diffDays} дн. назад`;
+      }
 
-      return date.toLocaleDateString("ru-RU", {
+      return date.toLocaleDateString(window.RitmoriaI18n?.getLanguage?.() === "en" ? "en-US" : "ru-RU", {
         day: "numeric",
         month: "short",
         year: "numeric"
       });
     } catch {
-      return "Недавно";
+      return playlistsT("Недавно");
     }
   }
 
@@ -174,7 +189,7 @@ window.initPlaylistsPage = async function () {
 
     return {
       id: Number(track.id) || 0,
-      title: track.title || "Без названия",
+      title: track.title || playlistsT("Без названия"),
       artist: track.artist || "Unknown artist",
       cover,
       audioSrc,
@@ -213,7 +228,7 @@ window.initPlaylistsPage = async function () {
 
     return [favorites, ...others.map((p) => ({
       id: p.id || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      name: p.name || "Без названия",
+      name: p.name || playlistsT("Без названия"),
       system: !!p.system,
       public: p.system ? false : (p.public === true || p.is_public === true),
       cover: p.cover || "",
@@ -578,14 +593,14 @@ window.initPlaylistsPage = async function () {
 
   function renderPlaylistVisibilityBadge(playlist) {
     if (playlist?.system) {
-      return `<span class="playlists-badge playlists-badge-muted"><i class="fa-solid fa-star"></i> Системный</span>`;
+      return `<span class="playlists-badge playlists-badge-muted"><i class="fa-solid fa-star"></i> ${playlistsT("Системный")}</span>`;
     }
 
     if (playlist?.public) {
-      return `<span class="playlists-badge playlists-badge-public"><i class="fa-solid fa-globe"></i> Публичный</span>`;
+      return `<span class="playlists-badge playlists-badge-public"><i class="fa-solid fa-globe"></i> ${playlistsT("Публичный")}</span>`;
     }
 
-    return `<span class="playlists-badge playlists-badge-private"><i class="fa-solid fa-lock"></i> Приватный</span>`;
+    return `<span class="playlists-badge playlists-badge-private"><i class="fa-solid fa-lock"></i> ${playlistsT("Приватный")}</span>`;
   }
 
   function renderTrackRow(track, playlistId, index, { canEdit = true } = {}) {
@@ -603,7 +618,7 @@ window.initPlaylistsPage = async function () {
             class="playlist-track-play-btn"
             type="button"
             onclick="window.__togglePlaylistTrackPlayback('${escapeHtml(playlistId)}', ${Number(track.id)})"
-            aria-label="Слушать ${escapeHtml(track.title)}"
+            aria-label="${playlistsT("Слушать")} ${escapeHtml(track.title)}"
           >
             <i class="fa-solid ${isActive && isPlaying ? "fa-pause" : "fa-play"}"></i>
           </button>
@@ -641,7 +656,7 @@ window.initPlaylistsPage = async function () {
               class="playlist-track-remove-btn"
               type="button"
               onclick="window.__removeTrackFromPlaylistView('${escapeHtml(playlistId)}', ${Number(track.id)})"
-              aria-label="Удалить трек"
+              aria-label="${playlistsT("Удалить трек")}"
             >
               <i class="fa-regular fa-trash-can"></i>
             </button>
@@ -659,7 +674,7 @@ window.initPlaylistsPage = async function () {
     if (!playlist.tracks.length) {
       tracksBox.innerHTML = `
         <div class="playlists-empty-tracks">
-          <p>Здесь пока нет треков</p>
+          <p>${playlistsT("Здесь пока нет треков")}</p>
         </div>
       `;
       return;
@@ -684,14 +699,14 @@ window.initPlaylistsPage = async function () {
             class="playlists-toolbar-icon"
             type="button"
             onclick="window.__playlistSecondaryAction('${escapeHtml(playlist.id)}')"
-            title="Дополнительное действие"
+            title="${playlistsT("Дополнительное действие")}"
           >
             <i class="fa-solid fa-plus"></i>
           </button>
         </div>
 
         <div class="playlists-toolbar-meta">
-          <span>${playlist.tracks.length} треков</span>
+          <span>${formatTrackCount(playlist.tracks.length)}</span>
           <span>•</span>
           <span>${totalDuration}</span>
         </div>
@@ -700,9 +715,9 @@ window.initPlaylistsPage = async function () {
       <div class="playlist-tracks-table">
         <div class="playlist-tracks-head">
           <div>#</div>
-          <div>Название</div>
-          <div>Дата добавления</div>
-          <div>Длительность</div>
+          <div>${playlistsT("Название")}</div>
+          <div>${playlistsT("Дата добавления")}</div>
+          <div>${playlistsT("Длительность")}</div>
         </div>
 
         <div class="playlist-tracks-list">
@@ -722,8 +737,8 @@ window.initPlaylistsPage = async function () {
 
     if (!playlist) return;
 
-    viewTitle.textContent = playlist.name;
-    viewCount.textContent = `${getPlaylistTrackCount(playlist)} треков • ${formatPlaylistDuration(getPlaylistDuration(playlist))}`;
+    viewTitle.textContent = playlist.id === "favorites" ? playlistsT("Любимые треки") : playlist.name;
+    viewCount.textContent = `${formatTrackCount(getPlaylistTrackCount(playlist))} • ${formatPlaylistDuration(getPlaylistDuration(playlist))}`;
     playlistRenameBtn.classList.toggle("playlists-hidden", !canEditPlaylist);
     playlistCoverBtn.classList.toggle("playlists-hidden", !canEditPlaylist);
     playlistCoverEditWrap.classList.toggle("is-editable", canEditPlaylist);
@@ -732,13 +747,13 @@ window.initPlaylistsPage = async function () {
       ${canEditPlaylist ? `
         <button class="playlists-visibility-toggle" type="button" onclick="window.__togglePlaylistVisibility('${escapeHtml(playlist.id)}')">
           <i class="fa-solid ${playlist.public ? "fa-lock" : "fa-globe"}"></i>
-          ${playlist.public ? "Сделать приватным" : "Сделать публичным"}
+          ${playlist.public ? playlistsT("Сделать приватным") : playlistsT("Сделать публичным")}
         </button>
       ` : ""}
       ${externalPlaylist?.owner ? `
         <span class="playlists-badge playlists-badge-owner">
           <i class="fa-regular fa-user"></i>
-          ${escapeHtml(externalPlaylist.owner.username || externalPlaylist.owner.username_tag || "Автор")}
+          ${escapeHtml(externalPlaylist.owner.username || externalPlaylist.owner.username_tag || playlistsT("Автор"))}
         </span>
       ` : ""}
     `;
@@ -768,8 +783,8 @@ window.initPlaylistsPage = async function () {
             <path d="M29,16.5A13.08,13.08,0,0,0,25.7,8l0.7-.73L26,6.92A14.42,14.42,0,0,0,16,3,14.42,14.42,0,0,0,6,6.92L5.6,7.26,6.3,8A13.08,13.08,0,0,0,3,16.5a10.57,10.57,0,0,0,3,7.69V27H8a2,2,0,0,0,4,0V19a2,2,0,0,0-4,0H6v3.67A9.7,9.7,0,0,1,4,16.5,12,12,0,0,1,7,8.72L7.67,9.43,8,9.08A11.25,11.25,0,0,1,16,6a11.25,11.25,0,0,1,8,3.08l0.36,0.35L25,8.72a12,12,0,0,1,3,7.78,9.7,9.7,0,0,1-2,6.17V19H24a2,2,0,0,0-4,0v8a2,2,0,0,0,4,0h2V24.19A10.57,10.57,0,0,0,29,16.5ZM10,18a1,1,0,0,1,1,1v8a1,1,0,0,1-2,0V19A1,1,0,0,1,10,18ZM7,20H8v6H7V20ZM24.29,8A12.26,12.26,0,0,0,16,5,12.26,12.26,0,0,0,7.71,8L7,7.3A13.47,13.47,0,0,1,16,4a13.47,13.47,0,0,1,9,3.3ZM22,28a1,1,0,0,1-1-1V19a1,1,0,0,1,2,0v8A1,1,0,0,1,22,28Zm3-2H24V20h1v6Z"></path>
           </svg>
         </div>
-        <h3>У тебя пока нет плейлистов</h3>
-        <p>Создай первый и добавляй любимые треки</p>
+        <h3>${playlistsT("У тебя пока нет плейлистов")}</h3>
+        <p>${playlistsT("Создай первый и добавляй любимые треки")}</p>
       </div>
     `;
   }
@@ -786,8 +801,8 @@ window.initPlaylistsPage = async function () {
       grid.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
-          <h3>Загружаем публичные плейлисты</h3>
-          <p>Собираем подборки пользователей</p>
+          <h3>${playlistsT("Загружаем публичные плейлисты")}</h3>
+          <p>${playlistsT("Собираем подборки пользователей")}</p>
         </div>
       `;
       return;
@@ -814,8 +829,8 @@ window.initPlaylistsPage = async function () {
       grid.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
-          <h3>Ничего не найдено</h3>
-          <p>${activePlaylistsTab === "public" ? "Попробуй другое название публичного плейлиста" : "Попробуй другое название среди своих плейлистов"}</p>
+          <h3>${playlistsT("Ничего не найдено")}</h3>
+          <p>${activePlaylistsTab === "public" ? playlistsT("Попробуй другое название публичного плейлиста") : playlistsT("Попробуй другое название среди своих плейлистов")}</p>
         </div>
       `;
       return;
@@ -833,7 +848,7 @@ window.initPlaylistsPage = async function () {
       card.innerHTML = `
         ${!isExternal ? `
           <div class="playlist-menu">
-            <button class="playlists-menu-btn" type="button" aria-label="Настройки плейлиста">
+            <button class="playlists-menu-btn" type="button" aria-label="${playlistsT("Настройки плейлиста")}">
               <span class="menu-dots">
                 <span></span>
                 <span></span>
@@ -847,28 +862,28 @@ window.initPlaylistsPage = async function () {
                   ? `
                     <button class="playlists-menu-item system-label" type="button" disabled>
                       <span class="menu-icon"><i class="fa-solid fa-star"></i></span>
-                      <span>Системный плейлист</span>
+                      <span>${playlistsT("Системный плейлист")}</span>
                     </button>
                   `
                   : `
                     <button class="playlists-menu-item visibility-action" type="button">
                       <span class="menu-icon"><i class="fa-solid ${playlist.public ? "fa-lock" : "fa-globe"}"></i></span>
-                      <span>${playlist.public ? "Сделать приватным" : "Сделать публичным"}</span>
+                      <span>${playlist.public ? playlistsT("Сделать приватным") : playlistsT("Сделать публичным")}</span>
                     </button>
 
                     <button class="playlists-menu-item rename" type="button">
                       <span class="menu-icon"><i class="fa-solid fa-pen"></i></span>
-                      <span>Изменить название</span>
+                      <span>${playlistsT("Изменить название")}</span>
                     </button>
 
                     <button class="playlists-menu-item cover-action" type="button">
                       <span class="menu-icon"><i class="fa-regular fa-image"></i></span>
-                      <span>Изменить обложку</span>
+                      <span>${playlistsT("Изменить обложку")}</span>
                     </button>
 
                     <button class="playlists-menu-item delete" type="button">
                       <span class="menu-icon"><i class="fa-regular fa-trash-can"></i></span>
-                      <span>Удалить</span>
+                      <span>${playlistsT("Удалить")}</span>
                     </button>
                   `
               }
@@ -881,7 +896,7 @@ window.initPlaylistsPage = async function () {
           <button
             class="playlist-card-play-btn ${isPlaylistPlaying ? "is-playing" : ""}"
             type="button"
-            aria-label="Слушать плейлист ${escapeHtml(playlist.name)}"
+            aria-label="${playlistsT("Слушать плейлист")} ${escapeHtml(playlist.name)}"
           >
             <i class="fa-solid ${isPlaylistPlaying ? "fa-pause" : "fa-play"}"></i>
           </button>
@@ -889,8 +904,8 @@ window.initPlaylistsPage = async function () {
         <div class="playlist-card-meta-row">
           ${renderPlaylistVisibilityBadge(playlist)}
         </div>
-        <h3>${escapeHtml(playlist.name)}</h3>
-        <p>${count} треков${isExternal && playlist.owner?.username ? ` • ${escapeHtml(playlist.owner.username)}` : ""}</p>
+        <h3>${escapeHtml(playlist.id === "favorites" ? playlistsT("Любимые треки") : playlist.name)}</h3>
+        <p>${formatTrackCount(count)}${isExternal && playlist.owner?.username ? ` • ${escapeHtml(playlist.owner.username)}` : ""}</p>
       `;
 
       const menu = card.querySelector(".playlist-menu");

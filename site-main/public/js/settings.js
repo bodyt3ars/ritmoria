@@ -16,6 +16,11 @@ function settingsEscapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function settingsT(value) {
+  if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+  return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+}
+
 function setSettingsModalMode(open) {
   document.body.classList.toggle("settings-modal-open", !!open);
 }
@@ -27,7 +32,7 @@ function setCollectivePreviewState(name = "") {
 
   const hasName = Boolean(String(name || "").trim());
   badge.classList.toggle("settings-badge-preview-empty", !hasName);
-  badgeName.textContent = hasName ? String(name).trim() : "Твоё объединение";
+  badgeName.textContent = hasName ? String(name).trim() : settingsT("Твоё объединение");
 }
 
 const settingsCollectiveExpandedIds = new Set();
@@ -687,7 +692,7 @@ async function saveCommunicationSettings() {
       throw new Error("communication_settings_save_failed");
     }
 
-    if (success) success.innerText = "Настройки сохранены.";
+    if (success) success.innerText = settingsT("Настройки сохранены.");
     await window.loadNavbarNotifications?.();
     await window.loadNavbarMessagesBadge?.();
   } catch (err) {
@@ -1088,7 +1093,7 @@ async function openSettingsSection(type) {
   modal.style.display = "flex";
 
 if (type === "archive") {
-  title.innerText = "Архив";
+  title.innerText = settingsT("Архив");
 
   body.innerHTML = `
     <div class="settings-archive-tabs">
@@ -1129,7 +1134,7 @@ if (type === "archive") {
 }
 
   if (type === "privacy") {
-    title.innerText = "Конфиденциальность";
+    title.innerText = settingsT("Конфиденциальность");
 
     try {
       const token = settingsGetToken();
@@ -1153,36 +1158,36 @@ if (type === "archive") {
 <div class="privacy-section">
 
   <div class="privacy-block">
-    <div class="privacy-title">🔐 ${hasPassword ? "Смена пароля" : "Установка пароля"}</div>
+    <div class="privacy-title">🔐 ${hasPassword ? settingsT("Смена пароля") : settingsT("Установка пароля")}</div>
 
     ${
       hasPassword
         ? `
     <div class="privacy-row privacy-row-inputs">
-  <input id="currentPassword" type="password" placeholder="Текущий пароль" class="privacy-input">
-  <input id="newPassword" type="password" placeholder="Новый пароль" class="privacy-input">
-  <input id="newPassword2" type="password" placeholder="Повторите пароль" class="privacy-input">
+  <input id="currentPassword" type="password" placeholder="${settingsT("Текущий пароль")}" class="privacy-input">
+  <input id="newPassword" type="password" placeholder="${settingsT("Новый пароль")}" class="privacy-input">
+  <input id="newPassword2" type="password" placeholder="${settingsT("Повторите пароль")}" class="privacy-input">
 </div>
 
 <div class="privacy-row privacy-row-btn">
   <button onclick="changePassword()" class="privacy-btn">
-    Сменить пароль
+    ${settingsT("Сменить пароль")}
   </button>
 </div>
         `
         : `
     <div class="privacy-info">
-      У этого аккаунта пока нет пароля. Задай его один раз, и потом сможешь входить не только через Telegram.
+      ${settingsT("У этого аккаунта пока нет пароля. Задай его один раз, и потом сможешь входить не только через Telegram.")}
     </div>
 
     <div class="privacy-row privacy-row-inputs">
-      <input id="newPassword" type="password" placeholder="Новый пароль" class="privacy-input">
-      <input id="newPassword2" type="password" placeholder="Повторите пароль" class="privacy-input">
+      <input id="newPassword" type="password" placeholder="${settingsT("Новый пароль")}" class="privacy-input">
+      <input id="newPassword2" type="password" placeholder="${settingsT("Повторите пароль")}" class="privacy-input">
     </div>
 
     <div class="privacy-row privacy-row-btn">
       <button onclick="setPassword()" class="privacy-btn">
-        Установить пароль
+        ${settingsT("Установить пароль")}
       </button>
     </div>
         `
@@ -1194,24 +1199,24 @@ if (type === "archive") {
 
 
   <div class="privacy-block">
-    <div class="privacy-title">📧 Смена почты</div>
+    <div class="privacy-title">📧 ${settingsT("Смена почты")}</div>
 
     <div class="privacy-info">
-      Текущая почта: ${currentEmail || "не привязана"}
+      ${settingsT("Текущая почта:")} ${currentEmail || settingsT("не привязана")}
     </div>
 
     <div class="privacy-row">
-      <input id="newEmail" type="email" placeholder="Новая почта" class="privacy-input">
+      <input id="newEmail" type="email" placeholder="${settingsT("Новая почта")}" class="privacy-input">
       <button onclick="sendEmailCode()" class="privacy-btn">
-        Отправить код
+        ${settingsT("Отправить код")}
       </button>
     </div>
 
     <div id="emailCodeBlock" style="display:none; margin-top:10px;">
-      <input id="emailCode" placeholder="Код" class="privacy-input">
+      <input id="emailCode" placeholder="${settingsT("Код")}" class="privacy-input">
 
       <button onclick="confirmEmailChange()" class="privacy-btn" style="margin-top:10px;">
-        Подтвердить
+        ${settingsT("Подтвердить")}
       </button>
     </div>
 
@@ -1221,29 +1226,30 @@ if (type === "archive") {
 
 </div>
 `;
+      window.RitmoriaI18n?.apply?.(body);
       
     } catch (err) {
       console.log("openSettings privacy error:", err);
-      body.innerHTML = `<p>Ошибка загрузки</p>`;
+      body.innerHTML = `<p>${settingsT("Ошибка загрузки")}</p>`;
     }
 
     return;
   }
 
   if (type === "saved") {
-    title.innerText = "Сохранённые";
+    title.innerText = settingsT("Сохранённые");
     loadSavedPosts();
     return;
   }
 
   if (type === "likes") {
-    title.innerText = "Лайки";
+    title.innerText = settingsT("Лайки");
     loadLikedPosts();
     return;
   }
 
   if (type === "communication") {
-    title.innerText = "Сообщения и уведомления";
+    title.innerText = settingsT("Сообщения и уведомления");
     loadCommunicationSection();
     return;
   }
@@ -1255,13 +1261,13 @@ if (type === "archive") {
   }
 
   if (type === "achievements") {
-    title.innerText = "Достижения";
+    title.innerText = settingsT("Достижения");
     loadAchievementsSection();
     return;
   }
 
   if (type === "delete-account") {
-    title.innerText = "Удалить аккаунт";
+    title.innerText = settingsT("Удалить аккаунт");
     loadDeleteAccountSection();
   }
 }
@@ -1291,17 +1297,17 @@ async function changePassword() {
   if (passwordSuccess) passwordSuccess.innerText = "";
 
   if (!currentPassword) {
-    if (passwordError) passwordError.innerText = "Введи текущий пароль";
+    if (passwordError) passwordError.innerText = settingsT("Введи текущий пароль");
     return;
   }
 
   if (!newPassword) {
-    if (passwordError) passwordError.innerText = "Введи новый пароль";
+    if (passwordError) passwordError.innerText = settingsT("Введи новый пароль");
     return;
   }
 
   if (newPassword.length < 8) {
-    if (passwordError) passwordError.innerText = "Новый пароль должен быть минимум 8 символов";
+    if (passwordError) passwordError.innerText = settingsT("Новый пароль должен быть минимум 8 символов");
     return;
   }
 
@@ -1330,11 +1336,11 @@ async function changePassword() {
         passwordError.innerText = window.getApiErrorMessage?.(
           data,
           data.error === "Wrong password"
-            ? "Неверный текущий пароль"
+            ? settingsT("Неверный текущий пароль")
             : data.error === "No password set"
-              ? "У этого аккаунта пока нет пароля. Сначала установи его."
-              : "Ошибка смены пароля"
-        ) || "Ошибка смены пароля";
+              ? settingsT("У этого аккаунта пока нет пароля. Сначала установи его.")
+              : settingsT("Ошибка смены пароля")
+        ) || settingsT("Ошибка смены пароля");
       }
       return;
     }
@@ -1346,7 +1352,7 @@ async function changePassword() {
     document.getElementById("newPassword2").value = "";
   } catch (err) {
     console.log("changePassword error:", err);
-    if (passwordError) passwordError.innerText = "Ошибка смены пароля";
+    if (passwordError) passwordError.innerText = settingsT("Ошибка смены пароля");
   }
 }
 
@@ -1360,12 +1366,12 @@ async function sendEmailCode() {
   if (emailSuccess) emailSuccess.innerText = "";
 
   if (!newEmail) {
-    if (emailError) emailError.innerText = "Введи новую почту";
+    if (emailError) emailError.innerText = settingsT("Введи новую почту");
     return;
   }
 
   if (!newEmail.includes("@")) {
-    if (emailError) emailError.innerText = "Неверный формат почты";
+    if (emailError) emailError.innerText = settingsT("Неверный формат почты");
     return;
   }
 
@@ -1391,7 +1397,7 @@ async function sendEmailCode() {
     const block = document.getElementById("emailCodeBlock");
     if (block) block.style.display = "block";
 
-    if (emailSuccess) emailSuccess.innerText = "Код отправлен на почту";
+    if (emailSuccess) emailSuccess.innerText = settingsT("Код отправлен на почту");
   } catch (err) {
     console.log("sendEmailCode error:", err);
     if (emailError) emailError.innerText = "Не удалось отправить код";

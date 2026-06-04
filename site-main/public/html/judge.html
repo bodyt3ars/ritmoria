@@ -9,7 +9,7 @@
       </div>
 
       <div class="judge-track-info">
-        <small>ОЦЕНКА ТРЕКА</small>
+        <small data-i18n-phrase="ОЦЕНКА ТРЕКА">ОЦЕНКА ТРЕКА</small>
         <h1 id="trackName">Track Name</h1>
         <h2 id="trackArtist">Artist Name</h2>
       </div>
@@ -67,25 +67,25 @@
     <div class="judge-panel">
 
       <div class="judge-row">
-        <div class="judge-row-title">РИФМЫ И ОБРАЗЫ</div>
+        <div class="judge-row-title" data-i18n-phrase="РИФМЫ И ОБРАЗЫ">РИФМЫ И ОБРАЗЫ</div>
         <input id="s1" type="range" min="1" max="10" value="1">
         <div class="judge-value-box" id="v1">10</div>
       </div>
 
       <div class="judge-row">
-        <div class="judge-row-title">СТРУКТУРА И РИТМИКА</div>
+        <div class="judge-row-title" data-i18n-phrase="СТРУКТУРА И РИТМИКА">СТРУКТУРА И РИТМИКА</div>
         <input id="s2" type="range" min="1" max="10" value="1">
         <div class="judge-value-box" id="v2">10</div>
       </div>
 
       <div class="judge-row">
-        <div class="judge-row-title">РЕАЛИЗАЦИЯ СТИЛЯ</div>
+        <div class="judge-row-title" data-i18n-phrase="РЕАЛИЗАЦИЯ СТИЛЯ">РЕАЛИЗАЦИЯ СТИЛЯ</div>
         <input id="s3" type="range" min="1" max="10" value="1">
         <div class="judge-value-box" id="v3">10</div>
       </div>
 
       <div class="judge-row">
-        <div class="judge-row-title">ИНДИВИДУАЛЬНОСТЬ И ХАРИЗМА</div>
+        <div class="judge-row-title" data-i18n-phrase="ИНДИВИДУАЛЬНОСТЬ И ХАРИЗМА">ИНДИВИДУАЛЬНОСТЬ И ХАРИЗМА</div>
         <input id="s4" type="range" min="1" max="10" value="1">
         <div class="judge-value-box" id="v4">10</div>
       </div>
@@ -95,13 +95,13 @@
     <div class="judge-panel judge-panel-bonus">
 
       <div class="judge-row">
-        <div class="judge-row-title">АТМОСФЕРА И ВАЙБ</div>
+        <div class="judge-row-title" data-i18n-phrase="АТМОСФЕРА И ВАЙБ">АТМОСФЕРА И ВАЙБ</div>
         <input id="b1" type="range" min="1" max="5" value="1">
         <div class="judge-value-box" id="bv1">1</div>
       </div>
 
       <div class="judge-note">
-        Сначала база × (1 + вайб×0.1), потом × (1 + запоминаемость×0.1)
+        <span data-i18n-phrase="Сначала база × (1 + вайб×0.1), потом × (1 + запоминаемость×0.1)">Сначала база × (1 + вайб×0.1), потом × (1 + запоминаемость×0.1)</span>
       </div>
 
     </div>
@@ -109,7 +109,7 @@
     <div class="judge-panel judge-panel-bonus-2">
 
       <div class="judge-row">
-        <div class="judge-row-title">ЗАПОМИНАЕМОСТЬ</div>
+        <div class="judge-row-title" data-i18n-phrase="ЗАПОМИНАЕМОСТЬ">ЗАПОМИНАЕМОСТЬ</div>
         <input id="b2" type="range" min="1" max="5" value="1">
         <div class="judge-value-box" id="bv2">1</div>
       </div>
@@ -123,12 +123,12 @@
         <div class="judge-pill judge-pill-red" id="bonusExpr1">× 1.1</div>
         <div class="judge-pill judge-pill-red" id="bonusExpr2">× 1.1</div>
         <div class="judge-pill">× 1.(11) =</div>
-        <div class="judge-result"><span id="total">48</span> БАЛЛОВ</div>
+        <div class="judge-result"><span id="total">48</span> <span data-i18n-phrase="БАЛЛОВ">БАЛЛОВ</span></div>
       </div>
 
       <div class="judge-actions">
-        <button id="resetBtn" class="judge-action-button judge-reset-button">ОЧИСТИТЬ</button>
-        <button id="rateBtn" class="judge-action-button judge-rate-button">ОЦЕНИТЬ</button>
+        <button id="resetBtn" class="judge-action-button judge-reset-button" data-i18n-phrase="ОЧИСТИТЬ">ОЧИСТИТЬ</button>
+        <button id="rateBtn" class="judge-action-button judge-rate-button" data-i18n-phrase="ОЦЕНИТЬ">ОЦЕНИТЬ</button>
       </div>
 
     </div>

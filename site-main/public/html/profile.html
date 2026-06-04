@@ -176,10 +176,10 @@
         <input id="editAvatar" type="hidden" />
 
         <input id="editSoundcloud" type="text" placeholder="Ссылка на SoundCloud" />
-        <input id="editInstagram" type="text" placeholder="Ссылка на Instagram" />
+        <input id="editInstagram" type="text" placeholder="Ссылка на Instagram" data-i18n-placeholder-phrase="Ссылка на Instagram" />
         <input id="editTwitter" type="hidden" />
         <input id="editTelegram" type="text" placeholder="Telegram username или ссылка" />
-        <input id="editWebsite" type="text" placeholder="Ссылка на Website" />
+        <input id="editWebsite" type="text" placeholder="Ссылка на Website" data-i18n-placeholder-phrase="Ссылка на Website" />
 
         <p id="editProfileError" class="profile-field-error"></p>
         <p id="editProfileSuccess" class="profile-field-success"></p>
@@ -253,21 +253,22 @@
         </button>
 
         <div class="profile-post-modal-left">
-          <h3 class="profile-post-modal-title">Создать публикацию</h3>
+          <h3 class="profile-post-modal-title" data-i18n-phrase="Создать публикацию">Создать публикацию</h3>
 
           <textarea
             id="postText"
             class="profile-post-textarea"
             placeholder="Что нового? Можно отметить @ник"
+            data-i18n-placeholder-phrase="Что нового? Можно отметить @ник"
             maxlength="500"
           ></textarea>
 
           <div id="editorDropzone" class="profile-editor-dropzone">
             <div id="mediaHint" class="profile-media-hint">
               <i class="fa-solid fa-photo-film"></i>
-              <p>Перетащи фото или видео сюда</p>
-              <span>или</span>
-              <button type="button" class="profile-media-select-btn" onclick="selectMedia()">
+              <p data-i18n-phrase="Перетащи фото или видео сюда">Перетащи фото или видео сюда</p>
+              <span data-i18n-phrase="или">или</span>
+              <button type="button" class="profile-media-select-btn" onclick="selectMedia()" data-i18n-phrase="Выбрать файл">
                 Выбрать файл
               </button>
             </div>
@@ -293,8 +294,8 @@
           />
 
           <div id="mediaActions" class="profile-media-actions profile-hidden">
-            <button type="button" class="profile-secondary-btn" onclick="selectMedia()">Изменить файл</button>
-            <button type="button" class="profile-danger-btn" onclick="removeMedia()">Удалить файл</button>
+            <button type="button" class="profile-secondary-btn" onclick="selectMedia()" data-i18n-phrase="Изменить файл">Изменить файл</button>
+            <button type="button" class="profile-danger-btn" onclick="removeMedia()" data-i18n-phrase="Удалить файл">Удалить файл</button>
           </div>
 
           <div id="uploadProgress" class="profile-upload-progress profile-hidden">
@@ -302,8 +303,8 @@
           </div>
 
           <div class="profile-post-modal-actions">
-            <button type="button" class="profile-secondary-btn" onclick="closePostModal()">Отмена</button>
-            <button type="button" id="publishPostBtn" class="profile-primary-btn" onclick="publishPost()">Опубликовать</button>
+            <button type="button" class="profile-secondary-btn" onclick="closePostModal()" data-i18n-phrase="Отмена">Отмена</button>
+            <button type="button" id="publishPostBtn" class="profile-primary-btn" onclick="publishPost()" data-i18n-phrase="Опубликовать">Опубликовать</button>
           </div>
         </div>
       </div>

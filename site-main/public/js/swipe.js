@@ -61,6 +61,17 @@ function discoverEscapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function discoverT(value) {
+  if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+  return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+}
+
+function formatDiscoverTrackCount(count) {
+  return window.RitmoriaI18n?.getLanguage?.() === "en"
+    ? `${count} tracks`
+    : `${count} треков`;
+}
+
 function parseDiscoverTags(tags) {
   if (Array.isArray(tags)) {
     return tags.map(v => String(v).trim()).filter(Boolean);
@@ -82,8 +93,8 @@ function normalizeDiscoverTrack(track) {
 
   return {
     id: track.id,
-    title: track.title || "Без названия",
-    artist: track.artist || track.username || "Неизвестный исполнитель",
+    title: track.title || discoverT("Без названия"),
+    artist: track.artist || track.username || discoverT("Неизвестный исполнитель"),
     username: track.username || "",
     username_tag: track.username_tag || "",
     genre: track.genre || "",
@@ -141,7 +152,9 @@ function getSelectedDiscoverPlaylist() {
 function updateDiscoverPlaylistLabel() {
   if (!discoverPlaylistLabel) return;
   const selected = getSelectedDiscoverPlaylist();
-  discoverPlaylistLabel.textContent = selected?.name || "Любимые треки";
+  discoverPlaylistLabel.textContent = selected?.id === "favorites"
+    ? discoverT("Любимые треки")
+    : (selected?.name || discoverT("Любимые треки"));
 }
 
 function renderDiscoverPlaylistOptions() {
@@ -151,7 +164,7 @@ function renderDiscoverPlaylistOptions() {
   const selectedId = getSelectedDiscoverPlaylistId();
 
   if (!playlists.length) {
-    discoverPlaylistList.innerHTML = `<div class="discover-playlist-empty">Пока нет плейлистов.</div>`;
+    discoverPlaylistList.innerHTML = `<div class="discover-playlist-empty">${discoverT("Пока нет плейлистов.")}</div>`;
     return;
   }
 
@@ -162,8 +175,8 @@ function renderDiscoverPlaylistOptions() {
     return `
       <button class="discover-playlist-option ${isSelected ? "is-selected" : ""}" type="button" data-discover-playlist-id="${discoverEscapeHtml(playlist.id)}">
         <div class="discover-playlist-option-main">
-          <div class="discover-playlist-option-name">${discoverEscapeHtml(playlist.name || "Без названия")}</div>
-          <div class="discover-playlist-option-meta">${count} треков</div>
+          <div class="discover-playlist-option-name">${discoverEscapeHtml(playlist.id === "favorites" ? discoverT("Любимые треки") : (playlist.name || discoverT("Без названия")))}</div>
+          <div class="discover-playlist-option-meta">${formatDiscoverTrackCount(count)}</div>
         </div>
         <div class="discover-playlist-option-mark">✓</div>
       </button>
@@ -289,7 +302,7 @@ function buildTrackCardMarkup(track, isNext = false) {
         ></div>
 
         <div class="discover-card-badge ${isNext ? "discover-card-badge-soft" : ""}">
-          ${isNext ? "Дальше" : "Сейчас играет"}
+          ${isNext ? discoverT("Дальше") : discoverT("Сейчас играет")}
         </div>
       </div>
 
@@ -593,29 +606,29 @@ function renderDiscoverCards() {
           <div class="discover-auth-icon">
             <i class="fa-solid fa-user-lock"></i>
           </div>
-          <div class="discover-card-badge discover-card-badge-soft">Нужен аккаунт</div>
+          <div class="discover-card-badge discover-card-badge-soft">${discoverT("Нужен аккаунт")}</div>
         </div>
 
         <div class="discover-track-info">
-          <h2>Войди или зарегистрируйся</h2>
-          <p class="discover-artist">Чтобы свайпать треки, сохранять лайки и собирать плейлисты</p>
+          <h2>${discoverT("Войди или зарегистрируйся")}</h2>
+          <p class="discover-artist">${discoverT("Чтобы свайпать треки, сохранять лайки и собирать плейлисты")}</p>
         </div>
 
         <div class="discover-auth-actions">
-          <button type="button" class="discover-auth-btn discover-auth-btn-primary" data-discover-auth="register">Регистрация</button>
-          <button type="button" class="discover-auth-btn" data-discover-auth="login">Вход</button>
+          <button type="button" class="discover-auth-btn discover-auth-btn-primary" data-discover-auth="register">${discoverT("Регистрация")}</button>
+          <button type="button" class="discover-auth-btn" data-discover-auth="login">${discoverT("Вход")}</button>
         </div>
       </div>
     ` : `
       <div class="discover-card-content">
         <div class="discover-cover-wrap">
           <div class="discover-cover discover-cover-loading"></div>
-          <div class="discover-card-badge discover-card-badge-soft">Загрузка</div>
+          <div class="discover-card-badge discover-card-badge-soft">${discoverT("Загрузка")}</div>
         </div>
 
         <div class="discover-track-info">
-          <h2>Загружаем треки...</h2>
-          <p class="discover-artist">Подожди секунду</p>
+          <h2>${discoverT("Загружаем треки...")}</h2>
+          <p class="discover-artist">${discoverT("Подожди секунду")}</p>
         </div>
       </div>
     `;

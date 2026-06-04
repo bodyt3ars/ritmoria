@@ -4,6 +4,11 @@ function profileUserT(key, fallback = "") {
   return window.RitmoriaI18n?.t?.(key, fallback) || fallback || key;
 }
 
+function profileUserPhrase(value) {
+  if (window.RitmoriaI18n?.getLanguage?.() !== "en") return value;
+  return window.RitmoriaI18n?.translatePhrase?.(value) || value;
+}
+
 function setText(id, text) {
   const el = document.getElementById(id);
   if (el) {
@@ -853,7 +858,7 @@ async function saveProfile() {
     }
 
     closeEdit();
-    setText("profileSuccess", "Профиль сохранён");
+    setText("profileSuccess", profileUserPhrase("Профиль сохранён"));
 
     if (typeof loadNavbarUser === "function") {
       await loadNavbarUser();

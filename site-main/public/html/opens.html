@@ -1,44 +1,44 @@
 <div class="opens-page">
   <div class="opens-layout">
     <aside class="opens-create-panel">
-      <h2 class="opens-section-title">Выложить опен</h2>
+      <h2 class="opens-section-title" data-i18n-phrase="Выложить опен">Выложить опен</h2>
 
       <div class="opens-form">
-        <input id="openTitle" class="opens-input" type="text" placeholder="Название опена">
-        <textarea id="openDescription" class="opens-textarea" placeholder="Что это за опен и какой вайб нужен"></textarea>
-        <input id="openGenre" class="opens-input" type="text" placeholder="Жанр">
-        <textarea id="openLookingFor" class="opens-textarea opens-textarea-small" placeholder="Кого ты ищешь на фит"></textarea>
-        <input id="openSoundcloud" class="opens-input" type="text" placeholder="SoundCloud ссылка (необязательно)">
+        <input id="openTitle" class="opens-input" type="text" placeholder="Название опена" data-i18n-placeholder-phrase="Название опена">
+        <textarea id="openDescription" class="opens-textarea" placeholder="Что это за опен и какой вайб нужен" data-i18n-placeholder-phrase="Что это за опен и какой вайб нужен"></textarea>
+        <input id="openGenre" class="opens-input" type="text" placeholder="Жанр" data-i18n-placeholder-phrase="Жанр">
+        <textarea id="openLookingFor" class="opens-textarea opens-textarea-small" placeholder="Кого ты ищешь на фит" data-i18n-placeholder-phrase="Кого ты ищешь на фит"></textarea>
+        <input id="openSoundcloud" class="opens-input" type="text" placeholder="SoundCloud ссылка (необязательно)" data-i18n-placeholder-phrase="SoundCloud ссылка (необязательно)">
 
       <div class="opens-file-field">
-        <span>Аудио</span>
+        <span data-i18n-phrase="Аудио">Аудио</span>
         <label class="opens-file-picker" for="openAudio">
-          <span class="opens-file-picker-btn">Выбрать аудио</span>
-            <span id="openAudioName" class="opens-file-picker-name">Файл не выбран</span>
+          <span class="opens-file-picker-btn" data-i18n-phrase="Выбрать аудио">Выбрать аудио</span>
+            <span id="openAudioName" class="opens-file-picker-name" data-i18n-phrase="Файл не выбран">Файл не выбран</span>
           </label>
         <input id="openAudio" type="file" accept="audio/*" hidden>
       </div>
 
-        <button id="publishOpenBtn" class="opens-primary-btn" type="button">Опубликовать опен</button>
+        <button id="publishOpenBtn" class="opens-primary-btn" type="button" data-i18n-phrase="Опубликовать опен">Опубликовать опен</button>
         <p id="opensCreateStatus" class="opens-status"></p>
       </div>
     </aside>
 
     <main class="opens-feed-panel">
       <div class="opens-feed-head">
-        <h1 class="opens-page-title">Опены</h1>
-        <p class="opens-page-subtitle">Недописанные треки, на которые можно залететь с фитом</p>
+        <h1 class="opens-page-title" data-i18n-phrase="Опены">Опены</h1>
+        <p class="opens-page-subtitle" data-i18n-phrase="Недописанные треки, на которые можно залететь с фитом">Недописанные треки, на которые можно залететь с фитом</p>
       </div>
 
       <div id="opensFeed" class="opens-feed">
-        <div class="opens-empty">Загрузка опенов...</div>
+        <div class="opens-empty" data-i18n-phrase="Загрузка опенов...">Загрузка опенов...</div>
       </div>
     </main>
 
     <aside class="opens-side-panel">
-      <h2 class="opens-section-title">Мои заявки</h2>
+      <h2 class="opens-section-title" data-i18n-phrase="Мои заявки">Мои заявки</h2>
       <div id="opensMyActivity" class="opens-side-list">
-        <div class="opens-empty">Пока пусто</div>
+        <div class="opens-empty" data-i18n-phrase="Пока пусто">Пока пусто</div>
       </div>
     </aside>
   </div>

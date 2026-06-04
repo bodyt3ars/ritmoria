@@ -19,32 +19,32 @@
     <div class="discover-player-controls">
       <div class="discover-controls-cluster discover-controls-cluster-side discover-controls-cluster-left">
         <div class="discover-playlist-wrap">
-          <button class="discover-playlist-trigger" id="discoverPlaylistTrigger" type="button" title="Выбрать плейлист">
-            <span class="discover-playlist-kicker">Свайп вправо</span>
-            <span class="discover-playlist-label" id="discoverPlaylistLabel">Любимые треки</span>
+          <button class="discover-playlist-trigger" id="discoverPlaylistTrigger" type="button" title="Выбрать плейлист" data-i18n-title-phrase="Выбрать плейлист">
+            <span class="discover-playlist-kicker" data-i18n-phrase="Свайп вправо">Свайп вправо</span>
+            <span class="discover-playlist-label" id="discoverPlaylistLabel" data-i18n-phrase="Любимые треки">Любимые треки</span>
           </button>
 
           <div class="discover-playlist-panel discover-hidden" id="discoverPlaylistPanel">
             <div class="discover-playlist-panel-head">
               <div>
-                <div class="discover-playlist-panel-kicker">Куда сохранять</div>
-                <div class="discover-playlist-panel-title">Плейлист для лайка</div>
+                <div class="discover-playlist-panel-kicker" data-i18n-phrase="Куда сохранять">Куда сохранять</div>
+                <div class="discover-playlist-panel-title" data-i18n-phrase="Плейлист для лайка">Плейлист для лайка</div>
               </div>
-              <button class="discover-playlist-close" id="discoverPlaylistClose" type="button" aria-label="Закрыть">✕</button>
+              <button class="discover-playlist-close" id="discoverPlaylistClose" type="button" aria-label="Закрыть" data-i18n-aria-phrase="Закрыть">✕</button>
             </div>
 
             <div class="discover-playlist-list" id="discoverPlaylistList"></div>
 
-            <button class="discover-playlist-create" id="discoverPlaylistCreate" type="button">+ Новый плейлист</button>
+            <button class="discover-playlist-create" id="discoverPlaylistCreate" type="button" data-i18n-phrase="+ Новый плейлист">+ Новый плейлист</button>
           </div>
         </div>
       </div>
 
       <div class="discover-controls-cluster discover-controls-cluster-main">
-        <button class="discover-btn discover-btn-back" type="button" title="Назад">↩</button>
-        <button class="discover-btn discover-btn-dislike" type="button" title="Свайп влево">✕</button>
+        <button class="discover-btn discover-btn-back" type="button" title="Назад" data-i18n-title-phrase="Назад">↩</button>
+        <button class="discover-btn discover-btn-dislike" type="button" title="Свайп влево" data-i18n-title-phrase="Свайп влево">✕</button>
         <button class="discover-btn discover-btn-play discover-btn-play-main" type="button" title="Play / Pause">▶</button>
-        <button class="discover-btn discover-btn-like" type="button" title="Свайп вправо">❤</button>
+        <button class="discover-btn discover-btn-like" type="button" title="Свайп вправо" data-i18n-title-phrase="Свайп вправо">❤</button>
       </div>
 
       <div class="discover-controls-cluster discover-controls-cluster-side discover-controls-cluster-right">
@@ -61,7 +61,7 @@
             </svg>
           </button>
 
-          <input type="range" id="volumeRange" min="0" max="100" value="70" step="1" aria-label="Громкость">
+          <input type="range" id="volumeRange" min="0" max="100" value="70" step="1" aria-label="Громкость" data-i18n-aria-phrase="Громкость">
         </div>
       </div>
     </div>
