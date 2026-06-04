@@ -928,7 +928,6 @@
     document.documentElement.dataset.language = currentLanguage;
 
     root.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-aria-label], [data-i18n-title], [data-i18n-alt]").forEach(translateElement);
-    autoTranslateTree(root);
     root.querySelectorAll("[data-language-option]").forEach((button) => {
       const isActive = button.dataset.languageOption === currentLanguage;
       button.classList.toggle("active", isActive);
@@ -982,37 +981,6 @@
       currentLanguage === DEFAULT_LANGUAGE ? message : translatePhrase(message),
       defaultValue
     );
-  }
-
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === "characterData") {
-        translateTextNode(mutation.target);
-        return;
-      }
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
-          applyI18n(node.nodeType === Node.ELEMENT_NODE ? node : document);
-        }
-      });
-    });
-  });
-
-  if (document.body) {
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true
-    });
-  } else {
-    document.addEventListener("DOMContentLoaded", () => {
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        characterData: true
-      });
-      applyI18n(document);
-    }, { once: true });
   }
 
   window.RitmoriaI18n = {
