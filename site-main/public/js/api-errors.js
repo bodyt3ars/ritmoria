@@ -69,36 +69,41 @@
     delete_account_failed: "Не удалось удалить аккаунт."
   };
 
+  function translateErrorMessage(message) {
+    if (window.RitmoriaI18n?.getLanguage?.() !== "en") return message;
+    return window.RitmoriaI18n?.translatePhrase?.(message) || message;
+  }
+
   function humanizeErrorCode(code, fallback = "Что-то пошло не так. Попробуй ещё раз.") {
     const raw = String(code || "").trim();
-    if (!raw) return fallback;
+    if (!raw) return translateErrorMessage(fallback);
 
     if (ERROR_MESSAGES[raw]) {
-      return ERROR_MESSAGES[raw];
+      return translateErrorMessage(ERROR_MESSAGES[raw]);
     }
 
     const lower = raw.toLowerCase();
     if (ERROR_MESSAGES[lower]) {
-      return ERROR_MESSAGES[lower];
+      return translateErrorMessage(ERROR_MESSAGES[lower]);
     }
 
     if (/json|invalid input syntax|malformed/i.test(raw)) {
-      return "Один из параметров передан в неверном формате. Обнови страницу и попробуй ещё раз.";
+      return translateErrorMessage("Один из параметров передан в неверном формате. Обнови страницу и попробуй ещё раз.");
     }
 
     if (/too large|file is too large|limit_file_size/i.test(raw)) {
-      return "Файл слишком большой. Попробуй выбрать файл поменьше.";
+      return translateErrorMessage("Файл слишком большой. Попробуй выбрать файл поменьше.");
     }
 
     if (/token|jwt/i.test(raw)) {
-      return "Сессия устарела. Войди в аккаунт заново.";
+      return translateErrorMessage("Сессия устарела. Войди в аккаунт заново.");
     }
 
     if (/[_-]/.test(raw) || /^[A-Za-z]/.test(raw)) {
-      return fallback;
+      return translateErrorMessage(fallback);
     }
 
-    return raw;
+    return translateErrorMessage(raw);
   }
 
   window.getApiErrorMessage = function getApiErrorMessage(payload, fallback = "Что-то пошло не так. Попробуй ещё раз.") {
@@ -108,7 +113,7 @@
 
     const message = String(payload?.message || "").trim();
     if (message) {
-      return message;
+      return translateErrorMessage(message);
     }
 
     const error = String(payload?.error || payload?.errorCode || payload?.code || "").trim();

@@ -2,6 +2,8 @@
   const STORAGE_KEY = "ritmoria-language";
   const DEFAULT_LANGUAGE = "ru";
   const SUPPORTED_LANGUAGES = ["ru", "en"];
+  const textNodeOriginals = new WeakMap();
+  const attrOriginals = new WeakMap();
 
   const dictionaries = {
     ru: {
@@ -254,6 +256,515 @@
     }
   };
 
+  const phraseTranslations = {
+    "Главная": "Home",
+    "Плейлисты": "Playlists",
+    "Очередь": "Queue",
+    "Баттлы": "Battles",
+    "Опены": "Opens",
+    "Дискавер": "Discover",
+    "Поддержка": "Support",
+    "Вход": "Log in",
+    "Регистрация": "Sign up",
+    "Выйти": "Log out",
+    "Профиль": "Profile",
+    "Настройки": "Settings",
+    "Админ панель": "Admin panel",
+    "Сообщения": "Messages",
+    "Уведомления": "Notifications",
+    "Прочитать все": "Mark all read",
+    "Пока пусто": "Nothing here yet",
+    "Файл не выбран": "No file selected",
+    "Выбрать файл": "Choose file",
+    "Выбрать фото": "Choose photo",
+    "Сохранить": "Save",
+    "Отмена": "Cancel",
+    "Создать": "Create",
+    "Закрыть": "Close",
+    "Открыть": "Open",
+    "Удалить": "Delete",
+    "Редактировать": "Edit",
+    "Ответить": "Reply",
+    "Переслать": "Forward",
+    "Информация": "Information",
+    "Вложение": "Attachment",
+    "Группа": "Group",
+    "Новый чат": "New chat",
+    "Название": "Name",
+    "Название группы": "Group name",
+    "Описание": "Description",
+    "Пригласить": "Invite",
+    "Пригласить по @username": "Invite by @username",
+    "Новый трек": "New track",
+    "Из профиля": "From profile",
+    "Автор:": "Artist:",
+    "Автор": "Artist",
+    "Название трека:": "Track title:",
+    "Название трека": "Track title",
+    "Ссылка SoundCloud:": "SoundCloud link:",
+    "Аудиофайл:": "Audio file:",
+    "Аудио": "Audio",
+    "Предпрослушивание:": "Preview:",
+    "ПОДТЯНУТЬ": "FETCH",
+    "ОТПРАВИТЬ ТРЕК": "SUBMIT TRACK",
+    "посмотреть очередь": "view queue",
+    "Трек на оценку": "Track for rating",
+    "Выбери трек из профиля": "Choose a track from your profile",
+    "Загружаем треки...": "Loading tracks...",
+    "Обложка трека": "Track cover",
+    "Нажми на обложку, чтобы загрузить изображение": "Click the cover to upload an image",
+    "Выложить опен": "Post an open",
+    "Название опена": "Open title",
+    "Что это за опен и какой вайб нужен": "What is this open and what vibe do you need?",
+    "Жанр": "Genre",
+    "Кого ты ищешь на фит": "Who are you looking for on the feature?",
+    "SoundCloud ссылка (необязательно)": "SoundCloud link (optional)",
+    "Выбрать аудио": "Choose audio",
+    "Опубликовать опен": "Publish open",
+    "Недописанные треки, на которые можно залететь с фитом": "Unfinished tracks you can jump on with a feature",
+    "Загрузка опенов...": "Loading opens...",
+    "Мои заявки": "My applications",
+    "Плейлист": "Playlist",
+    "Мои плейлисты": "My playlists",
+    "Публичные плейлисты": "Public playlists",
+    "Разделы плейлистов": "Playlist sections",
+    "Поиск плейлиста по названию": "Search playlist by name",
+    "+ Создать плейлист": "+ Create playlist",
+    "← Назад": "← Back",
+    "Назад": "Back",
+    "Переименовать плейлист": "Rename playlist",
+    "Здесь пока нет треков": "No tracks here yet",
+    "Новый плейлист": "New playlist",
+    "Название плейлиста": "Playlist name",
+    "Сообщения и уведомления": "Messages and notifications",
+    "Конфиденциальность": "Privacy",
+    "Сохранённые": "Saved",
+    "Лайки": "Likes",
+    "Музыкальные объединения": "Music collectives",
+    "Достижения": "Achievements",
+    "Выйти из аккаунта": "Log out",
+    "Удалить аккаунт": "Delete account",
+    "Архив": "Archive",
+    "Заголовок": "Title",
+    "Контент": "Content",
+    "Пост": "Post",
+    "Посты": "Posts",
+    "Треки": "Tracks",
+    "Репосты": "Reposts",
+    "Упоминания": "Mentions",
+    "Редактировать профиль": "Edit profile",
+    "Написать сообщение": "Message",
+    "подписчики": "followers",
+    "подписки": "following",
+    "Настройки аккаунта": "Account settings",
+    "Оценка трека": "Track rating",
+    "Оценить трек": "Rate track",
+    "Оценить": "Rate",
+    "Обновить оценку": "Update rating",
+    "Рейтинг": "Rating",
+    "Юзеры": "Users",
+    "Судьи": "Judges",
+    "Общие": "Overall",
+    "Пользователи": "Users",
+    "Открыта": "Open",
+    "Закрыта": "Closed",
+    "Приостановлена": "Paused",
+    "Пауза": "Pause",
+    "Возобновить": "Resume",
+    "Очередь треков": "Track queue",
+    "Разделы очереди": "Queue sections",
+    "загрузка...": "loading...",
+    "Найти по нику или @username": "Find by nickname or @username",
+    "Загрузка диалогов...": "Loading conversations...",
+    "Выбери диалог слева": "Choose a conversation on the left",
+    "Здесь появится переписка": "Messages will appear here",
+    "Прикрепить файл": "Attach file",
+    "Напиши сообщение": "Write a message",
+    "Отправить": "Send",
+    "Переслать сообщение": "Forward message",
+    "Введите название": "Enter a name",
+    "Фото группы не выбрано": "No group photo selected",
+    "Описание группы (необязательно)": "Group description (optional)",
+    "Описание (необязательно)": "Description (optional)",
+    "Публикация": "Publication",
+    "Создать публикацию": "Create publication",
+    "Что нового? Можно отметить @ник": "What's new? You can mention @username",
+    "Перетащи фото или видео сюда": "Drop a photo or video here",
+    "или": "or",
+    "Изменить файл": "Change file",
+    "Удалить файл": "Delete file",
+    "Опубликовать": "Publish",
+    "Загрузить трек": "Upload track",
+    "Артист(ы)": "Artist(s)",
+    "Продюсер": "Producer",
+    "Тэги": "Tags",
+    "Напиши что-то о треке...": "Write something about the track...",
+    "Файл не выбран": "No file selected",
+    "Сохранить аватар": "Save avatar",
+    "Удалить аватар": "Delete avatar",
+    "Настройте аватар": "Adjust avatar",
+    "Масштаб": "Zoom",
+    "Новая почта": "New email",
+    "Текущий пароль": "Current password",
+    "Новый пароль": "New password",
+    "Изменить почту": "Change email",
+    "Изменить пароль": "Change password",
+    "Музыкальное объединение": "Music collective",
+    "Состав": "Members",
+    "Загружаем состав...": "Loading members...",
+    "Итог": "Total",
+    "Рифмы и образы": "Rhymes and imagery",
+    "Структура и ритмика": "Structure and rhythm",
+    "Реализация стиля": "Style execution",
+    "Харизма": "Charisma",
+    "Атмосфера": "Atmosphere",
+    "Запоминаемость": "Memorability",
+    "Сбросить": "Reset",
+    "Сохранить оценку": "Save rating",
+    "Открыть меню": "Open menu",
+    "Подтвердите действие": "Confirm action",
+    "Вы уверены?": "Are you sure?",
+    "Подтвердить": "Confirm",
+    "Остаться": "Stay",
+    "Личные сообщения": "Direct messages",
+    "Поиск треков, пользователей...": "Search tracks, users...",
+    "Ничего не найдено": "No results found",
+    "Топ исполнители": "Top artists",
+    "Лучшие треки прошлого стрима": "Best tracks from the last stream",
+    "Новости": "News",
+    "Открывай треки": "Discover tracks",
+    "Рекомендации": "Recommendations",
+    "Ещё рекомендации": "More recommendations",
+    "Загрузка треков...": "Loading tracks...",
+    "Загрузка новостей...": "Loading news...",
+    "Загрузка подборки...": "Loading selection...",
+    "Загрузка постов...": "Loading posts..."
+    ,
+    "Войди по email, username или через Telegram": "Log in with email, username, or Telegram",
+    "Email или @username": "Email or @username",
+    "email или @username": "email or @username",
+    "Пароль": "Password",
+    "Введите пароль": "Enter password",
+    "Войти": "Log in",
+    "Нет аккаунта?": "No account?",
+    "Зарегистрироваться": "Sign up",
+    "Можно также через Telegram": "You can also use Telegram",
+    "Войти через Telegram": "Log in with Telegram",
+    "Продолжить через Telegram": "Continue with Telegram",
+    "Открыть бота вручную": "Open bot manually",
+    "Создай аккаунт вручную или войди через Telegram": "Create an account manually or log in with Telegram",
+    "Имя": "Name",
+    "Твоё имя": "Your name",
+    "Введите email": "Enter email",
+    "Минимум 8 символов": "At least 8 characters",
+    "Повтори пароль": "Repeat password",
+    "Уже есть аккаунт?": "Already have an account?",
+    "Подтверждение": "Verification",
+    "Мы отправили код на твой email. Введи его ниже.": "We sent a code to your email. Enter it below.",
+    "СТРАНИЦА ТРЕКА": "TRACK PAGE",
+    "ОЦЕНКА ТРЕКА": "TRACK RATING",
+    "Судья": "Judge",
+    "Рифмы": "Rhymes",
+    "Структура": "Structure",
+    "Стиль": "Style",
+    "Вайб": "Vibe",
+    "Память": "Memory",
+    "Пользовательские оценки:": "User ratings:",
+    "РИФМЫ И ОБРАЗЫ": "RHYMES AND IMAGERY",
+    "СТРУКТУРА И РИТМИКА": "STRUCTURE AND RHYTHM",
+    "РЕАЛИЗАЦИЯ СТИЛЯ": "STYLE EXECUTION",
+    "ИНДИВИДУАЛЬНОСТЬ И ХАРИЗМА": "PERSONALITY AND CHARISMA",
+    "АТМОСФЕРА И ВАЙБ": "ATMOSPHERE AND VIBE",
+    "ЗАПОМИНАЕМОСТЬ": "MEMORABILITY",
+    "Сначала база × (1 + вайб×0.1), потом × (1 + запоминаемость×0.1)": "Base first × (1 + vibe×0.1), then × (1 + memorability×0.1)",
+    "БАЛЛОВ": "POINTS",
+    "ОЧИСТИТЬ": "RESET",
+    "ОЦЕНИТЬ": "RATE",
+    "Выбрать плейлист": "Choose playlist",
+    "Свайп вправо": "Swipe right",
+    "Свайп влево": "Swipe left",
+    "Любимые треки": "Favorite tracks",
+    "Куда сохранять": "Where to save",
+    "Плейлист для лайка": "Playlist for likes",
+    "+ Новый плейлист": "+ New playlist",
+    "Назад": "Back",
+    "Громкость": "Volume",
+    "Нужен аккаунт": "Account required",
+    "Войди или зарегистрируйся": "Log in or sign up",
+    "Чтобы свайпать треки, сохранять лайки и собирать плейлисты": "To swipe tracks, save likes, and build playlists",
+    "Загрузка": "Loading",
+    "Загружаем треки...": "Loading tracks...",
+    "Подожди секунду": "Wait a second",
+    "Дальше": "Next",
+    "Сейчас играет": "Now playing",
+    "Пока нет плейлистов.": "No playlists yet.",
+    "Название плейлиста": "Playlist name"
+    ,
+    "Пользователи, онлайн, роли, блокировки и контент главной в одном месте.": "Users, online status, roles, blocks, and homepage content in one place.",
+    "Зарегистрировано": "Registered",
+    "Сейчас онлайн": "Online now",
+    "Новости на главной": "Homepage news",
+    "Добавить изображение или видео": "Add image or video",
+    "Поиск по нику или @username_tag...": "Search by nickname or @username_tag...",
+    "Заголовок новости": "News title",
+    "Текст новости": "News text",
+    "Турнирная зона": "Tournament zone",
+    "Админ собирает сетку, участники занимают свободные слоты и заходят в баттл со своим треком.": "Admin builds the bracket, participants take open slots, and enter the battle with their own track.",
+    "Заявка в баттл": "Battle application",
+    "Занять слот": "Take slot",
+    "Загрузить файл": "Upload file",
+    "+Трек на оценку": "+Submit track",
+    "Слушатель": "Listener",
+    "Загрузка артистов...": "Loading artists...",
+    "Показать предыдущие треки": "Show previous tracks",
+    "Показать следующие треки": "Show next tracks",
+    "0 треков": "0 tracks",
+    "Переключатель рейтинга": "Rating switcher",
+    "Нажми, чтобы загрузить обложку": "Click to upload cover art",
+    "p.s. благодаря тэгам и жанрам,": "p.s. thanks to tags and genres,",
+    "ваши треки попадают в рекомендации": "your tracks can appear in recommendations",
+    "Подписчики": "Followers",
+    "Ссылка скопирована": "Link copied",
+    "Ссылка на SoundCloud": "SoundCloud link",
+    "Ссылка на Instagram": "Instagram link",
+    "Telegram username или ссылка": "Telegram username or link",
+    "Ссылка на Website": "Website link",
+    "Предпросмотр аватара": "Avatar preview",
+    "@ник артиста или несколько через запятую": "@artist username or several separated by commas",
+    "ник артиста или артистов": "artist username or artists",
+    "Ник": "Name",
+    "Username (например: username)": "Username, for example: username",
+    "Расскажите о себе": "Tell people about yourself",
+    "Артист": "Artist",
+    "РИТМОРИЯ": "RITMORIA",
+    "Основная навигация": "Main navigation",
+    "Поддержка в Telegram": "Support on Telegram",
+    "Добавить в очередь": "Add to queue",
+    "Репост": "Repost",
+    "Редактирование трека": "Edit track",
+    "Сохранить изменения": "Save changes",
+    "Укажи причину удаления трека. Она придёт пользователю уведомлением:": "Enter the reason for deleting the track. The user will receive it as a notification:",
+    "Нужно указать причину удаления.": "You need to enter a deletion reason.",
+    "Ошибка удаления": "Delete failed",
+    "Ошибка архивации": "Archive failed",
+    "только что": "just now",
+    "Нельзя оценивать свой трек.": "You cannot rate your own track.",
+    "Сохраняем оценку...": "Saving rating...",
+    "Оценка сохранена": "Rating saved",
+    "Нужно войти в аккаунт.": "You need to log in.",
+    "Свой трек репостнуть нельзя.": "You cannot repost your own track.",
+    "Не удалось обновить репост трека": "Could not update track repost",
+    "Для треков в профиле действует лимит 35 МБ.": "Profile tracks have a 35 MB limit.",
+    "Название обязательно": "Title is required",
+    "Загрузите песню": "Upload a song",
+    "Загрузите обложку": "Upload cover art",
+    "Не удалось обновить трек": "Could not update track",
+    "Не удалось загрузить трек": "Could not upload track"
+    ,
+    "Что-то пошло не так. Попробуй ещё раз.": "Something went wrong. Try again.",
+    "Что-то пошло не так на сервере. Попробуй ещё раз чуть позже.": "Something went wrong on the server. Try again a bit later.",
+    "Файл слишком большой. Попробуй выбрать файл поменьше.": "The file is too large. Try choosing a smaller file.",
+    "Не удалось обработать выбранный файл. Попробуй загрузить его заново.": "Could not process the selected file. Try uploading it again.",
+    "Укажи корректную почту.": "Enter a valid email.",
+    "Эта почта уже занята.": "This email is already taken.",
+    "Сначала подтверди почту кодом из письма.": "Confirm your email with the code first.",
+    "Код подтверждения истёк. Запроси новый.": "The verification code has expired. Request a new one.",
+    "Не удалось завершить регистрацию.": "Could not finish registration.",
+    "Пароль должен быть минимум 8 символов.": "Password must be at least 8 characters.",
+    "Имя должно быть минимум 3 символа.": "Name must be at least 3 characters.",
+    "Не удалось отправить сообщение. Попробуй ещё раз.": "Could not send the message. Try again.",
+    "Напиши сообщение или прикрепи файл.": "Write a message or attach a file.",
+    "Этот пользователь отключил входящие сообщения.": "This user has disabled incoming messages.",
+    "Этот пользователь ограничил тебе сообщения.": "This user has restricted messages from you.",
+    "Ты отключил сообщения для этого пользователя.": "You disabled messages for this user.",
+    "Не удалось открыть диалог.": "Could not open the conversation.",
+    "Добавь название опена.": "Add an open title.",
+    "Не удалось опубликовать опен.": "Could not publish the open.",
+    "Не удалось загрузить файлы для опена. Проверь размер и формат.": "Could not upload open files. Check size and format.",
+    "Не удалось отправить заявку.": "Could not send the application.",
+    "Не удалось выбрать участника.": "Could not choose participant.",
+    "Не удалось удалить опен.": "Could not delete the open.",
+    "Ты уже отправил заявку в этот опен.": "You have already applied to this open.",
+    "Опен не найден.": "Open not found.",
+    "Некорректные данные. Проверь заполненные поля.": "Invalid data. Check the filled fields.",
+    "Не удалось сохранить изменения.": "Could not save changes.",
+    "Не удалось отправить трек.": "Could not submit the track.",
+    "Очередь сейчас закрыта или на паузе.": "The queue is closed or paused right now.",
+    "Этот трек уже добавлен в очередь.": "This track is already in the queue.",
+    "Трек из профиля не найден.": "Profile track not found.",
+    "Не удалось сохранить оценку трека.": "Could not save track rating.",
+    "Не удалось загрузить твою прошлую оценку.": "Could not load your previous rating.",
+    "Нельзя оценивать свой трек.": "You cannot rate your own track.",
+    "Нельзя ставить оценку своему треку.": "You cannot rate your own track.",
+    "Не удалось загрузить трек. Проверь файл и попробуй ещё раз.": "Could not upload the track. Check the file and try again.",
+    "Не удалось загрузить изображение. Проверь файл и попробуй ещё раз.": "Could not upload the image. Check the file and try again.",
+    "Не удалось загрузить медиафайл. Проверь файл и попробуй ещё раз.": "Could not upload the media file. Check the file and try again.",
+    "Не удалось загрузить аватар.": "Could not upload avatar.",
+    "Сначала выбери файл.": "Choose a file first.",
+    "Неверный пароль.": "Wrong password.",
+    "Неверный код. Проверь письмо и попробуй ещё раз.": "Wrong code. Check the email and try again.",
+    "Нужно войти в аккаунт.": "You need to log in.",
+    "Сессия устарела. Войди в аккаунт заново.": "Your session has expired. Log in again.",
+    "Пользователь не найден.": "User not found.",
+    "Трек не найден.": "Track not found.",
+    "Публикация не найдена.": "Post not found.",
+    "Комментарий не найден.": "Comment not found.",
+    "Не удалось отправить код подтверждения.": "Could not send verification code.",
+    "Не удалось удалить аккаунт.": "Could not delete account.",
+    "Один из параметров передан в неверном формате. Обнови страницу и попробуй ещё раз.": "One of the parameters has an invalid format. Refresh the page and try again.",
+    "Вы уже оценили (обновить)": "Already rated (update)",
+    "Нельзя оценить свой трек": "You cannot rate your own track",
+    "Ошибка оценки": "Rating failed",
+    "Ошибка загрузки трека": "Track loading failed",
+    "неизвестная ошибка": "unknown error",
+    "Комментариев пока нет.": "No comments yet.",
+    "Не удалось загрузить комментарии.": "Could not load comments.",
+    "Комментарии для этого трека пока недоступны.": "Comments are not available for this track yet.",
+    "Нет оценок": "No ratings",
+    "В профиле пока нет треков для отправки на оценку.": "There are no profile tracks to submit for rating yet.",
+    "Уже в очереди": "Already in queue",
+    "Выбрано": "Selected",
+    "Выбрать": "Choose",
+    "Очередь закрыта": "Queue is closed",
+    "Очередь временно приостановлена": "Queue is temporarily paused",
+    "Отправка сейчас недоступна": "Submitting is unavailable right now",
+    "Для очереди можно загрузить файл до 20 МБ": "Queue uploads are limited to 20 MB",
+    "Вставь ссылку SoundCloud": "Paste a SoundCloud link",
+    "Подтягиваю данные...": "Fetching data...",
+    "Не удалось подтянуть данные из SoundCloud": "Could not fetch data from SoundCloud",
+    "Данные подтянуты": "Data fetched",
+    "Отправка...": "Submitting...",
+    "Не удалось отправить трек из профиля": "Could not submit profile track",
+    "Трек из профиля отправлен в очередь": "Profile track sent to queue",
+    "Загрузите песню или вставьте ссылку SoundCloud": "Upload a song or paste a SoundCloud link",
+    "Заполни автора и название": "Fill in artist and title",
+    "Трек успешно отправлен": "Track submitted successfully",
+    "Без текста": "No text",
+    "Неизвестный артист": "Unknown artist",
+    "Слушать": "Listen",
+    "Обновление": "Update",
+    "Без заголовка": "Untitled",
+    "На паузе": "Paused",
+    "Пульс платформы": "Platform pulse",
+    "Музыка, движение и азарт в одном потоке.": "Music, motion, and energy in one flow.",
+    "Следи за стримом, лови еженедельный челлендж и возвращайся в момент, когда очередь снова взорвётся новыми именами.": "Follow the stream, catch the weekly challenge, and come back when the queue lights up with new names.",
+    "Обновляем таймер...": "Updating timer...",
+    "Неделя уже в движении": "The week is already moving",
+    "Челлендж недели": "Weekly challenge",
+    "Поймай свой импульс": "Catch your impulse",
+    "Возвращайся чаще, чтобы держать темп и не выпадать из движухи.": "Come back more often to keep the pace and stay in the movement.",
+    "Фокус недели": "Weekly focus",
+    "Для тебя": "For you",
+    "Войди в аккаунт, чтобы лента стала личной.": "Log in to make the feed personal.",
+    "Здесь появятся твой прогресс, streak, свежие уведомления и быстрые поводы вернуться в очередь.": "Your progress, streak, fresh notifications, and quick reasons to return to the queue will appear here.",
+    "Твой прогресс": "Your progress",
+    "Твой ранг": "Your rank",
+    "XP сейчас": "Current XP",
+    "Ты уже на максимальном ранге. Самое время удерживать статус и собирать достижения.": "You are already at max rank. Time to hold status and collect achievements.",
+    "Серия": "Streak",
+    "Возвращайся каждый день, чтобы серия не обнулилась и прогресс не остыл.": "Come back every day so the streak does not reset and progress stays warm.",
+    "Оценки, посты, репосты и загрузки двигают тебя вверх быстрее всего.": "Ratings, posts, reposts, and uploads move you up the fastest.",
+    "Сигналы для тебя": "Signals for you",
+    "Новое событие в твоём профиле.": "New event in your profile.",
+    "Пока тихо": "Quiet for now",
+    "Как только тебя оценят, упомянут или заметят, всё появится здесь.": "When someone rates, mentions, or notices you, it will appear here.",
+    "Открыть настройки": "Open settings",
+    "Быстрый вход": "Quick entry",
+    "Есть трек, который ждёт твою оценку": "There is a track waiting for your rating",
+    "Очередь скоро заполнится": "The queue will fill up soon",
+    "Открыть трек": "Open track",
+    "Перейти в очередь": "Go to queue",
+    "Новое движение": "New movement",
+    "Активность": "Activity",
+    "Идёт финальная витрина": "Final showcase is live",
+    "Пауза в эфире": "Stream is paused",
+    "Стрим в движении": "Stream is moving",
+    "Пока нет треков для витрины.": "No showcase tracks yet.",
+    "Судейская оценка": "Judge rating",
+    "Общая оценка": "Overall rating",
+    "Пользовательская оценка": "User rating",
+    "Подборка треков скоро появится.": "Track selection will appear soon.",
+    "Может зайти": "You may like this",
+    "Загружаем": "Loading",
+    "Постовой модуль ещё не загрузился.": "Post module has not loaded yet.",
+    "Артисты скоро появятся.": "Artists will appear soon.",
+    "Повторить": "Retry",
+    "Пока никто не откликнулся": "No responses yet",
+    "Выбран": "Chosen",
+    "Без сообщения": "No message",
+    "Воспроизвести": "Play",
+    "Выключить звук": "Mute",
+    "Включить звук": "Unmute",
+    "Опен": "Open",
+    "Участник уже выбран": "Participant already chosen",
+    "Открыт для заявок": "Open for applications",
+    "Без описания": "No description",
+    "Удалить опен": "Delete open",
+    "Напиши, почему именно ты залетишь сюда лучше всех": "Write why you are the best fit here",
+    "Предложить кандидатуру": "Apply",
+    "Пока опенов нет": "No opens yet",
+    "Ты уже оставил заявку": "You have already applied",
+    "Твой опен": "Your open",
+    "Опен опубликован": "Open published",
+    "Фото": "Photo",
+    "Видео": "Video",
+    "Диалог пуст": "Conversation is empty",
+    "Отправка": "Sending",
+    "Сообщений пока нет": "No messages yet",
+    "Сообщения от этого пользователя отключены": "Messages from this user are disabled",
+    "Ответ": "Reply",
+    "Пересылка": "Forward",
+    "Файл": "File",
+    "Текущее фото группы": "Current group photo",
+    "Создать группу": "Create group",
+    "Можно закрепить максимум 5 чатов.": "You can pin up to 5 chats.",
+    "Не удалось обновить закреп.": "Could not update pin.",
+    "Пока без описания": "No description yet",
+    "Участников": "Members",
+    "Сообщений": "Messages",
+    "Создан": "Created",
+    "Приглашать участников в эту группу может только владелец.": "Only the owner can invite members to this group.",
+    "Редактировать группу": "Edit group",
+    "Введи название.": "Enter a name.",
+    "Введи @username для приглашения.": "Enter @username to invite.",
+    "Этот человек уже в группе.": "This person is already in the group.",
+    "Приглашение уже отправлено.": "Invitation already sent.",
+    "Не удалось отправить приглашение.": "Could not send invitation.",
+    "Приглашение отправлено.": "Invitation sent.",
+    "Удалить группу": "Delete group",
+    "Это действие удалит чат и все сообщения без возможности восстановления.": "This will permanently delete the chat and all messages.",
+    "Не удалось удалить чат": "Could not delete chat",
+    "Ты перестанешь видеть новые сообщения этой группы.": "You will stop seeing new messages from this group.",
+    "Не удалось выйти из группы": "Could not leave group",
+    "Диалогов пока нет": "No conversations yet",
+    "Приглашение в группу": "Group invitation",
+    "Отклонить": "Decline",
+    "Управление": "Manage",
+    "Открепить": "Unpin",
+    "Включить сообщения": "Enable messages",
+    "Отключить сообщения": "Disable messages",
+    "Не удалось удалить сообщение": "Could not delete message",
+    "Не удалось обновить настройки диалога": "Could not update conversation settings",
+    "Некуда пересылать, пока есть только этот диалог": "There is nowhere to forward while this is your only conversation",
+    "Не удалось переслать сообщение": "Could not forward message",
+    "Скачать файл": "Download file",
+    "Участники": "Members",
+    "Не удалось загрузить участников.": "Could not load members.",
+    "В группе пока нет участников.": "There are no members in the group yet.",
+    "Пользователь": "User",
+    "владелец": "owner",
+    "Скачать": "Download",
+    "Недавно": "Recently",
+    "Сегодня": "Today",
+    "Вчера": "Yesterday",
+    "Системный": "System",
+    "Публичный": "Public",
+    "Приватный": "Private",
+    "Дата добавления": "Date added",
+    "Длительность": "Duration",
+    "Дополнительное действие": "More action"
+  };
+
   function normalizeLanguage(language) {
     return SUPPORTED_LANGUAGES.includes(language) ? language : DEFAULT_LANGUAGE;
   }
@@ -285,11 +796,139 @@
     if (altKey) element.setAttribute("alt", t(altKey, element.getAttribute("alt") || ""));
   }
 
+  function translatePhrase(value) {
+    const cleanValue = String(value || "").trim();
+    if (!cleanValue) return value;
+    if (currentLanguage === "en") {
+      const dynamicPatterns = [
+        [/^(\d+)\s+треков$/i, "$1 tracks"],
+        [/^(\d+)\s+откликов$/i, "$1 responses"],
+        [/^(\d+)\s+участников$/i, "$1 members"],
+        [/^Доступно\s+(\d+)$/i, "$1 available"],
+        [/^(\d+)\s+дн\.\s+назад$/i, "$1 days ago"],
+        [/^(\d+)\s+мин\s+назад$/i, "$1 min ago"],
+        [/^(\d+)\s+ч\s+назад$/i, "$1 h ago"],
+        [/^(\d+)\s+д\s+назад$/i, "$1 d ago"],
+        [/^(\d+)\s+дн\.$/i, "$1 days"],
+        [/^(\d+)\s+действий за неделю$/i, "$1 actions this week"],
+        [/^(\d+)\s+непрочитанных уведомлений$/i, "$1 unread notifications"],
+        [/^До следующего ранга осталось\s+(\d+)\s+XP\.$/i, "$1 XP to the next rank."],
+        [/^Ты в игре уже\s+(\d+)\s+дн\.$/i, "You have been in the game for $1 days."],
+        [/^Очередь:\s*(.+)$/i, "Queue: $1"]
+      ];
+      for (const [pattern, replacement] of dynamicPatterns) {
+        if (pattern.test(cleanValue)) {
+          return cleanValue.replace(pattern, replacement);
+        }
+      }
+    }
+    return phraseTranslations[cleanValue] || value;
+  }
+
+  function rememberAttrOriginal(element, attr, value) {
+    let originalAttrs = attrOriginals.get(element);
+    if (!originalAttrs) {
+      originalAttrs = {};
+      attrOriginals.set(element, originalAttrs);
+    }
+    if (typeof originalAttrs[attr] === "undefined") {
+      originalAttrs[attr] = value;
+    }
+    return originalAttrs[attr];
+  }
+
+  function translateTextNode(node) {
+    let original = textNodeOriginals.get(node) || node.nodeValue;
+    const translatedOriginal = translatePhrase(original);
+    const currentValue = node.nodeValue;
+
+    if (
+      textNodeOriginals.has(node) &&
+      currentLanguage !== DEFAULT_LANGUAGE &&
+      currentValue !== translatedOriginal &&
+      /[А-Яа-яЁё]/.test(String(currentValue || ""))
+    ) {
+      original = currentValue;
+      textNodeOriginals.set(node, original);
+    }
+
+    if (!textNodeOriginals.has(node)) {
+      textNodeOriginals.set(node, original);
+    }
+
+    if (currentLanguage === DEFAULT_LANGUAGE) {
+      node.nodeValue = original;
+      return;
+    }
+
+    const translated = translatePhrase(original);
+    if (translated === original) return;
+
+    const prefix = String(original).match(/^\s*/)?.[0] || "";
+    const suffix = String(original).match(/\s*$/)?.[0] || "";
+    node.nodeValue = `${prefix}${translated}${suffix}`;
+  }
+
+  function translatePlainAttribute(element, attr) {
+    if (!element.hasAttribute(attr)) return;
+    const original = rememberAttrOriginal(element, attr, element.getAttribute(attr));
+
+    if (currentLanguage === DEFAULT_LANGUAGE) {
+      element.setAttribute(attr, original);
+      return;
+    }
+
+    element.setAttribute(attr, translatePhrase(original));
+  }
+
+  function autoTranslateTree(root = document) {
+    const walkerRoot = root.nodeType === Node.TEXT_NODE ? root.parentElement : root;
+    if (!walkerRoot) return;
+
+    if (root.nodeType === Node.TEXT_NODE) {
+      translateTextNode(root);
+      return;
+    }
+
+    const textWalker = document.createTreeWalker(walkerRoot, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        if (parent.closest("script, style, textarea, input, [data-i18n-skip], [data-i18n], [data-i18n-placeholder], [data-i18n-aria-label], [data-i18n-title], [data-i18n-alt]")) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (!String(node.nodeValue || "").trim()) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    while (textWalker.nextNode()) {
+      translateTextNode(textWalker.currentNode);
+    }
+
+    const attrTargets = walkerRoot.querySelectorAll?.("input, textarea, button, a, img, [title], [aria-label], [placeholder]") || [];
+    attrTargets.forEach((element) => {
+      if (element.closest?.("[data-i18n-skip]")) return;
+      if (
+        element.hasAttribute("data-i18n-placeholder") ||
+        element.hasAttribute("data-i18n-aria-label") ||
+        element.hasAttribute("data-i18n-title") ||
+        element.hasAttribute("data-i18n-alt")
+      ) {
+        return;
+      }
+      ["placeholder", "title", "aria-label", "alt"].forEach((attr) => {
+        translatePlainAttribute(element, attr);
+      });
+    });
+  }
+
   function applyI18n(root = document) {
     document.documentElement.lang = currentLanguage;
     document.documentElement.dataset.language = currentLanguage;
 
     root.querySelectorAll("[data-i18n], [data-i18n-placeholder], [data-i18n-aria-label], [data-i18n-title], [data-i18n-alt]").forEach(translateElement);
+    autoTranslateTree(root);
     root.querySelectorAll("[data-language-option]").forEach((button) => {
       const isActive = button.dataset.languageOption === currentLanguage;
       button.classList.toggle("active", isActive);
@@ -323,12 +962,66 @@
     });
   }
 
+  const nativeAlert = window.alert?.bind(window);
+  const nativeConfirm = window.confirm?.bind(window);
+  const nativePrompt = window.prompt?.bind(window);
+
+  if (nativeAlert && !window.__ritmoriaAlertI18nWrapped) {
+    window.__ritmoriaAlertI18nWrapped = true;
+    window.alert = (message) => nativeAlert(currentLanguage === DEFAULT_LANGUAGE ? message : translatePhrase(message));
+  }
+
+  if (nativeConfirm && !window.__ritmoriaConfirmI18nWrapped) {
+    window.__ritmoriaConfirmI18nWrapped = true;
+    window.confirm = (message) => nativeConfirm(currentLanguage === DEFAULT_LANGUAGE ? message : translatePhrase(message));
+  }
+
+  if (nativePrompt && !window.__ritmoriaPromptI18nWrapped) {
+    window.__ritmoriaPromptI18nWrapped = true;
+    window.prompt = (message, defaultValue) => nativePrompt(
+      currentLanguage === DEFAULT_LANGUAGE ? message : translatePhrase(message),
+      defaultValue
+    );
+  }
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === "characterData") {
+        translateTextNode(mutation.target);
+        return;
+      }
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
+          applyI18n(node.nodeType === Node.ELEMENT_NODE ? node : document);
+        }
+      });
+    });
+  });
+
+  if (document.body) {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+  } else {
+    document.addEventListener("DOMContentLoaded", () => {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      });
+      applyI18n(document);
+    }, { once: true });
+  }
+
   window.RitmoriaI18n = {
     apply: applyI18n,
     initSwitchers: initLanguageSwitcher,
     setLanguage,
     getLanguage: () => currentLanguage,
-    t
+    t,
+    translatePhrase
   };
 
   applyI18n(document);
