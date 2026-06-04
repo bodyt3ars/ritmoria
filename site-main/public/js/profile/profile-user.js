@@ -1,5 +1,9 @@
 const token = localStorage.getItem("token");
 
+function profileUserT(key, fallback = "") {
+  return window.RitmoriaI18n?.t?.(key, fallback) || fallback || key;
+}
+
 function setText(id, text) {
   const el = document.getElementById(id);
   if (el) {
@@ -1003,10 +1007,10 @@ async function initFollowSystem() {
 
 function updateFollowBtn(btn, following) {
   if (following) {
-    btn.innerHTML = '<i class="fa-solid fa-user-minus"></i> Отписаться';
+    btn.innerHTML = `<i class="fa-solid fa-user-minus"></i> <span>${profileUserT("profile.unfollow", "Отписаться")}</span>`;
     btn.classList.add("secondary-btn");
   } else {
-    btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Подписаться';
+    btn.innerHTML = `<i class="fa-solid fa-user-plus"></i> <span>${profileUserT("profile.follow", "Подписаться")}</span>`;
     btn.classList.remove("secondary-btn");
   }
 }
@@ -1080,17 +1084,17 @@ async function openFollowModal(type) {
   if (!modal || !list || !title) return;
 
   modal.style.display = "flex";
-  list.textContent = "Загрузка...";
+  list.textContent = profileUserT("profile.loading", "Загрузка...");
 
   const targetId = await getProfileId();
 
   let url = "";
 
   if (type === "followers") {
-    title.innerText = "Подписчики";
+    title.innerText = profileUserT("profile.followers", "Подписчики");
     url = `/followers/${targetId}`;
   } else {
-    title.innerText = "Подписки";
+    title.innerText = profileUserT("profile.following", "Подписки");
     url = `/following/${targetId}`;
   }
 
@@ -1098,7 +1102,7 @@ async function openFollowModal(type) {
   const users = await res.json();
 
   if (!Array.isArray(users) || !users.length) {
-    list.textContent = "Пока пусто";
+    list.textContent = profileUserT("profile.empty", "Пока пусто");
     return;
   }
 
@@ -1169,6 +1173,10 @@ window.loadFollowCounts = loadFollowCounts;
 window.openCollectiveModal = openCollectiveModal;
 window.closeCollectiveModal = closeCollectiveModal;
 window.openMemberProfile = openMemberProfile;
+
+window.addEventListener("ritmoria:language-change", () => {
+  initFollowSystem().catch((err) => console.error("Profile follow i18n refresh error:", err));
+});
 
 function showXP(amount) {
   const toast = document.getElementById("xpToast");

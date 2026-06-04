@@ -1,5 +1,9 @@
 window.currentUser = window.currentUser || {};
 
+function profileTrackT(key, fallback = "") {
+  return window.RitmoriaI18n?.t?.(key, fallback) || fallback || key;
+}
+
 function canModerateProfileTracks() {
   return !window.currentProfileIsMine && String(window.currentViewer?.role || "").toLowerCase() === "admin";
 }
@@ -311,7 +315,7 @@ function renderTrack(track, options = {}) {
         <div class="track-header">
           <div class="track-texts">
             <div class="track-title" onclick="goToTrack(event, ${track.id})">
-              ${escapeTrackHtml(track.title || "Без названия")}
+              ${escapeTrackHtml(track.title || profileTrackT("profile.noTitle", "Без названия"))}
             </div>
 
             <div class="track-artist">
@@ -331,7 +335,7 @@ function renderTrack(track, options = {}) {
             ${canRate ? `
               <button class="profile-track-rate-btn" type="button" onclick="openProfileTrackRatingModal(event, ${track.id})">
                 <i class="fa-regular fa-star"></i>
-                <span>${track.profile_my_rating_type ? "Обновить оценку" : "Оценить"}</span>
+                <span>${track.profile_my_rating_type ? profileTrackT("profile.updateRating", "Обновить оценку") : profileTrackT("queue.rate", "Оценить")}</span>
               </button>
             ` : ""}
 
@@ -345,23 +349,23 @@ function renderTrack(track, options = {}) {
                   ${isMy ? `
                     <div onclick="editTrack(${track.id})">
                       <i class="fa-solid fa-pen"></i>
-                      <span>Редактировать</span>
+                      <span>${profileTrackT("profile.edit", "Редактировать")}</span>
                     </div>
 
                     <div onclick="pinTrack(${track.id})">
                       <i class="fa-solid fa-thumbtack"></i>
-                      <span>Закрепить</span>
+                      <span>${profileTrackT("profile.pin", "Закрепить")}</span>
                     </div>
 
                     <div onclick="archiveTrack(${track.id})">
                       <i class="fa-solid fa-box-archive"></i>
-                      <span>Архив</span>
+                      <span>${profileTrackT("profile.archive", "Архив")}</span>
                     </div>
                   ` : ""}
 
                   <div onclick="deleteTrack(${track.id})" class="danger">
                     <i class="fa-solid fa-trash"></i>
-                    <span>Удалить</span>
+                    <span>${profileTrackT("profile.delete", "Удалить")}</span>
                   </div>
                 </div>
               </div>
@@ -935,7 +939,7 @@ async function deleteTrack(id) {
       return;
     }
   } else {
-    const ok = confirm("Удалить трек навсегда?");
+    const ok = confirm(profileTrackT("profile.deleteTrackConfirm", "Удалить трек навсегда?"));
     if (!ok) return;
   }
 
@@ -1051,12 +1055,12 @@ function renderProfileTrackRatingSummary(track) {
   return `
     <div class="profile-track-rating-summary" id="profile-track-rating-summary-${track.id}">
       <div class="profile-track-rating-pill ${hasVotes ? "has-votes" : ""}">
-        <span class="profile-track-rating-pill-label">Рейтинг</span>
+        <span class="profile-track-rating-pill-label">${profileTrackT("profile.rating", "Рейтинг")}</span>
         <strong class="profile-track-rating-pill-value">${formatProfileRatingValue(total)}</strong>
       </div>
       <div class="profile-track-rating-meta">
-        <span>Юзеры ${formatProfileRatingValue(track.profile_user_score || 0)}</span>
-        <span>Судьи ${formatProfileRatingValue(track.profile_judge_score || 0)}</span>
+        <span>${profileTrackT("profile.users", "Юзеры")} ${formatProfileRatingValue(track.profile_user_score || 0)}</span>
+        <span>${profileTrackT("profile.judges", "Судьи")} ${formatProfileRatingValue(track.profile_judge_score || 0)}</span>
       </div>
     </div>
   `;
@@ -1164,7 +1168,7 @@ async function openProfileTrackRatingModal(event, id) {
   profileTrackRatingState.track = track;
   profileTrackRatingState.myRatingLoaded = false;
 
-  document.getElementById("profileTrackRateTitle").textContent = track.title || "Без названия";
+  document.getElementById("profileTrackRateTitle").textContent = track.title || profileTrackT("profile.noTitle", "Без названия");
   document.getElementById("profileTrackRateArtist").textContent = renderTrackArtistDisplay(track, { asHtml: false });
   document.getElementById("profileTrackRateCover").src = track.cover
     ? (track.cover.startsWith("http") ? track.cover : "/" + track.cover.replace(/^\/+/, ""))
@@ -1239,7 +1243,7 @@ function applyProfileTrackRatingSummary(trackId, summary, ratingType = "") {
   const card = document.getElementById(`track-card-${numericTrackId}`);
   const buttonLabel = card?.querySelector(".profile-track-rate-btn span");
   if (buttonLabel) {
-    buttonLabel.textContent = "Обновить оценку";
+    buttonLabel.textContent = profileTrackT("profile.updateRating", "Обновить оценку");
   }
 }
 
@@ -1466,6 +1470,12 @@ window.renderProfileTrackCard = renderTrack;
 window.hydrateProfileTrackCards = hydrateTrackCards;
 window.syncProfileTrackCardsWithGlobalPlayer = syncProfileTrackCardsWithGlobalPlayer;
 window.renderTrackArtistDisplay = renderTrackArtistDisplay;
+
+window.addEventListener("ritmoria:language-change", () => {
+  if (document.getElementById("tracksContainer")) {
+    loadTracks().catch((err) => console.error("Profile tracks i18n refresh error:", err));
+  }
+});
 
 function initTrackModal() {
   const coverInput = document.getElementById("trackCoverInput");

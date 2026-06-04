@@ -14,6 +14,10 @@ function escapeQueueHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function queueT(key, fallback = "") {
+  return window.RitmoriaI18n?.t?.(key, fallback) || fallback || key;
+}
+
 async function loadQueueCurrentUser() {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -78,9 +82,9 @@ function getQueueScoreValue(track, view = queueRatingView) {
 }
 
 function getQueueScoreLabel(view = queueRatingView) {
-  if (view === "judge") return "Судьи";
-  if (view === "user") return "Пользователи";
-  return "Общее";
+  if (view === "judge") return queueT("queue.judgesScore", "Судьи");
+  if (view === "user") return queueT("queue.usersScore", "Пользователи");
+  return queueT("queue.totalScore", "Общее");
 }
 
 function getQueueTrackTimestamp(track) {
@@ -193,7 +197,7 @@ async function loadQueue() {
               ${
                 state === "closed"
                   ? `
-                    <div class="queue-track-score" aria-label="${escapeQueueHtml(getQueueScoreLabel())} оценка">
+                    <div class="queue-track-score" aria-label="${escapeQueueHtml(`${getQueueScoreLabel()} ${queueT("queue.scoreAria", "оценка")}`)}">
                       <span class="queue-track-score-label">${escapeQueueHtml(getQueueScoreLabel())}</span>
                       <span class="queue-track-score-value">${getQueueScoreValue(track).toFixed(1)}</span>
                     </div>
@@ -213,7 +217,7 @@ async function loadQueue() {
                       ? `
                         <button class="queue-judge-btn">
                           <i class="fa-solid fa-play"></i>
-                          Оценить
+                          <span data-i18n="queue.rate">${escapeQueueHtml(queueT("queue.rate", "Оценить"))}</span>
                         </button>
                       `
                       : ""
@@ -256,7 +260,7 @@ async function loadQueue() {
             e.preventDefault();
             e.stopPropagation();
 
-            const confirmed = confirm("Удалить трек?");
+            const confirmed = confirm(queueT("queue.deleteConfirm", "Удалить трек?"));
             if (!confirmed) return;
 
             try {
@@ -276,7 +280,7 @@ async function loadQueue() {
               trackCard.remove();
             } catch (err) {
               console.error(err);
-              alert("Ошибка при удалении");
+              alert(queueT("queue.deleteError", "Ошибка при удалении"));
             }
           });
         }
@@ -331,19 +335,19 @@ async function initAdminControls() {
 
   if (openBtn) openBtn.onclick = () => setState("open").catch((err) => {
     console.error("Queue open error:", err);
-    alert("Не удалось открыть очередь");
+    alert(queueT("queue.openError", "Не удалось открыть очередь"));
   });
   if (pauseBtn) pauseBtn.onclick = () => setState("paused").catch((err) => {
     console.error("Queue pause error:", err);
-    alert("Не удалось приостановить очередь");
+    alert(queueT("queue.pauseError", "Не удалось приостановить очередь"));
   });
   if (resumeBtn) resumeBtn.onclick = () => setState("open").catch((err) => {
     console.error("Queue resume error:", err);
-    alert("Не удалось открыть очередь");
+    alert(queueT("queue.openError", "Не удалось открыть очередь"));
   });
   if (closeBtn) closeBtn.onclick = () => setState("closed").catch((err) => {
     console.error("Queue close error:", err);
-    alert("Не удалось закрыть очередь");
+    alert(queueT("queue.closeError", "Не удалось закрыть очередь"));
   });
 }
 
@@ -360,17 +364,17 @@ async function loadQueueState() {
     el.className = "queue-status";
 
     if (data.state === "open") {
-      el.textContent = "Открыта";
+      el.textContent = queueT("queue.openStatus", "Открыта");
       el.classList.add("queue-status-open");
     }
 
     if (data.state === "closed") {
-      el.textContent = "Закрыта";
+      el.textContent = queueT("queue.closedStatus", "Закрыта");
       el.classList.add("queue-status-closed");
     }
 
     if (data.state === "paused") {
-      el.textContent = "Приостановлена";
+      el.textContent = queueT("queue.pausedStatus", "Приостановлена");
       el.classList.add("queue-status-paused");
     }
   } catch (err) {
@@ -409,3 +413,9 @@ window.initQueuePage = async function () {
   queueReloadInterval = setInterval(loadQueue, 5000);
   queueStateInterval = setInterval(loadQueueState, 3000);
 };
+
+window.addEventListener("ritmoria:language-change", () => {
+  renderQueueRatingControls(queueCurrentState);
+  loadQueue();
+  loadQueueState();
+});
