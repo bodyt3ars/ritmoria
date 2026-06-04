@@ -1081,6 +1081,58 @@ async function loadAchievementsSection() {
   }
 }
 
+function settingsThemeLabel(theme, field) {
+  const isEnglish = window.RitmoriaI18n?.getLanguage?.() === "en";
+  if (field === "description") {
+    return isEnglish ? theme.descriptionEn : theme.descriptionRu;
+  }
+  return isEnglish ? theme.nameEn : theme.nameRu;
+}
+
+function renderAppearanceSection() {
+  const body = document.getElementById("modalBody");
+  if (!body) return;
+
+  const themes = window.RitmoriaTheme?.themes || [];
+  const activeTheme = window.RitmoriaTheme?.getTheme?.() || "rose";
+
+  body.innerHTML = `
+    <div class="settings-theme-grid">
+      ${themes.map((theme) => {
+        const isActive = theme.id === activeTheme;
+        return `
+          <button
+            type="button"
+            class="settings-theme-option ${isActive ? "is-active" : ""}"
+            data-theme-choice="${settingsEscapeHtml(theme.id)}"
+            aria-pressed="${isActive ? "true" : "false"}"
+          >
+            <span class="settings-theme-swatches" aria-hidden="true">
+              ${theme.swatches.map((color) => `
+                <span class="settings-theme-swatch" style="background:${settingsEscapeHtml(color)}"></span>
+              `).join("")}
+            </span>
+            <span>
+              <span class="settings-theme-name">${settingsEscapeHtml(settingsThemeLabel(theme, "name"))}</span>
+              <span class="settings-theme-description">${settingsEscapeHtml(settingsThemeLabel(theme, "description"))}</span>
+            </span>
+            <span class="settings-theme-check">
+              <i class="fa-solid fa-check"></i>
+            </span>
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+
+  body.querySelectorAll("[data-theme-choice]").forEach((button) => {
+    button.addEventListener("click", () => {
+      window.RitmoriaTheme?.setTheme?.(button.dataset.themeChoice);
+      renderAppearanceSection();
+    });
+  });
+}
+
 async function openSettingsSection(type) {
   
   const modal = document.getElementById("settingsModal");
@@ -1233,6 +1285,12 @@ if (type === "archive") {
       body.innerHTML = `<p>${settingsT("Ошибка загрузки")}</p>`;
     }
 
+    return;
+  }
+
+  if (type === "appearance") {
+    title.innerText = settingsT("Внешний вид");
+    renderAppearanceSection();
     return;
   }
 

@@ -1,0 +1,251 @@
+html[data-theme="rose"] {
+  --brand-pink: #e3a0bd;
+  --brand-pink-strong: #f0b5cc;
+  --brand-pink-deep: #bd7196;
+  --brand-pink-soft: rgba(227, 160, 189, 0.16);
+  --brand-pink-line: rgba(227, 160, 189, 0.24);
+  --brand-ink: #291520;
+  --surface-0: #07080c;
+  --surface-1: rgba(13, 14, 20, 0.94);
+  --surface-2: rgba(18, 19, 27, 0.92);
+  --surface-3: rgba(25, 25, 34, 0.94);
+  --theme-rgb: 227, 160, 189;
+  --theme-strong-rgb: 240, 181, 204;
+  --theme-bg-1: rgba(227, 160, 189, 0.09);
+  --theme-bg-2: rgba(227, 160, 189, 0.13);
+}
+
+html[data-theme="ocean"] {
+  --brand-pink: #38bdf8;
+  --brand-pink-strong: #7dd3fc;
+  --brand-pink-deep: #2563eb;
+  --brand-pink-soft: rgba(56, 189, 248, 0.15);
+  --brand-pink-line: rgba(125, 211, 252, 0.24);
+  --brand-ink: #07172a;
+  --surface-0: #06111d;
+  --surface-1: rgba(7, 18, 31, 0.95);
+  --surface-2: rgba(10, 26, 42, 0.92);
+  --surface-3: rgba(15, 35, 55, 0.94);
+  --theme-rgb: 56, 189, 248;
+  --theme-strong-rgb: 125, 211, 252;
+  --theme-bg-1: rgba(56, 189, 248, 0.09);
+  --theme-bg-2: rgba(37, 99, 235, 0.14);
+}
+
+html[data-theme="mint"] {
+  --brand-pink: #34d399;
+  --brand-pink-strong: #86efac;
+  --brand-pink-deep: #059669;
+  --brand-pink-soft: rgba(52, 211, 153, 0.15);
+  --brand-pink-line: rgba(134, 239, 172, 0.23);
+  --brand-ink: #062015;
+  --surface-0: #06130d;
+  --surface-1: rgba(7, 20, 14, 0.95);
+  --surface-2: rgba(10, 29, 20, 0.92);
+  --surface-3: rgba(14, 42, 29, 0.94);
+  --theme-rgb: 52, 211, 153;
+  --theme-strong-rgb: 134, 239, 172;
+  --theme-bg-1: rgba(52, 211, 153, 0.085);
+  --theme-bg-2: rgba(16, 185, 129, 0.13);
+}
+
+html[data-theme="ember"] {
+  --brand-pink: #f59e0b;
+  --brand-pink-strong: #fbbf24;
+  --brand-pink-deep: #ea580c;
+  --brand-pink-soft: rgba(245, 158, 11, 0.15);
+  --brand-pink-line: rgba(251, 191, 36, 0.24);
+  --brand-ink: #2a1104;
+  --surface-0: #120b05;
+  --surface-1: rgba(24, 14, 7, 0.95);
+  --surface-2: rgba(34, 19, 10, 0.92);
+  --surface-3: rgba(48, 27, 13, 0.94);
+  --theme-rgb: 245, 158, 11;
+  --theme-strong-rgb: 251, 191, 36;
+  --theme-bg-1: rgba(245, 158, 11, 0.08);
+  --theme-bg-2: rgba(249, 115, 22, 0.13);
+}
+
+html[data-theme="mono"] {
+  --brand-pink: #cbd5e1;
+  --brand-pink-strong: #f8fafc;
+  --brand-pink-deep: #94a3b8;
+  --brand-pink-soft: rgba(203, 213, 225, 0.14);
+  --brand-pink-line: rgba(226, 232, 240, 0.2);
+  --brand-ink: #0f172a;
+  --surface-0: #07080c;
+  --surface-1: rgba(12, 13, 18, 0.96);
+  --surface-2: rgba(18, 20, 27, 0.94);
+  --surface-3: rgba(28, 31, 39, 0.94);
+  --theme-rgb: 203, 213, 225;
+  --theme-strong-rgb: 248, 250, 252;
+  --theme-bg-1: rgba(203, 213, 225, 0.055);
+  --theme-bg-2: rgba(148, 163, 184, 0.08);
+}
+
+html[data-theme] {
+  --brand-gradient: linear-gradient(135deg, var(--brand-pink-strong), var(--brand-pink-deep));
+  --panel-gradient:
+    linear-gradient(180deg, var(--surface-2), rgba(8, 9, 14, 0.96)),
+    radial-gradient(circle at 0% 0%, var(--theme-bg-2), transparent 34%);
+  --shadow-panel: 0 24px 70px rgba(0, 0, 0, 0.42);
+  --gp-judge-strong: var(--brand-pink-deep);
+  --gp-judge-strong-2: var(--brand-pink-strong);
+  --gp-min-accent: var(--brand-pink);
+  --gp-min-accent-strong: var(--brand-pink-strong);
+}
+
+html[data-theme],
+html[data-theme] body {
+  background-color: var(--surface-0);
+}
+
+html[data-theme] body {
+  background:
+    radial-gradient(circle at 18% -8%, var(--theme-bg-1), transparent 34%),
+    radial-gradient(circle at 82% 0%, rgba(var(--theme-rgb), 0.05), transparent 28%),
+    linear-gradient(180deg, var(--surface-0) 0%, #07080c 52%, var(--surface-0) 100%);
+}
+
+html[data-theme] ::selection {
+  background: rgba(var(--theme-rgb), 0.34);
+}
+
+html[data-theme] ::-webkit-scrollbar-thumb {
+  background: rgba(var(--theme-rgb), 0.26);
+}
+
+html[data-theme] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--theme-rgb), 0.44);
+}
+
+html[data-theme] .video-background::after {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(var(--theme-rgb), 0.13), transparent 28%),
+    radial-gradient(circle at 78% 0%, rgba(var(--theme-strong-rgb), 0.045), transparent 22%),
+    linear-gradient(180deg, rgba(7, 8, 12, 0.44), rgba(7, 8, 12, 0.92));
+}
+
+html[data-theme] .navbar,
+html[data-theme] .settings-page-card,
+html[data-theme] .settings-page-modal-content,
+html[data-theme] .profile-modal-content,
+html[data-theme] .profile-post-modal-content,
+html[data-theme] .playlists-page .playlist-card,
+html[data-theme] .playlists-page .playlists-tracks-box,
+html[data-theme] .opens-card,
+html[data-theme] .opens-create-panel,
+html[data-theme] .opens-feed-panel,
+html[data-theme] .opens-side-panel,
+html[data-theme] .track-page-shell,
+html[data-theme] .judge-page,
+html[data-theme] .gp-shell,
+html[data-theme] .gp-queue-panel,
+html[data-theme] .gp-playlist-modal-card,
+html[data-theme] .gp-playlist-modal-card-small {
+  border-color: var(--brand-pink-line);
+}
+
+html[data-theme] .navbar .navbar-search-icon,
+html[data-theme] .navbar .navbar-search-highlight,
+html[data-theme] .settings-page-card i,
+html[data-theme] .profile-tabs button.active,
+html[data-theme] .playlists-badge,
+html[data-theme] .track-page-kicker,
+html[data-theme] .judge-track-kicker {
+  color: var(--brand-pink-strong);
+}
+
+html[data-theme] .settings-page {
+  --settings-pink: var(--brand-pink);
+  --settings-rose: var(--brand-pink-strong);
+  --settings-violet: var(--brand-pink-deep);
+  --settings-panel:
+    linear-gradient(180deg, var(--surface-2), var(--surface-1)),
+    radial-gradient(circle at top left, rgba(var(--theme-rgb), 0.15), transparent 38%),
+    radial-gradient(circle at top right, rgba(var(--theme-strong-rgb), 0.09), transparent 34%);
+}
+
+.settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.settings-theme-option {
+  width: 100%;
+  min-height: 118px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line-soft);
+  background:
+    linear-gradient(180deg, var(--surface-2), var(--surface-1)),
+    radial-gradient(circle at 0% 0%, rgba(var(--theme-rgb), 0.12), transparent 42%);
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  text-align: left;
+  transition: 0.2s ease;
+}
+
+.settings-theme-option:hover,
+.settings-theme-option.is-active {
+  transform: translateY(-2px);
+  border-color: var(--brand-pink-line);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28), 0 0 28px rgba(var(--theme-rgb), 0.12);
+}
+
+.settings-theme-option.is-active {
+  background:
+    linear-gradient(180deg, rgba(var(--theme-rgb), 0.13), var(--surface-1)),
+    radial-gradient(circle at 0% 0%, rgba(var(--theme-strong-rgb), 0.14), transparent 42%);
+}
+
+.settings-theme-swatches {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-theme-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.settings-theme-name {
+  display: block;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.settings-theme-description {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.settings-theme-check {
+  align-self: flex-end;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--theme-rgb), 0.16);
+  color: var(--brand-pink-strong);
+  opacity: 0;
+  transition: 0.2s ease;
+}
+
+.settings-theme-option.is-active .settings-theme-check {
+  opacity: 1;
+}

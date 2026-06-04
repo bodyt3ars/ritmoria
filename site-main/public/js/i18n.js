@@ -338,6 +338,7 @@
     "Название плейлиста": "Playlist name",
     "Сообщения и уведомления": "Messages and notifications",
     "Конфиденциальность": "Privacy",
+    "Внешний вид": "Appearance",
     "Сохранённые": "Saved",
     "Лайки": "Likes",
     "Музыкальные объединения": "Music collectives",
