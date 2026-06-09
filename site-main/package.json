@@ -1,17 +1,17 @@
 {
   "name": "music-platform",
-  "version": "1.0.2",
-  "description": "",
+  "version": "1.0.3",
+  "description": "Desktop app for Ritmoria music platform",
   "main": "electron/main.js",
   "scripts": {
     "electron:dev": "electron .",
     "electron:build": "electron-builder --win",
-    "electron:build:web": "electron-builder --win nsis-web",
+    "electron:build:web": "electron-builder --win nsis",
     "electron:pack": "electron-builder --win --dir",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ritmoria",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -33,7 +33,7 @@
     "appId": "com.ritmoria.desktop",
     "productName": "Ritmoria",
     "executableName": "Ritmoria",
-    "asar": false,
+    "asar": true,
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "directories": {
@@ -50,7 +50,7 @@
       "signAndEditExecutable": true,
       "target": [
         {
-          "target": "nsis-web",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
@@ -61,18 +61,12 @@
     "nsis": {
       "installerIcon": "public/images/icon.ico",
       "uninstallerIcon": "public/images/icon.ico",
+      "artifactName": "RitmoriaSetup.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Ритмория"
-    },
-    "nsisWeb": {
-      "installerIcon": "public/images/icon.ico",
-      "uninstallerIcon": "public/images/icon.ico",
-      "artifactName": "RitmoriaSetup.${ext}",
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
     },
     "publish": {
       "provider": "generic",

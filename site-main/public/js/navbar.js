@@ -370,13 +370,6 @@ function showCollectiveInviteDecision({ collectiveName = "", actorTag = "" } = {
   });
 }
 
-function hideDesktopInstallLinks(container = document) {
-  if (!window.RitmoriaDesktop?.isDesktop) return;
-  container.querySelectorAll("[data-desktop-install-link]").forEach((link) => {
-    link.remove();
-  });
-}
-
 async function loadNavbar() {
   const container = document.getElementById("navbar");
   if (!container) return;
@@ -386,7 +379,6 @@ async function loadNavbar() {
     const html = await res.text();
 
     container.innerHTML = html;
-    hideDesktopInstallLinks(container);
     window.RitmoriaI18n?.initSwitchers?.(container);
     window.RitmoriaI18n?.apply?.(container);
 
