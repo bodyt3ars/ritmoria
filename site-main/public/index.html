@@ -34,6 +34,11 @@
   <meta name="twitter:description" content="Ритмория — музыкальная платформа для артистов, треков, опенов и общения.">
   <meta name="twitter:image" content="https://ritmoria.com/images/logo.png">
   <link rel="canonical" href="https://ritmoria.com/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="preconnect" href="https://w.soundcloud.com">
+  <link rel="dns-prefetch" href="//www.clarity.ms">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png">
   <link rel="apple-touch-icon" sizes="192x192" href="/images/favicon-192.png">
@@ -70,7 +75,7 @@
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "x4drbi5py4");
   </script>
-  <script src="https://w.soundcloud.com/player/api.js"></script>
+  <script src="https://w.soundcloud.com/player/api.js" defer></script>
 
   <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Sans:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -99,7 +104,7 @@
 
   <!-- ВИДЕОФОН -->
   <div class="video-background">
-    <video muted loop playsinline id="background-video">
+    <video muted loop playsinline preload="none" id="background-video">
       <source src="/images/bg.mp4" type="video/mp4">
     </video>
   </div>

@@ -433,6 +433,36 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
+const QUEUE_STATE_CACHE_TTL_MS = Number(process.env.QUEUE_STATE_CACHE_TTL_MS || 5000);
+let queueStateCache = {
+  value: null,
+  expiresAt: 0
+};
+
+async function getCachedQueueState() {
+  const now = Date.now();
+  if (queueStateCache.value && queueStateCache.expiresAt > now) {
+    return queueStateCache.value;
+  }
+
+  const result = await pool.query(
+    "SELECT value FROM system_settings WHERE key = 'queue_state'"
+  );
+  const state = result.rows[0]?.value || "open";
+  queueStateCache = {
+    value: state,
+    expiresAt: now + Math.max(1000, QUEUE_STATE_CACHE_TTL_MS)
+  };
+  return state;
+}
+
+function invalidateQueueStateCache(nextState = null) {
+  queueStateCache = {
+    value: nextState,
+    expiresAt: nextState ? Date.now() + Math.max(1000, QUEUE_STATE_CACHE_TTL_MS) : 0
+  };
+}
+
 function generateUsernameTag(name) {
   const tag = String(name || "")
     .toLowerCase()
@@ -918,7 +948,11 @@ async function ensureScalabilityIndexes() {
     ["follows", ["following_id"], "CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id)"],
     ["track_likes", ["track_id"], "CREATE INDEX IF NOT EXISTS idx_track_likes_track ON track_likes(track_id)"],
     ["track_likes", ["user_id"], "CREATE INDEX IF NOT EXISTS idx_track_likes_user ON track_likes(user_id)"],
-    ["notifications", ["user_id", "is_read", "created_at"], "CREATE INDEX IF NOT EXISTS idx_notifications_user_unread_created ON notifications(user_id, is_read, created_at DESC)"]
+    ["track_listens", ["track_id"], "CREATE INDEX IF NOT EXISTS idx_track_listens_track ON track_listens(track_id)"],
+    ["track_listens", ["user_id"], "CREATE INDEX IF NOT EXISTS idx_track_listens_user ON track_listens(user_id)"],
+    ["notifications", ["user_id", "is_read", "created_at"], "CREATE INDEX IF NOT EXISTS idx_notifications_user_unread_created ON notifications(user_id, is_read, created_at DESC)"],
+    ["direct_conversation_members", ["user_id", "conversation_id"], "CREATE INDEX IF NOT EXISTS idx_direct_conversation_members_user_conversation ON direct_conversation_members(user_id, conversation_id)"],
+    ["direct_messages", ["conversation_id", "is_read", "sender_id", "created_at"], "CREATE INDEX IF NOT EXISTS idx_direct_messages_unread_lookup ON direct_messages(conversation_id, is_read, sender_id, created_at DESC)"]
   ];
 
   for (const [tableName, columns, sql] of indexes) {
@@ -2806,13 +2840,9 @@ async function getHomeTopTracksSnapshot() {
     return snapshotRes.rows;
   }
 
-  const queueStateRes = await pool.query(
-    "SELECT value FROM system_settings WHERE key = 'queue_state'"
-  );
-
   // Если очередь уже открыта заново и живых треков в ней ещё нет,
   // просто не строим новый рейтинг с нуля.
-  if (queueStateRes.rows[0]?.value !== "closed") {
+  if ((await getCachedQueueState()) !== "closed") {
     return [];
   }
 
@@ -7867,15 +7897,11 @@ app.get("/api/soundcloud", async (req, res) => {
 // ➕ создать трек
 app.post("/api/tracks", requireRole(["user", "judge", "admin"]), trackUploadFields, async (req, res) => {
   try {
-    const q = await pool.query(
-  "SELECT value FROM system_settings WHERE key = 'queue_state'"
-);
+    const state = await getCachedQueueState();
 
-const state = q.rows[0]?.value || "open";
-
-if (state !== "open") {
-  return res.status(403).json({ message: "Очередь закрыта или на паузе" });
-}
+    if (state !== "open") {
+      return res.status(403).json({ message: "Очередь закрыта или на паузе" });
+    }
 
     const artist = sanitizeTrackText(req.body?.artist, { maxLength: 255 });
     const title = sanitizeTrackText(req.body?.title, { maxLength: 255 });
@@ -7942,12 +7968,7 @@ const result = await pool.query(
 app.get("/api/tracks/queue", async (req, res) => {
   try {
 
-    // 🔥 получаем статус
-    const q = await pool.query(
-      "SELECT value FROM system_settings WHERE key = 'queue_state'"
-    );
-
-    const state = q.rows[0]?.value || "open";
+    const state = await getCachedQueueState();
 
     let query = "";
 
@@ -9206,11 +9227,7 @@ app.post("/api/profile-tracks/:id/rate", requireRole(["user", "judge", "admin"])
 
 app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), async (req, res) => {
   try {
-    const queueStateRes = await pool.query(
-      "SELECT value FROM system_settings WHERE key = 'queue_state'"
-    );
-
-    const state = queueStateRes.rows[0]?.value || "open";
+    const state = await getCachedQueueState();
     if (state !== "open") {
       return res.status(403).json({ error: "queue_not_open" });
     }
@@ -9670,11 +9687,8 @@ app.post("/api/battles/:id/join-profile", requireRole(["user", "judge", "admin"]
 
 // получить состояние
 app.get("/api/queue/state", async (req, res) => {
-  const q = await pool.query(
-    "SELECT value FROM system_settings WHERE key = 'queue_state'"
-  );
-
-  res.json({ state: q.rows[0]?.value || "open" });
+  res.set("Cache-Control", "private, max-age=3");
+  res.json({ state: await getCachedQueueState() });
 });
 
 
@@ -9687,10 +9701,7 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
       return res.status(400).json({ error: "Invalid state" });
     }
 
-    const currentStateRes = await pool.query(
-      "SELECT value FROM system_settings WHERE key = 'queue_state'"
-    );
-    const currentState = currentStateRes.rows[0]?.value || "open";
+    const currentState = await getCachedQueueState();
 
     // При новом открытии после завершённого стрима очищаем только активную очередь:
     // сами queue-треки и все их queue-оценки/реакции. Snapshot главной не трогаем.
@@ -9731,6 +9742,7 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
       `,
       [state]
     );
+    invalidateQueueStateCache(state);
 
     await pool.query(
       `

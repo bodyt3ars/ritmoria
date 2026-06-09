@@ -250,6 +250,12 @@ async function preloadProfileAssets() {
   ]);
 }
 
+function optimizePageMedia(root = document) {
+  root.querySelectorAll("img").forEach((img) => {
+    if (!img.hasAttribute("loading")) img.setAttribute("loading", "lazy");
+    if (!img.hasAttribute("decoding")) img.setAttribute("decoding", "async");
+  });
+}
 
 function initProfileAfterRenderDeferred() {
   runAfterPaint(async () => {
@@ -283,6 +289,7 @@ const renderToken = currentRenderToken;
 
   const html = await loadPage(htmlUrl);
   app.innerHTML = html;
+  optimizePageMedia(app);
 
   finishRender(app);
   app.style.opacity = "1";
@@ -343,6 +350,7 @@ export async function renderPage(path) {
     const html = await loadPage("/html/index.html");
     if (renderToken !== currentRenderToken) return;
     app.innerHTML = html;
+    optimizePageMedia(app);
     finishRender(app);
     app.style.opacity = "1";
 
@@ -480,6 +488,7 @@ export async function renderPage(path) {
     if (renderToken !== currentRenderToken) return;
 
     app.innerHTML = html;
+    optimizePageMedia(app);
 
     const params = new URLSearchParams(location.search);
     const pathParts = routePath.split("/").filter(Boolean);
@@ -519,6 +528,7 @@ export async function renderPage(path) {
     if (renderToken !== currentRenderToken) return;
 
     app.innerHTML = html;
+    optimizePageMedia(app);
 
     const params = new URLSearchParams(location.search);
     window.__trackId = params.get("track");
@@ -660,6 +670,7 @@ export async function renderPage(path) {
       if (renderToken !== currentRenderToken) return;
 
       app.innerHTML = html;
+      optimizePageMedia(app);
 
       window.__trackTag = decodeURIComponent(tag);
       window.__trackSlug = decodeURIComponent(slug);
@@ -712,6 +723,7 @@ const [_, html, __] = await Promise.all([
 
     app.style.opacity = "0";
     app.innerHTML = html;
+    optimizePageMedia(app);
     window.scrollTo(0, 0);
     let tag = null;
 

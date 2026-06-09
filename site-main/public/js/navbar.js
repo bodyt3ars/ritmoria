@@ -8,6 +8,11 @@ let navbarRealtimeInitialized = false;
 let navbarRealtimeLoopInterval = null;
 let collectiveInviteDecisionResolver = null;
 
+const NAVBAR_QUEUE_POLL_MS = 30000;
+const NAVBAR_REALTIME_POLL_MS = 30000;
+const NAVBAR_FOCUS_REFRESH_COOLDOWN_MS = 10000;
+let navbarLastFocusRefreshAt = 0;
+
 const NAVBAR_RANK_TIERS = [
   { rank: 1, rankName: "Новичок", rankKey: "rank.newbie", minXp: 0 },
   { rank: 2, rankName: "Слушатель", rankKey: "rank.listener", minXp: 500 },
@@ -198,7 +203,17 @@ function ensureNavbarRealtimeLoop() {
     } catch (err) {
       console.error("Navbar realtime loop error:", err);
     }
-  }, 5000);
+  }, NAVBAR_REALTIME_POLL_MS);
+}
+
+function refreshNavbarRealtimeStateSoon(reason = "") {
+  const now = Date.now();
+  if (now - navbarLastFocusRefreshAt < NAVBAR_FOCUS_REFRESH_COOLDOWN_MS) return;
+  navbarLastFocusRefreshAt = now;
+
+  refreshNavbarRealtimeState().catch((err) => {
+    console.error(`Navbar ${reason || "refresh"} error:`, err);
+  });
 }
 
 function ensureAppConfirmModal() {
@@ -400,11 +415,10 @@ async function loadNavbar() {
     await loadNavbarNotifications();
     await loadNavbarMessagesBadge();
     ensureNavbarRealtimeLoop();
-    navbarQueueInterval = setInterval(loadQueueStatus, 5000);
-    navbarNotificationsInterval = setInterval(async () => {
-      await loadNavbarNotifications();
-      await loadNavbarMessagesBadge();
-    }, 15000);
+    navbarQueueInterval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      loadQueueStatus();
+    }, NAVBAR_QUEUE_POLL_MS);
   } catch (err) {
     console.error("Navbar load error:", err);
   }
@@ -1109,16 +1123,12 @@ if (!navbarRealtimeInitialized) {
   ensureNavbarRealtimeLoop();
 
   window.addEventListener("focus", () => {
-    refreshNavbarRealtimeState().catch((err) => {
-      console.error("Navbar focus refresh error:", err);
-    });
+    refreshNavbarRealtimeStateSoon("focus refresh");
   });
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
-    refreshNavbarRealtimeState().catch((err) => {
-      console.error("Navbar visibility refresh error:", err);
-    });
+    refreshNavbarRealtimeStateSoon("visibility refresh");
   });
 }
 

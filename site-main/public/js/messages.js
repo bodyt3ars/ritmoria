@@ -212,6 +212,7 @@ function startMessagesLivePolling() {
       return;
     }
 
+    if (document.visibilityState === "hidden") return;
     if (!messagesState.activeConversationId) return;
 
     try {

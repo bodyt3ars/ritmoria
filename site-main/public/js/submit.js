@@ -431,7 +431,9 @@ function initSubmitPage() {
     clearInterval(window.__submitQueueInterval);
   }
 
-  queueStateInterval = setInterval(checkQueueState, 3000);
+  queueStateInterval = setInterval(() => {
+    if (!document.hidden) checkQueueState();
+  }, 15000);
   window.__submitQueueInterval = queueStateInterval;
 }
 
