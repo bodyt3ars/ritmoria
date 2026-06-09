@@ -6,6 +6,36 @@
     </p>
 
     <form id="registerForm" class="auth-form">
+      <div class="auth-social auth-social-top">
+        <p class="auth-social-text">Быстро продолжить с</p>
+
+        <button type="button" id="googleAuthBtn" class="auth-google-btn">
+          <i class="fa-brands fa-google"></i>
+          <span>Google</span>
+        </button>
+
+        <button type="button" id="telegramAuthBtn" class="auth-telegram-btn">
+          <i class="fa-brands fa-telegram"></i>
+          <span>Telegram</span>
+        </button>
+
+        <p id="telegramAuthStatus" class="auth-telegram-status"></p>
+
+        <a
+          id="telegramAuthLink"
+          class="auth-telegram-manual auth-hidden"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Открыть бота вручную
+        </a>
+      </div>
+
+      <div class="auth-manual-divider">
+        <span>Или создать через email</span>
+      </div>
+
       <label class="auth-label" for="username">Имя</label>
       <input
         id="username"
@@ -51,32 +81,6 @@
       <div id="error" class="auth-error"></div>
 
       <button type="submit" class="auth-submit-btn">Зарегистрироваться</button>
-
-      <div class="auth-social">
-        <p class="auth-social-text">Или продолжить с</p>
-
-        <button type="button" id="googleAuthBtn" class="auth-google-btn">
-          <i class="fa-brands fa-google"></i>
-          <span>Google</span>
-        </button>
-
-        <button type="button" id="telegramAuthBtn" class="auth-telegram-btn">
-          <i class="fa-brands fa-telegram"></i>
-          <span>Telegram</span>
-        </button>
-
-        <p id="telegramAuthStatus" class="auth-telegram-status"></p>
-
-        <a
-          id="telegramAuthLink"
-          class="auth-telegram-manual auth-hidden"
-          href="#"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Открыть бота вручную
-        </a>
-      </div>
 
       <p class="auth-switch">
         Уже есть аккаунт? <a href="/login">Войти</a>

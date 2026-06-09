@@ -220,6 +220,11 @@
   align-items: stretch;
 }
 
+.auth-social-top {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
 .auth-social-text {
   grid-column: 1 / -1;
   margin: 0 0 4px;
@@ -231,6 +236,24 @@
   font-size: 13px;
   line-height: 1.2;
   font-family: "Segoe UI", sans-serif;
+}
+
+.auth-manual-divider {
+  margin: 4px 0 2px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  color: var(--auth-soft);
+  font-size: 13px;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.auth-manual-divider::before,
+.auth-manual-divider::after {
+  content: "";
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .auth-social-text::before,

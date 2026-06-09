@@ -5,29 +5,8 @@
     <p class="auth-card-subtitle">Войди по email, username или через Telegram</p>
 
     <form id="loginForm" class="auth-form">
-
-      <label class="auth-label">Email или @username</label>
-      <input
-        id="email"
-        class="auth-input"
-        type="text"
-        placeholder="email или @username"
-      >
-
-      <label class="auth-label">Пароль</label>
-      <input
-        type="password"
-        id="password"
-        class="auth-input"
-        placeholder="Введите пароль"
-      >
-
-      <div id="error" class="auth-error"></div>
-
-      <button type="submit" class="auth-submit-btn">Войти</button>
-
-      <div class="auth-social">
-        <p class="auth-social-text">Или продолжить с</p>
+      <div class="auth-social auth-social-top">
+        <p class="auth-social-text">Быстро продолжить с</p>
 
         <button type="button" id="googleAuthBtn" class="auth-google-btn">
           <i class="fa-brands fa-google"></i>
@@ -51,6 +30,30 @@
           Открыть бота вручную
         </a>
       </div>
+
+      <div class="auth-manual-divider">
+        <span>Или через email</span>
+      </div>
+
+      <label class="auth-label">Email или @username</label>
+      <input
+        id="email"
+        class="auth-input"
+        type="text"
+        placeholder="email или @username"
+      >
+
+      <label class="auth-label">Пароль</label>
+      <input
+        type="password"
+        id="password"
+        class="auth-input"
+        placeholder="Введите пароль"
+      >
+
+      <div id="error" class="auth-error"></div>
+
+      <button type="submit" class="auth-submit-btn">Войти</button>
 
       <p class="auth-switch">
         Нет аккаунта? <a href="/register">Зарегистрироваться</a>
