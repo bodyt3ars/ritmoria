@@ -9,6 +9,7 @@ const FRONTEND_MODE = String(process.env.RITMORIA_DESKTOP_FRONTEND_MODE || "remo
 const ENABLE_LOCAL_FALLBACK = process.env.RITMORIA_DESKTOP_LOCAL_FALLBACK === "1";
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const WINDOWS_APP_USER_MODEL_ID = "com.ritmoria.desktop";
+const START_FULLSCREEN = process.env.RITMORIA_DESKTOP_START_FULLSCREEN !== "0";
 
 const REMOTE_PATH_PREFIXES = [
   "/api/",
@@ -384,6 +385,7 @@ function createMainWindow() {
     backgroundColor: "#090a10",
     title: "Ритмория",
     icon: path.join(PUBLIC_DIR, "images", "icon.ico"),
+    fullscreen: START_FULLSCREEN,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -394,6 +396,13 @@ function createMainWindow() {
   });
 
   configureNavigation(mainWindow.webContents);
+
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown" || input.key !== "F11") return;
+
+    event.preventDefault();
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  });
 
   mainWindow.webContents.on("did-create-window", (childWindow) => {
     configureNavigation(childWindow.webContents, { closeOnExternal: true });
