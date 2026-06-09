@@ -43,6 +43,7 @@ let discoverRenderToken = 0;
 let discoverSwipeUnlockTimer = null;
 let discoverPointerEventsBound = false;
 let discoverDragSafetyTimer = null;
+let discoverSwipeSequence = 0;
 
 const DISCOVER_VOLUME_KEY = "discoverVolume";
 const DISCOVER_MUTED_KEY = "discoverMuted";
@@ -413,6 +414,25 @@ function clearDiscoverDragSafetyTimer() {
   discoverDragSafetyTimer = null;
 }
 
+function clearDiscoverSwipeUnlockTimer() {
+  if (!discoverSwipeUnlockTimer) return;
+  clearTimeout(discoverSwipeUnlockTimer);
+  discoverSwipeUnlockTimer = null;
+}
+
+function unlockDiscoverSwipe() {
+  discoverSwipeLocked = false;
+  discoverDragging = false;
+  discoverPointerId = null;
+  discoverDeltaX = 0;
+  clearDiscoverDragSafetyTimer();
+  clearDiscoverSwipeUnlockTimer();
+
+  if (discoverCard) {
+    discoverCard.style.pointerEvents = "";
+  }
+}
+
 function releaseDiscoverPointerCapture(pointerId = discoverPointerId) {
   if (!discoverCard || pointerId === null || pointerId === undefined) return;
 
@@ -714,8 +734,8 @@ async function sendTrackAction(trackId, action) {
   }
 }
 
-async function saveLikedDiscoverTrack(trackId) {
-  const current = getCurrentTrack();
+async function saveLikedDiscoverTrack(track) {
+  const current = track || getCurrentTrack();
   const selectedPlaylistId = getSelectedDiscoverPlaylistId();
   const api = ensureDiscoverPlaylistApi();
 
@@ -873,7 +893,8 @@ async function swipeCurrentTrack(direction, options = {}) {
   discoverDeltaX = 0;
   releaseDiscoverPointerCapture(swipePointerId);
   discoverSwipeLocked = true;
-  clearTimeout(discoverSwipeUnlockTimer);
+  const swipeToken = ++discoverSwipeSequence;
+  clearDiscoverSwipeUnlockTimer();
 
   discoverCard.style.pointerEvents = "none";
   discoverCard.style.transition = "transform 0.30s ease, opacity 0.30s ease";
@@ -896,7 +917,7 @@ async function swipeCurrentTrack(direction, options = {}) {
 
     if (!skipPlaylistSave) {
       pendingTasks.push(
-        saveLikedDiscoverTrack(current.id).catch((err) => {
+        saveLikedDiscoverTrack(current).catch((err) => {
           console.error("discover playlist save error", err);
         })
       );
@@ -910,6 +931,8 @@ async function swipeCurrentTrack(direction, options = {}) {
   }
 
   setTimeout(() => {
+    if (swipeToken !== discoverSwipeSequence) return;
+
     try {
       goToNextDiscoverTrack();
     } catch (err) {
@@ -918,18 +941,15 @@ async function swipeCurrentTrack(direction, options = {}) {
       renderDiscoverCards();
       playCurrentDiscoverTrack();
     } finally {
-      discoverSwipeLocked = false;
-      if (discoverCard) {
-        discoverCard.style.pointerEvents = "";
-      }
+      unlockDiscoverSwipe();
     }
   }, 260);
 
   discoverSwipeUnlockTimer = setTimeout(() => {
-    if (!discoverSwipeLocked) return;
+    if (!discoverSwipeLocked || swipeToken !== discoverSwipeSequence) return;
 
     console.warn("discover swipe fallback unlock");
-    discoverSwipeLocked = false;
+    unlockDiscoverSwipe();
     cancelDiscoverDrag(false);
     renderDiscoverCards();
   }, 900);
@@ -1082,6 +1102,7 @@ function bindDiscoverAudioEvents() {
   discoverAudio.onplay = updateDiscoverPlayButton;
   discoverAudio.onpause = updateDiscoverPlayButton;
   discoverAudio.onended = () => {
+    if (discoverSwipeLocked || discoverDragging) return;
     goToNextDiscoverTrack();
   };
 
@@ -1145,11 +1166,17 @@ function bindDiscoverButtonEvents() {
   }
 
   if (discoverLikeBtn) {
-    discoverLikeBtn.onclick = () => swipeCurrentTrack("right");
+    discoverLikeBtn.onclick = () => {
+      if (discoverSwipeLocked) return;
+      swipeCurrentTrack("right");
+    };
   }
 
   if (discoverDislikeBtn) {
-    discoverDislikeBtn.onclick = () => swipeCurrentTrack("left");
+    discoverDislikeBtn.onclick = () => {
+      if (discoverSwipeLocked) return;
+      swipeCurrentTrack("left");
+    };
   }
 
   if (discoverBackBtn) {
