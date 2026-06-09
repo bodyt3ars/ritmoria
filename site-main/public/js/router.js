@@ -14,7 +14,7 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260604-2";
+const ASSET_VERSION = "20260610-1";
 
 const DEFAULT_SEO = {
   title: "Ритмория — музыкальная платформа для артистов",
@@ -152,7 +152,13 @@ function removePageStyles() {
 async function addPageStyles(styles = []) {
   const oldStyles = document.querySelectorAll('link[data-page-style]');
 
-  const unique = [...new Set(["/styles/player.css", ...styles, "/styles/official-theme.css", "/styles/themes.css"])];
+  const unique = [...new Set([
+    "/styles/player.css",
+    ...styles,
+    "/styles/official-theme.css",
+    "/styles/themes.css",
+    "/styles/mobile-fixes.css"
+  ])];
 
   const newLinks = [];
 

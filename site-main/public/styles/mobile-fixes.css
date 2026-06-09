@@ -1,0 +1,676 @@
+/* Final responsive layer: layout-only fixes for small and tablet screens. */
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-wrap: anywhere;
+}
+
+body *,
+body *::before,
+body *::after {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+img,
+video,
+canvas,
+iframe,
+svg {
+  max-width: 100%;
+}
+
+input,
+textarea,
+select,
+button {
+  max-width: 100%;
+}
+
+.navbar,
+.app-sidebar,
+.global-player,
+.auth-card,
+.profile-page-card,
+.track-page-card,
+.track-page-panel,
+.queue-track-main,
+.settings-page-card,
+.settings-page-modal-content,
+.profile-modal-content,
+.profile-post-modal-content,
+.profile-post-comments-modal-content,
+.messages-shell,
+.opens-create-panel,
+.opens-feed-panel,
+.opens-side-panel,
+.playlists-page .playlist-card {
+  max-width: 100%;
+}
+
+.profile-page,
+.settings-page,
+.track-page,
+.queue-page,
+.playlists-page,
+.auth-page,
+.messages-page,
+.submit-page,
+.upload-page,
+.opens-page,
+.judge-page,
+.discover-page,
+.admin-page,
+.profile-page-container,
+.home-page .home-layout {
+  width: 100%;
+}
+
+.profile-page h1,
+.profile-page h2,
+.profile-page h3,
+.track-page h1,
+.track-page h2,
+.queue-title,
+.settings-page-title,
+.opens-card-title,
+.messages-title,
+.home-page .home-panel-title,
+.home-page .home-feed-title {
+  overflow-wrap: anywhere;
+}
+
+.profile-tabs,
+.queue-rating-controls,
+.queue-section-nav,
+.messages-chat-tabs,
+.settings-section-tabs,
+.track-page-reactions,
+.track-page-scores,
+.home-page .home-posts-shell .post-actions,
+.post-actions {
+  -webkit-overflow-scrolling: touch;
+}
+
+.track-page-judge-popup,
+.track-page-judge-modal-content,
+.settings-page-modal-content,
+.profile-modal-content,
+.profile-post-modal-content,
+.profile-post-comments-modal-content,
+.messages-modal,
+.auth-code-modal-content,
+.app-confirm-dialog {
+  width: min(100%, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+}
+
+.track-page-judge-popup-content,
+.track-page-judge-table,
+.settings-page-modal-body,
+.profile-post-comments-modal-content,
+.messages-media-viewer-body {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1023px) {
+  #app {
+    padding-left: 0 !important;
+  }
+
+  .app-sidebar {
+    display: none !important;
+  }
+
+  .navbar {
+    top: max(10px, env(safe-area-inset-top));
+    left: 9px !important;
+    right: 9px;
+    width: auto !important;
+    transform: none !important;
+  }
+
+  .navbar.auth-navbar {
+    left: 9px !important;
+    right: 9px;
+    width: auto !important;
+  }
+
+  .global-player {
+    left: 0 !important;
+    right: 0;
+    width: 100% !important;
+    max-width: none !important;
+    transform: none !important;
+  }
+
+  .home-page .home-layout,
+  .opens-layout,
+  .opens-page .opens-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .messages-shell,
+  body.messages-mode .messages-shell {
+    grid-template-columns: 1fr !important;
+    width: 100%;
+  }
+
+  .profile-page-container,
+  .settings-page,
+  .track-page,
+  .queue-page,
+  .submit-page,
+  .opens-page,
+  .playlists-page,
+  .messages-page,
+  .discover-page,
+  .judge-page,
+  .admin-page,
+  .upload-page {
+    padding-left: clamp(12px, 3vw, 22px);
+    padding-right: clamp(12px, 3vw, 22px);
+  }
+
+  .profile-page-container,
+  .settings-page,
+  .track-page,
+  .queue-page,
+  .submit-page,
+  .opens-page,
+  .playlists-page,
+  .messages-page,
+  .judge-page,
+  .admin-page {
+    margin-top: clamp(96px, 14vw, 118px);
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+
+  .navbar {
+    max-height: calc(100dvh - 18px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .navbar .navbar-search-results {
+    width: 100%;
+    max-height: min(54dvh, 420px);
+  }
+
+  .navbar .navbar-notifications-dropdown {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: 86px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 112px);
+    overflow: auto;
+  }
+
+  .home-page .home-layout {
+    padding-left: 14px;
+    padding-right: 14px;
+    gap: 18px;
+  }
+
+  .home-page .home-momentum-grid,
+  .home-page .home-for-you-grid,
+  .home-page .home-artist-grid,
+  .home-page .home-recommendation-meta,
+  .submit-top-row,
+  .submit-form-grid,
+  .submit-soundcloud-row,
+  .profile-form-grid,
+  .profile-top-row,
+  .settings-page-grid,
+  .settings-auth-grid,
+  .settings-communication-grid,
+  .settings-collective-grid,
+  .track-page-top,
+  .track-page-criterion-row,
+  .opens-page .opens-audio-player {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-page .home-posts-shell .post-card,
+  .profile-page .post-card,
+  .home-page .home-post,
+  .home-page .home-track-card,
+  .queue-track-main,
+  .track-page-top,
+  .track-page-player-box,
+  .track-page-panel,
+  .submit-card,
+  .settings-page-card,
+  .opens-card,
+  .messages-sidebar,
+  .messages-chat {
+    border-radius: 8px;
+  }
+
+  .profile-page-header,
+  .profile-posts-header,
+  .profile-section-header,
+  .track-page-comments-head,
+  .queue-header,
+  .messages-sidebar-head,
+  .messages-chat-header,
+  .settings-section-header,
+  .opens-card-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-page-actions,
+  .profile-post-modal-actions,
+  .profile-modal-buttons,
+  .queue-track-right,
+  .queue-track-score,
+  .track-page-reactions,
+  .track-page-scores,
+  .home-page .home-posts-shell .post-actions,
+  .post-actions,
+  .messages-invite-actions,
+  .messages-create-actions {
+    flex-wrap: wrap;
+  }
+
+  .profile-main-btn,
+  .profile-secondary-btn,
+  .profile-create-post-btn,
+  .profile-create-track-btn,
+  .profile-section-cta-btn,
+  .queue-admin-btn,
+  .queue-admin-btn-primary,
+  .track-page-comment-form button,
+  .messages-send-btn,
+  .messages-create-btn,
+  .opens-primary-btn,
+  .opens-apply-btn,
+  .opens-select-btn,
+  .auth-submit-btn,
+  .auth-google-btn,
+  .auth-telegram-btn {
+    min-height: 44px;
+  }
+
+  .profile-page-actions > *,
+  .profile-post-modal-actions > *,
+  .profile-modal-buttons > *,
+  .messages-invite-actions > *,
+  .messages-create-actions > *,
+  .opens-card-actions > * {
+    flex: 1 1 auto;
+  }
+
+  .queue-track-main {
+    align-items: stretch;
+  }
+
+  .queue-track-left {
+    width: 100%;
+  }
+
+  .queue-track-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .queue-track-score {
+    width: 100%;
+  }
+
+  .track-page-score-chip,
+  .track-page-reaction-btn {
+    flex: 1 1 140px;
+  }
+
+  .track-page-judge-popup {
+    display: none !important;
+  }
+
+  .track-page-judge-header,
+  .track-page-judge-row {
+    min-width: 640px;
+  }
+
+  .messages-sidebar {
+    max-height: 42dvh;
+  }
+
+  .messages-chat {
+    min-height: 68dvh;
+  }
+
+  .messages-message-bubble,
+  .messages-bubble {
+    max-width: 88% !important;
+  }
+
+  .settings-page-modal,
+  .profile-modal,
+  .profile-post-modal,
+  .profile-post-comments-modal,
+  .track-page-judge-modal {
+    padding: 12px;
+  }
+
+  .settings-page-modal-content,
+  .profile-modal-content,
+  .profile-post-modal-content,
+  .profile-post-comments-modal-content,
+  .track-page-judge-modal-content {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  .global-player {
+    min-height: 74px;
+    padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
+  .gp-left {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .gp-center {
+    min-width: 0;
+  }
+
+  .gp-right {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .navbar {
+    left: 6px !important;
+    right: 6px;
+    width: auto !important;
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .navbar.auth-navbar {
+    left: 6px !important;
+    right: 6px;
+    width: auto !important;
+  }
+
+  .navbar .navbar-logo-text {
+    font-size: 18px;
+  }
+
+  .navbar .navbar-right-extra,
+  .navbar .navbar-guest {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .navbar .navbar-user-wrap,
+  .navbar .navbar-notifications-wrap {
+    width: 100%;
+  }
+
+  .navbar .navbar-icon-link,
+  .navbar .navbar-language-switch,
+  .navbar .navbar-user {
+    justify-self: stretch;
+  }
+
+  .navbar .navbar-notifications-dropdown,
+  .navbar .navbar-dropdown {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+  }
+
+  .home-page .home-layout,
+  .profile-page-container,
+  .settings-page,
+  .track-page,
+  .queue-page,
+  .submit-page,
+  .opens-page,
+  .playlists-page,
+  .messages-page,
+  .discover-page,
+  .judge-page,
+  .admin-page,
+  .upload-page {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .profile-page-info h2,
+  .track-page-info h1,
+  .queue-title,
+  .settings-page-title,
+  .opens-page-title {
+    font-size: 30px;
+    line-height: 1.08;
+  }
+
+  .profile-page-card,
+  .profile-page .post-card,
+  .profile-page .track-card,
+  .home-page .home-posts-shell .post-card,
+  .home-page .home-post,
+  .home-page .home-track-card,
+  .queue-track-main,
+  .track-page-top,
+  .track-page-player-box,
+  .track-page-panel,
+  .settings-page-card,
+  .settings-page-modal-content,
+  .profile-modal-content,
+  .profile-post-modal-content,
+  .profile-post-comments-modal-content,
+  .submit-card,
+  .opens-create-panel,
+  .opens-feed-panel,
+  .opens-side-panel,
+  .opens-card,
+  .messages-sidebar,
+  .messages-chat {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .profile-tabs,
+  .queue-rating-controls,
+  .queue-section-nav,
+  .messages-chat-tabs {
+    justify-content: flex-start !important;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    padding-bottom: 4px;
+  }
+
+  .profile-tab-btn,
+  .queue-rating-tab,
+  .queue-section-nav-btn,
+  .messages-chat-tab {
+    flex: 0 0 auto;
+    min-height: 42px;
+  }
+
+  .profile-page-header,
+  .profile-page-actions,
+  .profile-follow-stats,
+  .profile-user-badges,
+  .track-page-scores,
+  .track-page-reactions,
+  .queue-track-score,
+  .home-page .home-posts-shell .post-actions,
+  .post-actions {
+    gap: 8px;
+  }
+
+  .profile-page-actions > *,
+  .profile-main-btn,
+  .profile-secondary-btn,
+  .profile-create-post-btn,
+  .profile-create-track-btn,
+  .profile-section-cta-btn,
+  .track-page-score-chip,
+  .track-page-reaction-btn,
+  .queue-admin-btn,
+  .queue-admin-btn-primary,
+  .submit-btn,
+  .opens-primary-btn,
+  .opens-apply-btn,
+  .opens-select-btn {
+    width: 100%;
+  }
+
+  .profile-avatar-wrapper,
+  .profile-avatar {
+    width: clamp(86px, 28vw, 116px);
+    height: clamp(86px, 28vw, 116px);
+  }
+
+  .profile-cover-label,
+  .profile-file-input,
+  .submit-upload-area,
+  .opens-file-picker {
+    min-height: 132px;
+  }
+
+  .post-comment,
+  .track-page-comment {
+    overflow-wrap: anywhere;
+  }
+
+  .post-comment.is-reply {
+    margin-left: min(18px, calc(8px * var(--comment-depth, 1))) !important;
+  }
+
+  .messages-message-bubble,
+  .messages-bubble {
+    max-width: 92% !important;
+  }
+
+  .messages-media-grid,
+  .messages-conversation-profile-stats,
+  .messages-conversation-media-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .discover-page .discover-card,
+  .discover-card {
+    width: min(100%, 350px) !important;
+  }
+
+  .gp-cover-wrap,
+  .gp-cover {
+    width: 46px !important;
+    height: 46px !important;
+  }
+
+  .gp-control-btn,
+  .gp-icon-btn,
+  .gp-add-btn {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .gp-btn-play {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .navbar .navbar-logo-img {
+    height: 28px;
+  }
+
+  .navbar .navbar-logo-wrap {
+    gap: 7px;
+  }
+
+  .navbar .navbar-logo-text {
+    font-size: 16px;
+  }
+
+  .home-page .home-layout,
+  .profile-page-container,
+  .settings-page,
+  .track-page,
+  .queue-page,
+  .submit-page,
+  .opens-page,
+  .playlists-page,
+  .messages-page,
+  .discover-page,
+  .judge-page,
+  .admin-page,
+  .upload-page {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .profile-page-card,
+  .profile-page .post-card,
+  .home-page .home-posts-shell .post-card,
+  .queue-track-main,
+  .track-page-top,
+  .track-page-player-box,
+  .track-page-panel,
+  .settings-page-card,
+  .submit-card,
+  .opens-card,
+  .messages-sidebar,
+  .messages-chat {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .track-page-cover-wrap {
+    width: 138px !important;
+    height: 138px !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .navbar {
+    left: 4px !important;
+    right: 4px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .navbar .navbar-logo-text {
+    max-width: 164px;
+  }
+
+  .profile-page-info h2,
+  .track-page-info h1,
+  .queue-title,
+  .settings-page-title,
+  .opens-page-title {
+    font-size: 24px;
+  }
+
+  .messages-message-bubble,
+  .messages-bubble {
+    max-width: 96% !important;
+  }
+}
