@@ -317,7 +317,6 @@ function initJudgePage() {
       const track = await res.json();
       const isOwnTrack =
         judgeCurrentUser &&
-        String(judgeCurrentUser.role || "") === "user" &&
         Number(track.user_id || 0) === Number(judgeCurrentUser.id || 0);
 
       const judgeEl = document.getElementById("judgeScore");

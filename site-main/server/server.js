@@ -857,6 +857,20 @@ async function ensureSocialAuthSchema() {
   `);
 }
 
+async function removeInvalidQueueSelfRatings() {
+  await pool.query(`
+    DELETE FROM track_rating_details d
+    USING tracks t
+    WHERE d.track_id = t.id
+      AND d.user_id = t.user_id;
+
+    DELETE FROM track_ratings r
+    USING tracks t
+    WHERE r.track_id = t.id
+      AND r.user_id = t.user_id;
+  `);
+}
+
 async function ensureSupportSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS support_tickets (
@@ -7911,13 +7925,21 @@ app.get("/api/tracks/queue", async (req, res) => {
                 FROM track_ratings
                 WHERE track_id = t.id AND type = 'judge'
               ),0)
-              ELSE COALESCE((
-                SELECT AVG(score)
-                FROM track_ratings
-                WHERE track_id = t.id AND type = 'user'
-              ),0)
+              ELSE 0
             END
-          ) as total_score
+          ) as total_score,
+
+          (
+            SELECT COUNT(*)::int
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'user'
+          ) as user_votes_count,
+
+          (
+            SELECT COUNT(*)::int
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'judge'
+          ) as judge_votes_count
 
         FROM tracks t
 
@@ -7941,7 +7963,19 @@ app.get("/api/tracks/queue", async (req, res) => {
             SELECT ROUND(AVG(score))
             FROM track_ratings
             WHERE track_id = t.id AND type = 'judge'
-          ) as judge_score
+          ) as judge_score,
+
+          (
+            SELECT COUNT(*)::int
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'user'
+          ) as user_votes_count,
+
+          (
+            SELECT COUNT(*)::int
+            FROM track_ratings
+            WHERE track_id = t.id AND type = 'judge'
+          ) as judge_votes_count
 
         FROM tracks t
 
@@ -8415,7 +8449,7 @@ app.post("/api/rate/user", requireRole(["user", "judge", "admin"]), async (req, 
       return res.status(404).json({ error: "track_not_found" });
     }
 
-    if (String(user.role || "") === "user" && Number(trackOwnerRes.rows[0].user_id || 0) === Number(user.id || 0)) {
+    if (Number(trackOwnerRes.rows[0].user_id || 0) === Number(user.id || 0)) {
       return res.status(403).json({ error: "self_rate_forbidden" });
     }
 
@@ -8484,6 +8518,23 @@ app.post("/api/rate/judge", requireRole(["judge", "admin"]), async (req, res) =>
     } = req.body;
 
     const user = req.user;
+    const trackOwnerRes = await pool.query(
+      `
+      SELECT user_id
+      FROM tracks
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [track_id]
+    );
+
+    if (!trackOwnerRes.rows.length) {
+      return res.status(404).json({ error: "track_not_found" });
+    }
+
+    if (Number(trackOwnerRes.rows[0].user_id || 0) === Number(user.id || 0)) {
+      return res.status(403).json({ error: "self_rate_forbidden" });
+    }
 
     await pool.query(`
       INSERT INTO track_ratings (track_id, user_id, type, score)
@@ -12869,6 +12920,7 @@ await ensureUserBadgeSchema();
 await ensureCommunitySchema();
 await ensurePlaylistsSchema();
 await ensureBattlesSchema();
+await removeInvalidQueueSelfRatings();
     app.listen(APP_PORT, () => {
       console.log(`Server running on ${APP_BASE_URL} (port ${APP_PORT})`);
       syncTelegramWebhooks().catch((error) => {

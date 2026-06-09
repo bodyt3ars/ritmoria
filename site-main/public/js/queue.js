@@ -78,7 +78,21 @@ function getQueueScoreValue(track, view = queueRatingView) {
     return Number(track.user_score || 0);
   }
 
+  if (Number(track.judge_votes_count || 0) <= 0) {
+    return 0;
+  }
+
   return Number(track.total_score || 0);
+}
+
+function getQueueScoreDisplay(track, view = queueRatingView) {
+  if (!track) return "—";
+
+  if (view === "total" && Number(track.judge_votes_count || 0) <= 0) {
+    return "—";
+  }
+
+  return getQueueScoreValue(track, view).toFixed(1);
 }
 
 function getQueueScoreLabel(view = queueRatingView) {
@@ -199,7 +213,7 @@ async function loadQueue() {
                   ? `
                     <div class="queue-track-score" aria-label="${escapeQueueHtml(`${getQueueScoreLabel()} ${queueT("queue.scoreAria", "оценка")}`)}">
                       <span class="queue-track-score-label">${escapeQueueHtml(getQueueScoreLabel())}</span>
-                      <span class="queue-track-score-value">${getQueueScoreValue(track).toFixed(1)}</span>
+                      <span class="queue-track-score-value">${escapeQueueHtml(getQueueScoreDisplay(track))}</span>
                     </div>
                   `
                   : ""
