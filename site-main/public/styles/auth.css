@@ -211,32 +211,33 @@
   color: #f0c7db;
 }
 
-.auth-telegram {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  text-align: center;
-}
-
 .auth-social {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 20px;
   text-align: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
 }
 
 .auth-social-text {
-  margin: 0 0 12px;
+  grid-column: 1 / -1;
+  margin: 0 0 4px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
   color: var(--auth-soft);
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.2;
   font-family: "Segoe UI", sans-serif;
 }
 
-.auth-telegram-text {
-  margin: 0 0 12px;
-  color: var(--auth-soft);
-  font-size: 14px;
-  font-family: "Segoe UI", sans-serif;
+.auth-social-text::before,
+.auth-social-text::after {
+  content: "";
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .auth-hidden {
@@ -253,40 +254,32 @@
   border: 2px solid rgba(255, 255, 255, 0.12);
 }
 
-.auth-telegram-btn {
+.auth-telegram-btn,
+.auth-google-btn {
   width: 100%;
-  min-height: 54px;
+  min-height: 52px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
-  color: #fff5fb;
+  border-radius: 16px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
   font-family: "Segoe UI", sans-serif;
 }
 
 .auth-google-btn {
-  width: 100%;
-  min-height: 54px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
   background: rgba(255, 255, 255, 0.92);
   color: #1f2937;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-  font-family: "Segoe UI", sans-serif;
+}
+
+.auth-telegram-btn {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+  color: #fff5fb;
 }
 
 .auth-google-btn i {
@@ -323,8 +316,9 @@
 }
 
 .auth-telegram-status {
+  grid-column: 1 / -1;
   min-height: 20px;
-  margin: 12px 0 0;
+  margin: 2px 0 0;
   color: rgba(255, 226, 240, 0.62);
   font-size: 13px;
   line-height: 1.45;
@@ -332,8 +326,9 @@
 }
 
 .auth-telegram-manual {
+  grid-column: 1 / -1;
   display: inline-block;
-  margin-top: 10px;
+  margin-top: 0;
   font-size: 14px;
   font-family: "Segoe UI", sans-serif;
 }
@@ -449,6 +444,10 @@
 
   .auth-card-title {
     font-size: 32px;
+  }
+
+  .auth-social {
+    grid-template-columns: 1fr;
   }
 
   .auth-code-modal-content {
