@@ -1,4 +1,5 @@
-require("dotenv").config()
+const path = require("path")
+require("dotenv").config({ path: path.join(__dirname, "../.env") })
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -9,7 +10,6 @@ const multer = require("multer");
 const sharp = require("sharp");
 const crypto = require("crypto");
 const fs = require("fs")
-const path = require("path")
 
 const APP_BASE_URL = String(process.env.APP_BASE_URL || "https://ritmoria.com").trim().replace(/\/+$/, "");
 const APP_PORT = Number(process.env.PORT || 3000);
@@ -21,6 +21,8 @@ const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
 const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
 const AUTH_COOKIE_NAME = "ritmoria_token";
 const AUTH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+
+console.log(`Google OAuth configured: ${Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET)}`);
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
