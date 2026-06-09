@@ -5111,6 +5111,15 @@ app.get("/api/auth/session", async (req, res) => {
   }
 });
 
+app.get("/api/auth/google-config", (req, res) => {
+  res.json({
+    configured: Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
+    clientIdLength: GOOGLE_CLIENT_ID.length,
+    clientSecretLength: GOOGLE_CLIENT_SECRET.length,
+    redirectUri: getGoogleOAuthRedirectUri()
+  });
+});
+
 app.post("/logout", (req, res) => {
   clearAuthCookie(res);
   res.json({ success: true });

@@ -65,6 +65,8 @@ function initRegisterPage() {
       google_start_failed: "Не удалось запустить вход через Google."
     };
     setRegisterError(messages[oauthError] || "Не удалось продолжить через Google.");
+    const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+    window.history.replaceState({}, "", cleanUrl);
   }
 
   function setTelegramStatus(message = "") {
