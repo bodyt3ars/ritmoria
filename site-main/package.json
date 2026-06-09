@@ -1,6 +1,6 @@
 {
   "name": "music-platform",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "electron/main.js",
   "scripts": {
@@ -42,11 +42,12 @@
     "files": [
       "electron/**/*",
       "public/**/*",
+      "!public/download/**/*",
       "!public/uploads/**/*",
       "package.json"
     ],
     "win": {
-      "signAndEditExecutable": false,
+      "signAndEditExecutable": true,
       "target": [
         {
           "target": "nsis-web",

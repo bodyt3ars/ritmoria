@@ -8,6 +8,7 @@ const REMOTE_ORIGIN = String(process.env.RITMORIA_APP_API_ORIGIN || "https://rit
 const FRONTEND_MODE = String(process.env.RITMORIA_DESKTOP_FRONTEND_MODE || "remote").toLowerCase();
 const ENABLE_LOCAL_FALLBACK = process.env.RITMORIA_DESKTOP_LOCAL_FALLBACK === "1";
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
+const WINDOWS_APP_USER_MODEL_ID = "com.ritmoria.desktop";
 
 const REMOTE_PATH_PREFIXES = [
   "/api/",
@@ -415,6 +416,10 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === "win32") {
+    app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID);
+  }
+
   protocol.handle(APP_PROTOCOL, handleAppProtocol);
   installRemoteCookieBridge();
   createMainWindow();
