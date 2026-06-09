@@ -53,12 +53,13 @@ function setSeoMeta({
   title = i18nT("seo.defaultTitle", DEFAULT_SEO.title),
   description = i18nT("seo.defaultDescription", DEFAULT_SEO.description),
   canonical = DEFAULT_SEO.canonical,
-  image = DEFAULT_SEO.image
+  image = DEFAULT_SEO.image,
+  robots = "index, follow, max-image-preview:large"
 } = {}) {
   document.title = title;
   upsertMeta('meta[name="description"]', "name", description);
   upsertMeta('meta[name="keywords"]', "name", i18nT("seo.keywords", "Ритмория, РИТМОРИЯ, ritmoria, музыка, треки, артисты, музыкальная платформа, опены, стрим"));
-  upsertMeta('meta[name="robots"]', "name", "index, follow, max-image-preview:large");
+  upsertMeta('meta[name="robots"]', "name", robots);
   upsertMeta('meta[property="og:title"]', "property", title);
   upsertMeta('meta[property="og:description"]', "property", description);
   upsertMeta('meta[property="og:url"]', "property", canonical);
@@ -359,7 +360,8 @@ export async function renderPage(path) {
     setSeoMeta({
       title: "Добавить трек — Ритмория",
       description: "Добавь трек на Ритморию и отправь его в музыкальную очередь платформы.",
-      canonical: "https://ritmoria.com/submit"
+      canonical: "https://ritmoria.com/submit",
+      robots: "noindex, nofollow"
     });
     const ok = await renderSimplePage({
       app,
@@ -508,7 +510,8 @@ export async function renderPage(path) {
     setSeoMeta({
       title: "Оценка трека — Ритмория",
       description: "Судейская страница оценки трека на Ритмории.",
-      canonical: `https://ritmoria.com${routePath}${routeSearch || ""}`
+      canonical: `https://ritmoria.com${routePath}${routeSearch || ""}`,
+      robots: "noindex, nofollow"
     });
     addPageStyles(["/styles/judge.css"]);
 
@@ -538,7 +541,8 @@ export async function renderPage(path) {
     setSeoMeta({
       title: "Админ-панель — Ритмория",
       description: "Административная панель Ритмории.",
-      canonical: "https://ritmoria.com/admin"
+      canonical: "https://ritmoria.com/admin",
+      robots: "noindex, nofollow"
     });
     const ok = await renderSimplePage({
       app,
@@ -559,7 +563,8 @@ export async function renderPage(path) {
     setSeoMeta({
       title: "Вход — Ритмория",
       description: "Вход в аккаунт Ритмории.",
-      canonical: "https://ritmoria.com/login"
+      canonical: "https://ritmoria.com/login",
+      robots: "noindex, nofollow"
     });
     const ok = await renderSimplePage({
       app,
@@ -577,7 +582,8 @@ export async function renderPage(path) {
     setSeoMeta({
       title: "Регистрация — Ритмория",
       description: "Создай аккаунт на Ритмории и загружай музыку, посты и опены.",
-      canonical: "https://ritmoria.com/register"
+      canonical: "https://ritmoria.com/register",
+      robots: "noindex, nofollow"
     });
     const ok = await renderSimplePage({
       app,
@@ -595,7 +601,8 @@ export async function renderPage(path) {
   setSeoMeta({
     title: "Настройки — Ритмория",
     description: "Настройки аккаунта на Ритмории.",
-    canonical: "https://ritmoria.com/settings"
+    canonical: "https://ritmoria.com/settings",
+    robots: "noindex, nofollow"
   });
   const ok = await renderSimplePage({
     app,
@@ -619,7 +626,8 @@ export async function renderPage(path) {
     setSeoMeta({
       title: "Сообщения — Ритмория",
       description: "Личные сообщения и диалоги на Ритмории.",
-      canonical: "https://ritmoria.com/messages"
+      canonical: "https://ritmoria.com/messages",
+      robots: "noindex, nofollow"
     });
     const ok = await renderSimplePage({
       app,

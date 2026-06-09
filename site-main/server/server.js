@@ -1349,6 +1349,347 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "../public")));
 
+const SEO_INDEX_HTML_PATH = path.join(__dirname, "../public/index.html");
+const SEO_DEFAULT_IMAGE = `${APP_BASE_URL}/images/logo.png`;
+const SEO_PUBLIC_ROBOTS = "index, follow, max-image-preview:large";
+const SEO_PRIVATE_ROBOTS = "noindex, nofollow";
+const SEO_RESERVED_PROFILE_ROUTES = new Set([
+  "track",
+  "judge",
+  "profile",
+  "submit",
+  "queue",
+  "opens",
+  "playlists",
+  "discover",
+  "admin",
+  "messages",
+  "login",
+  "register",
+  "settings",
+  "html",
+  "privacy",
+  "api",
+  "images",
+  "styles",
+  "js",
+  "uploads"
+]);
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeJsonForHtml(value) {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}
+
+function absoluteUrl(value, fallback = SEO_DEFAULT_IMAGE) {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `${APP_BASE_URL}/${raw.replace(/^\/+/, "")}`;
+}
+
+function compactText(value, fallback = "", maxLength = 160) {
+  const text = String(value || fallback || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+function buildCanonical(req, pathname = req.path) {
+  const pathOnly = String(pathname || "/").split("?")[0] || "/";
+  return `${APP_BASE_URL}${pathOnly === "/" ? "/" : pathOnly}`;
+}
+
+function getStaticSeoMeta(req) {
+  const canonical = buildCanonical(req);
+  const route = String(req.path || "/").replace(/\/+$/, "") || "/";
+
+  const pages = {
+    "/": {
+      title: "Ритмория — музыкальная платформа для артистов",
+      description: "Ритмория — платформа для артистов и слушателей: треки, опены, стримовые оценки, профили, посты и поиск нового звучания."
+    },
+    "/discover": {
+      title: "Дискавер треков — Ритмория",
+      description: "Открывай новых артистов и свежие треки на Ритмории: слушай, сохраняй в плейлисты и находи свое звучание."
+    },
+    "/queue": {
+      title: "Очередь треков и оценки — Ритмория",
+      description: "Очередь треков Ритмории: судейские оценки, пользовательский рейтинг, лучшие работы и музыка для стримов."
+    },
+    "/queue/battles": {
+      title: "Музыкальные баттлы — Ритмория",
+      description: "Баттлы Ритмории для артистов: турнирные слоты, заявки, треки участников и соревновательная музыка."
+    },
+    "/opens": {
+      title: "Опены и коллаборации — Ритмория",
+      description: "Опены на Ритмории: открытые куплеты, фиты, коллаборации и поиск артистов для совместных треков."
+    },
+    "/playlists": {
+      title: "Плейлисты — Ритмория",
+      description: "Плейлисты Ритмории: сохраняй любимые треки артистов платформы и собирай собственные подборки."
+    },
+    "/submit": {
+      title: "Добавить трек — Ритмория",
+      description: "Загрузи трек на Ритморию, отправь его в очередь и получай оценки от слушателей и судей.",
+      robots: SEO_PRIVATE_ROBOTS
+    },
+    "/login": {
+      title: "Вход — Ритмория",
+      description: "Вход в аккаунт Ритмории.",
+      robots: SEO_PRIVATE_ROBOTS
+    },
+    "/register": {
+      title: "Регистрация — Ритмория",
+      description: "Создай аккаунт на Ритмории, загружай музыку, публикуй посты и участвуй в опенах.",
+      robots: SEO_PRIVATE_ROBOTS
+    },
+    "/settings": {
+      title: "Настройки — Ритмория",
+      description: "Настройки аккаунта Ритмории.",
+      robots: SEO_PRIVATE_ROBOTS
+    },
+    "/messages": {
+      title: "Сообщения — Ритмория",
+      description: "Личные сообщения на Ритмории.",
+      robots: SEO_PRIVATE_ROBOTS
+    },
+    "/admin": {
+      title: "Админ-панель — Ритмория",
+      description: "Административная панель Ритмории.",
+      robots: SEO_PRIVATE_ROBOTS
+    }
+  };
+
+  return pages[route] ? { canonical, image: SEO_DEFAULT_IMAGE, ...pages[route] } : null;
+}
+
+async function getQueueTrackSeoMeta(req) {
+  const match = String(req.path || "").match(/^\/track\/(\d+)$/);
+  if (!match) return null;
+
+  const result = await pool.query(
+    `
+    SELECT t.id, t.title, t.artist, t.cover, t.soundcloud, u.username, u.username_tag
+    FROM tracks t
+    LEFT JOIN users u ON u.id = t.user_id
+    WHERE t.id = $1
+    LIMIT 1
+    `,
+    [Number(match[1])]
+  );
+
+  const track = result.rows[0];
+  if (!track) return null;
+
+  const artist = compactText(track.artist || track.username || track.username_tag, "артиста", 80);
+  const title = compactText(track.title, "Трек", 80);
+
+  return {
+    title: `${title} — ${artist} | Ритмория`,
+    description: compactText(`Слушай трек «${title}» от ${artist} на Ритмории: оценки, реакции и обсуждение музыки.`, "", 170),
+    canonical: buildCanonical(req),
+    image: absoluteUrl(track.cover),
+    type: "music.song",
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "MusicRecording",
+      "name": title,
+      "url": buildCanonical(req),
+      "image": absoluteUrl(track.cover),
+      "byArtist": {
+        "@type": "MusicGroup",
+        "name": artist
+      }
+    }
+  };
+}
+
+async function getProfileTrackSeoMeta(req) {
+  const segments = String(req.path || "").split("/").filter(Boolean);
+  if (segments.length !== 2 || SEO_RESERVED_PROFILE_ROUTES.has(segments[0])) return null;
+
+  const [tag, slug] = segments.map((segment) => decodeURIComponent(segment));
+  const result = await pool.query(
+    `
+    SELECT t.id, t.title, t.artist, t.description, t.cover, t.genre, t.tags, u.username, u.username_tag
+    FROM user_tracks t
+    JOIN users u ON u.id = t.user_id
+    WHERE LOWER(u.username_tag) = LOWER($1)
+      AND t.slug = $2
+      AND COALESCE(t.is_archived, false) = false
+    LIMIT 1
+    `,
+    [tag, slug]
+  );
+
+  const track = result.rows[0];
+  if (!track) return null;
+
+  const artist = compactText(track.artist || track.username || track.username_tag, "артиста", 80);
+  const title = compactText(track.title, "Трек", 80);
+  const description = compactText(
+    track.description,
+    `Слушай «${title}» от ${artist} на Ритмории: релиз артиста, описание, реакции, комментарии и профильное звучание.`,
+    170
+  );
+
+  return {
+    title: `${title} — ${artist} | Ритмория`,
+    description,
+    canonical: buildCanonical(req),
+    image: absoluteUrl(track.cover),
+    type: "music.song",
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "MusicRecording",
+      "name": title,
+      "description": description,
+      "url": buildCanonical(req),
+      "image": absoluteUrl(track.cover),
+      "genre": compactText(track.genre || track.tags, "", 80),
+      "byArtist": {
+        "@type": "MusicGroup",
+        "name": artist,
+        "url": `${APP_BASE_URL}/${encodeURIComponent(track.username_tag || tag)}`
+      }
+    }
+  };
+}
+
+async function getProfileSeoMeta(req) {
+  const segments = String(req.path || "").split("/").filter(Boolean);
+  if (segments.length !== 1 || SEO_RESERVED_PROFILE_ROUTES.has(segments[0])) return null;
+
+  const tag = decodeURIComponent(segments[0]);
+  const result = await pool.query(
+    `
+    SELECT username, username_tag, avatar, bio, is_verified
+    FROM users
+    WHERE LOWER(username_tag) = LOWER($1)
+       OR LOWER(username) = LOWER($1)
+    LIMIT 1
+    `,
+    [tag]
+  );
+
+  const user = result.rows[0];
+  if (!user) return null;
+
+  const displayName = compactText(user.username || user.username_tag, "Артист", 80);
+  const handle = user.username_tag ? `@${user.username_tag}` : displayName;
+  const description = compactText(
+    user.bio,
+    `Профиль ${handle} на Ритмории: треки, посты, активность артиста и музыкальные релизы.`,
+    170
+  );
+
+  return {
+    title: `${displayName} (${handle}) — профиль на Ритмории`,
+    description,
+    canonical: `${APP_BASE_URL}/${encodeURIComponent(user.username_tag || tag)}`,
+    image: absoluteUrl(user.avatar),
+    type: "profile",
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": displayName,
+      "alternateName": handle,
+      "description": description,
+      "url": `${APP_BASE_URL}/${encodeURIComponent(user.username_tag || tag)}`,
+      "image": absoluteUrl(user.avatar)
+    }
+  };
+}
+
+async function resolveSeoMeta(req) {
+  const staticMeta = getStaticSeoMeta(req);
+  if (staticMeta) return staticMeta;
+
+  try {
+    return await getQueueTrackSeoMeta(req)
+      || await getProfileTrackSeoMeta(req)
+      || await getProfileSeoMeta(req);
+  } catch (err) {
+    console.error("SEO META ERROR:", err);
+    return null;
+  }
+}
+
+function applySeoMetaToHtml(html, req, meta = {}) {
+  const canonical = meta.canonical || buildCanonical(req);
+  const title = meta.title || "Ритмория — музыкальная платформа для артистов";
+  const description = compactText(
+    meta.description,
+    "Ритмория — музыкальная платформа для артистов, треков, опенов, общения и поиска нового звучания.",
+    170
+  );
+  const image = absoluteUrl(meta.image);
+  const robots = meta.robots || SEO_PUBLIC_ROBOTS;
+  const type = meta.type || "website";
+  const structuredData = meta.structuredData || {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "Ритмория",
+        "alternateName": ["РИТМОРИЯ", "ritmoria"],
+        "url": APP_BASE_URL + "/",
+        "logo": SEO_DEFAULT_IMAGE
+      },
+      {
+        "@type": "WebSite",
+        "name": "Ритмория",
+        "alternateName": "ritmoria",
+        "url": APP_BASE_URL + "/",
+        "inLanguage": "ru"
+      }
+    ]
+  };
+
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`)
+    .replace(/<meta name="description" content="[^"]*">/i, `<meta name="description" content="${escapeHtml(description)}">`)
+    .replace(/<meta name="robots" content="[^"]*">/i, `<meta name="robots" content="${escapeHtml(robots)}">`)
+    .replace(/<meta property="og:type" content="[^"]*">/i, `<meta property="og:type" content="${escapeHtml(type)}">`)
+    .replace(/<meta property="og:title" content="[^"]*">/i, `<meta property="og:title" content="${escapeHtml(title)}">`)
+    .replace(/<meta property="og:description" content="[^"]*">/i, `<meta property="og:description" content="${escapeHtml(description)}">`)
+    .replace(/<meta property="og:url" content="[^"]*">/i, `<meta property="og:url" content="${escapeHtml(canonical)}">`)
+    .replace(/<meta property="og:image" content="[^"]*">/i, `<meta property="og:image" content="${escapeHtml(image)}">`)
+    .replace(/<meta name="twitter:title" content="[^"]*">/i, `<meta name="twitter:title" content="${escapeHtml(title)}">`)
+    .replace(/<meta name="twitter:description" content="[^"]*">/i, `<meta name="twitter:description" content="${escapeHtml(description)}">`)
+    .replace(/<meta name="twitter:image" content="[^"]*">/i, `<meta name="twitter:image" content="${escapeHtml(image)}">`)
+    .replace(/<link rel="canonical" href="[^"]*">/i, `<link rel="canonical" href="${escapeHtml(canonical)}">`)
+    .replace(
+      /<script type="application\/ld\+json">[\s\S]*?<\/script>/i,
+      `<script type="application/ld+json">\n${escapeJsonForHtml(structuredData)}\n  </script>`
+    );
+}
+
+async function sendSeoPage(req, res, fallbackMeta = null) {
+  try {
+    const html = await fs.promises.readFile(SEO_INDEX_HTML_PATH, "utf8");
+    const meta = fallbackMeta || await resolveSeoMeta(req) || getStaticSeoMeta({ ...req, path: "/" });
+    res.send(applySeoMetaToHtml(html, req, meta));
+  } catch (err) {
+    console.error("SEO PAGE ERROR:", err);
+    res.sendFile(SEO_INDEX_HTML_PATH);
+  }
+}
+
 function authMiddleware(req, res, next) {
   const authResult = getVerifiedRequestAuth(req);
   if (!authResult?.decoded) {
@@ -3138,7 +3479,7 @@ function requireRole(roles = []) {
 }
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/index.html"));
+  sendSeoPage(req, res);
 });
 
 app.get("/me", auth, async (req, res) => {
@@ -12146,7 +12487,7 @@ app.use((req, res, next) => {
     return next();
   }
 
-  res.sendFile(path.join(__dirname, "../public/index.html"));
+  sendSeoPage(req, res);
 });
 app.post("/api/posts/:id/view", auth, async (req, res) => {
   try {
