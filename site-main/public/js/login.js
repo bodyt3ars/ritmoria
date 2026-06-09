@@ -6,6 +6,7 @@ function initLoginPage() {
   const telegramAuthBtn = document.getElementById("telegramAuthBtn");
   const telegramAuthStatus = document.getElementById("telegramAuthStatus");
   const telegramAuthLink = document.getElementById("telegramAuthLink");
+  const googleAuthBtn = document.getElementById("googleAuthBtn");
   let telegramAuthPoll = null;
 
   if (!loginForm) return;
@@ -16,6 +17,18 @@ function initLoginPage() {
     if (loginError) {
       loginError.innerText = message;
     }
+  }
+
+  const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
+  if (oauthError) {
+    const messages = {
+      google_not_configured: "Вход через Google пока не настроен.",
+      invalid_state: "Сессия входа через Google устарела. Попробуй ещё раз.",
+      missing_code: "Google не вернул код входа. Попробуй ещё раз.",
+      google_auth_failed: "Не удалось войти через Google.",
+      google_start_failed: "Не удалось запустить вход через Google."
+    };
+    setError(messages[oauthError] || "Не удалось войти через Google.");
   }
 
   loginForm.addEventListener("submit", async (event) => {
@@ -172,6 +185,14 @@ function initLoginPage() {
 
   if (telegramAuthBtn) {
     telegramAuthBtn.addEventListener("click", startTelegramAuth);
+  }
+
+  if (googleAuthBtn) {
+    googleAuthBtn.addEventListener("click", () => {
+      setError("");
+      googleAuthBtn.disabled = true;
+      window.location.href = "/auth/google?mode=login";
+    });
   }
 }
 

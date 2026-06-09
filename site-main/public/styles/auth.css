@@ -218,6 +218,20 @@
   text-align: center;
 }
 
+.auth-social {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.auth-social-text {
+  margin: 0 0 12px;
+  color: var(--auth-soft);
+  font-size: 14px;
+  font-family: "Segoe UI", sans-serif;
+}
+
 .auth-telegram-text {
   margin: 0 0 12px;
   color: var(--auth-soft);
@@ -255,6 +269,41 @@
   cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   font-family: "Segoe UI", sans-serif;
+}
+
+.auth-google-btn {
+  width: 100%;
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.auth-google-btn i {
+  color: #ea4335;
+  font-size: 18px;
+}
+
+.auth-google-btn:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+}
+
+.auth-google-btn:disabled {
+  opacity: 0.72;
+  cursor: wait;
+  transform: none;
 }
 
 .auth-telegram-btn i {

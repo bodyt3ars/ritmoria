@@ -17,6 +17,8 @@ const JWT_SECRET = String(process.env.JWT_SECRET || "").trim();
 const RESEND_API_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const TELEGRAM_AUTH_BOT_USERNAME = String(process.env.TELEGRAM_AUTH_BOT_USERNAME || "ritmoriaauthBot").trim();
 const SUPPORT_BOT_USERNAME = String(process.env.SUPPORT_BOT_USERNAME || "ritmoriasupportBOT").trim();
+const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
+const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
 const AUTH_COOKIE_NAME = "ritmoria_token";
 const AUTH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
@@ -816,6 +818,7 @@ async function ensureSocialAuthSchema() {
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS username_tag varchar(50),
       ADD COLUMN IF NOT EXISTS telegram_id text,
+      ADD COLUMN IF NOT EXISTS google_id text,
       ADD COLUMN IF NOT EXISTS is_verified boolean DEFAULT false,
       ADD COLUMN IF NOT EXISTS last_seen_at timestamp without time zone,
       ALTER COLUMN email DROP NOT NULL,
@@ -838,6 +841,10 @@ async function ensureSocialAuthSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id
       ON users(telegram_id)
       WHERE telegram_id IS NOT NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id
+      ON users(google_id)
+      WHERE google_id IS NOT NULL;
 
     CREATE INDEX IF NOT EXISTS idx_users_username_tag_lower
       ON users(LOWER(username_tag))
@@ -1245,6 +1252,221 @@ async function findOrCreateTelegramUser(telegramProfile = {}) {
       telegramProfile.first_name || telegramProfile.username || "user",
       usernameTag,
       "/images/default-avatar.jpg"
+    ]
+  );
+
+  return createdUserRes.rows[0];
+}
+
+function base64UrlEncodeJson(value) {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function base64UrlDecodeJson(value) {
+  return JSON.parse(Buffer.from(String(value || ""), "base64url").toString("utf8"));
+}
+
+function signOAuthState(payload) {
+  const body = base64UrlEncodeJson(payload);
+  const signature = crypto
+    .createHmac("sha256", JWT_SECRET)
+    .update(body)
+    .digest("base64url");
+
+  return `${body}.${signature}`;
+}
+
+function verifyOAuthState(state) {
+  const [body, signature] = String(state || "").split(".");
+  if (!body || !signature) return null;
+
+  const expected = crypto
+    .createHmac("sha256", JWT_SECRET)
+    .update(body)
+    .digest("base64url");
+
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)) {
+    return null;
+  }
+
+  const payload = base64UrlDecodeJson(body);
+  const createdAt = Number(payload?.createdAt || 0);
+  if (!createdAt || Date.now() - createdAt > 10 * 60 * 1000) {
+    return null;
+  }
+
+  return payload;
+}
+
+function getGoogleOAuthRedirectUri() {
+  return `${APP_BASE_URL}/auth/google/callback`;
+}
+
+function buildGoogleOAuthUrl(mode = "login") {
+  const state = signOAuthState({
+    provider: "google",
+    mode: mode === "register" ? "register" : "login",
+    nonce: crypto.randomUUID(),
+    createdAt: Date.now()
+  });
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: getGoogleOAuthRedirectUri(),
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    prompt: "select_account"
+  });
+
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+function decodeJwtPart(token, index) {
+  const part = String(token || "").split(".")[index];
+  if (!part) {
+    throw new Error("invalid_jwt");
+  }
+  return JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+}
+
+async function fetchGoogleToken(code) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: new URLSearchParams({
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: getGoogleOAuthRedirectUri(),
+      grant_type: "authorization_code"
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.id_token) {
+    const error = new Error(data.error_description || data.error || "google_token_exchange_failed");
+    error.errorCode = "google_token_exchange_failed";
+    throw error;
+  }
+
+  return data;
+}
+
+async function verifyGoogleIdToken(idToken) {
+  const header = decodeJwtPart(idToken, 0);
+  const payload = decodeJwtPart(idToken, 1);
+  const signature = String(idToken || "").split(".")[2];
+  const signedContent = String(idToken || "").split(".").slice(0, 2).join(".");
+
+  if (!header.kid || !signature || header.alg !== "RS256") {
+    throw new Error("invalid_google_id_token");
+  }
+
+  const certsResponse = await fetch("https://www.googleapis.com/oauth2/v3/certs");
+  const certs = await certsResponse.json().catch(() => ({}));
+  const key = Array.isArray(certs.keys)
+    ? certs.keys.find((item) => item.kid === header.kid)
+    : null;
+
+  if (!key) {
+    throw new Error("google_cert_not_found");
+  }
+
+  const publicKey = crypto.createPublicKey({ key, format: "jwk" });
+  const verified = crypto.verify(
+    "RSA-SHA256",
+    Buffer.from(signedContent),
+    publicKey,
+    Buffer.from(signature, "base64url")
+  );
+
+  if (!verified) {
+    throw new Error("invalid_google_signature");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.aud !== GOOGLE_CLIENT_ID || !["accounts.google.com", "https://accounts.google.com"].includes(payload.iss)) {
+    throw new Error("invalid_google_audience");
+  }
+
+  if (Number(payload.exp || 0) <= now || Number(payload.iat || 0) > now + 60) {
+    throw new Error("expired_google_id_token");
+  }
+
+  return payload;
+}
+
+function normalizeGoogleDisplayName(profile = {}) {
+  return normalizeSiteUsername(profile.name)
+    || normalizeSiteUsername(profile.given_name)
+    || String(profile.email || "").split("@")[0]
+    || "Google user";
+}
+
+async function findOrCreateGoogleUser(googleProfile = {}) {
+  const googleId = String(googleProfile.sub || "").trim();
+  const email = String(googleProfile.email || "").trim().toLowerCase();
+  const emailVerified = googleProfile.email_verified === true || googleProfile.email_verified === "true";
+
+  if (!googleId) {
+    throw new Error("google_id_missing");
+  }
+
+  if (!email || !emailVerified) {
+    throw new Error("google_email_not_verified");
+  }
+
+  const googleUserRes = await pool.query(
+    "SELECT * FROM users WHERE google_id = $1 LIMIT 1",
+    [googleId]
+  );
+
+  if (googleUserRes.rows.length) {
+    return googleUserRes.rows[0];
+  }
+
+  const emailUserRes = await pool.query(
+    "SELECT * FROM users WHERE LOWER(email) = LOWER($1) ORDER BY id DESC LIMIT 1",
+    [email]
+  );
+
+  if (emailUserRes.rows.length) {
+    const existingUser = emailUserRes.rows[0];
+    const updatedUserRes = await pool.query(
+      `
+      UPDATE users
+      SET google_id = $1,
+          avatar = CASE
+            WHEN (avatar IS NULL OR avatar = '' OR avatar = '/images/default-avatar.jpg') AND $2 <> '' THEN $2
+            ELSE avatar
+          END
+      WHERE id = $3
+      RETURNING *
+      `,
+      [googleId, String(googleProfile.picture || ""), existingUser.id]
+    );
+
+    return updatedUserRes.rows[0] || existingUser;
+  }
+
+  const username = normalizeGoogleDisplayName(googleProfile);
+  const usernameTag = await getUniqueUsernameTag(username);
+  const createdUserRes = await pool.query(
+    `
+    INSERT INTO users (google_id, username, username_tag, email, avatar)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *
+    `,
+    [
+      googleId,
+      username,
+      usernameTag,
+      email,
+      googleProfile.picture || "/images/default-avatar.jpg"
     ]
   );
 
@@ -4286,6 +4508,49 @@ app.post("/api/telegram-auth/webhook", async (req, res) => {
     );
   } catch (err) {
     console.error("TELEGRAM AUTH WEBHOOK ERROR:", err);
+  }
+});
+
+app.get("/auth/google", (req, res) => {
+  try {
+    const mode = req.query.mode === "register" ? "register" : "login";
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      return res.redirect(`/${mode}?oauth_error=google_not_configured`);
+    }
+
+    res.redirect(buildGoogleOAuthUrl(mode));
+  } catch (err) {
+    console.error("GOOGLE AUTH START ERROR:", err);
+    res.redirect("/login?oauth_error=google_start_failed");
+  }
+});
+
+app.get("/auth/google/callback", async (req, res) => {
+  try {
+    const statePayload = verifyOAuthState(req.query.state);
+    if (!statePayload || statePayload.provider !== "google") {
+      return res.redirect("/login?oauth_error=invalid_state");
+    }
+
+    const code = String(req.query.code || "").trim();
+    if (!code) {
+      return res.redirect(`/${statePayload.mode === "register" ? "register" : "login"}?oauth_error=missing_code`);
+    }
+
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      return res.redirect(`/${statePayload.mode === "register" ? "register" : "login"}?oauth_error=google_not_configured`);
+    }
+
+    const tokenData = await fetchGoogleToken(code);
+    const googleProfile = await verifyGoogleIdToken(tokenData.id_token);
+    const user = await findOrCreateGoogleUser(googleProfile);
+
+    setAuthCookie(res, signAppToken(user));
+    touchUserLastSeen(user.id).catch(() => {});
+    res.redirect("/");
+  } catch (err) {
+    console.error("GOOGLE AUTH CALLBACK ERROR:", err);
+    res.redirect("/login?oauth_error=google_auth_failed");
   }
 });
 
