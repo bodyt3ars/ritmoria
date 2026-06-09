@@ -69,6 +69,7 @@
     "nsisWeb": {
       "installerIcon": "public/images/icon.ico",
       "uninstallerIcon": "public/images/icon.ico",
+      "artifactName": "RitmoriaSetup.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
