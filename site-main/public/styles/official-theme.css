@@ -997,7 +997,8 @@ select {
 }
 
 .app-sidebar-link,
-.app-sidebar-upload {
+.app-sidebar-upload,
+.app-sidebar-install {
   position: relative;
   display: flex;
   align-items: center;
@@ -1013,7 +1014,8 @@ select {
 }
 
 .app-sidebar-link i,
-.app-sidebar-upload i {
+.app-sidebar-upload i,
+.app-sidebar-install i {
   width: 18px;
   color: rgba(244, 190, 210, 0.74);
   text-align: center;
@@ -1021,6 +1023,7 @@ select {
 
 .app-sidebar-link:hover,
 .app-sidebar-upload:hover,
+.app-sidebar-install:hover,
 .app-sidebar-link.active-link {
   background: rgba(233, 168, 194, 0.1);
   color: #fff;
@@ -1091,7 +1094,8 @@ select {
   background: var(--brand-pink-strong);
 }
 
-.app-sidebar-upload {
+.app-sidebar-upload,
+.app-sidebar-install {
   justify-content: center;
   min-height: 50px;
   gap: 9px;
@@ -1103,12 +1107,19 @@ select {
   text-align: center;
 }
 
-.app-sidebar-upload i {
+.app-sidebar-upload i,
+.app-sidebar-install i {
   color: #23141b;
 }
 
-.app-sidebar-upload span {
+.app-sidebar-upload span,
+.app-sidebar-install span {
   min-width: 0;
+}
+
+.app-sidebar-install {
+  margin-top: -6px;
+  background: linear-gradient(135deg, #f2a8c9, #c978a6);
 }
 
 @media (min-width: 1024px) {
@@ -1195,11 +1206,13 @@ body:has(.navbar.auth-navbar) .navbar {
 .navbar .navbar-link,
 .navbar .navbar-nav a,
 .app-sidebar-link,
-.app-sidebar-upload {
+.app-sidebar-upload,
+.app-sidebar-install {
   white-space: nowrap;
 }
 
-.app-sidebar-upload {
+.app-sidebar-upload,
+.app-sidebar-install {
   white-space: normal;
 }
 
