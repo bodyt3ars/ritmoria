@@ -424,8 +424,12 @@ window.initQueuePage = async function () {
   if (queueReloadInterval) clearInterval(queueReloadInterval);
   if (queueStateInterval) clearInterval(queueStateInterval);
 
-  queueReloadInterval = setInterval(loadQueue, 5000);
-  queueStateInterval = setInterval(loadQueueState, 3000);
+  queueReloadInterval = setInterval(() => {
+    if (!document.hidden) loadQueue();
+  }, 15000);
+  queueStateInterval = setInterval(() => {
+    if (!document.hidden) loadQueueState();
+  }, 10000);
 };
 
 window.addEventListener("ritmoria:language-change", () => {

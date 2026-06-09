@@ -430,6 +430,8 @@ const messageAttachmentUpload = createHandledUpload(
 );
 
 const app = express();
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
 
 function generateUsernameTag(name) {
   const tag = String(name || "")
@@ -869,6 +871,59 @@ async function removeInvalidQueueSelfRatings() {
     WHERE r.track_id = t.id
       AND r.user_id = t.user_id;
   `);
+}
+
+async function createIndexIfColumnsExist(tableName, columns, sql) {
+  try {
+    const tableResult = await pool.query(
+      "SELECT to_regclass($1) AS table_name",
+      [`public.${tableName}`]
+    );
+
+    if (!tableResult.rows[0]?.table_name) return;
+
+    if (columns.length) {
+      const columnResult = await pool.query(
+        `
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = $1
+          AND column_name = ANY($2::text[])
+        `,
+        [tableName, columns]
+      );
+      const existingColumns = new Set(columnResult.rows.map((row) => row.column_name));
+      if (!columns.every((column) => existingColumns.has(column))) return;
+    }
+
+    await pool.query(sql);
+  } catch (error) {
+    console.error(`SCALABILITY INDEX ERROR (${tableName}):`, error.message);
+  }
+}
+
+async function ensureScalabilityIndexes() {
+  const indexes = [
+    ["tracks", ["createdat"], "CREATE INDEX IF NOT EXISTS idx_tracks_createdat_desc ON tracks(createdAt DESC)"],
+    ["tracks", ["user_id"], "CREATE INDEX IF NOT EXISTS idx_tracks_user_id ON tracks(user_id)"],
+    ["track_ratings", ["track_id", "type"], "CREATE INDEX IF NOT EXISTS idx_track_ratings_track_type ON track_ratings(track_id, type)"],
+    ["track_ratings", ["user_id", "type"], "CREATE INDEX IF NOT EXISTS idx_track_ratings_user_type ON track_ratings(user_id, type)"],
+    ["track_rating_details", ["track_id", "rating_type"], "CREATE INDEX IF NOT EXISTS idx_track_rating_details_track_type ON track_rating_details(track_id, rating_type)"],
+    ["user_tracks", ["user_id", "is_archived", "created_at"], "CREATE INDEX IF NOT EXISTS idx_user_tracks_user_archived_created ON user_tracks(user_id, is_archived, created_at DESC)"],
+    ["user_tracks", ["user_id", "slug"], "CREATE INDEX IF NOT EXISTS idx_user_tracks_user_slug ON user_tracks(user_id, slug)"],
+    ["posts", ["user_id", "created_at"], "CREATE INDEX IF NOT EXISTS idx_posts_user_created ON posts(user_id, created_at DESC)"],
+    ["posts", ["created_at"], "CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at DESC)"],
+    ["follows", ["follower_id"], "CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id)"],
+    ["follows", ["following_id"], "CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id)"],
+    ["track_likes", ["track_id"], "CREATE INDEX IF NOT EXISTS idx_track_likes_track ON track_likes(track_id)"],
+    ["track_likes", ["user_id"], "CREATE INDEX IF NOT EXISTS idx_track_likes_user ON track_likes(user_id)"],
+    ["notifications", ["user_id", "is_read", "created_at"], "CREATE INDEX IF NOT EXISTS idx_notifications_user_unread_created ON notifications(user_id, is_read, created_at DESC)"]
+  ];
+
+  for (const [tableName, columns, sql] of indexes) {
+    await createIndexIfColumnsExist(tableName, columns, sql);
+  }
 }
 
 async function ensureSupportSchema() {
@@ -1585,9 +1640,33 @@ app.use(cors({
   credentials: true
 }));
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "../public")));
 
-const SEO_INDEX_HTML_PATH = path.join(__dirname, "../public/index.html");
+const PUBLIC_DIR = path.join(__dirname, "../public");
+
+app.get("/healthz", (req, res) => {
+  res.json({
+    ok: true,
+    uptime: Math.round(process.uptime())
+  });
+});
+
+app.use(express.static(PUBLIC_DIR, {
+  etag: true,
+  lastModified: true,
+  maxAge: "7d",
+  setHeaders(res, filePath) {
+    if (/\.html$/i.test(filePath)) {
+      res.setHeader("Cache-Control", "no-cache");
+      return;
+    }
+
+    if (/\.(?:js|css|png|jpe?g|webp|gif|svg|ico|mp3|mp4|wav|ogg|woff2?)$/i.test(filePath)) {
+      res.setHeader("Cache-Control", "public, max-age=604800");
+    }
+  }
+}));
+
+const SEO_INDEX_HTML_PATH = path.join(PUBLIC_DIR, "index.html");
 const SEO_DEFAULT_IMAGE = `${APP_BASE_URL}/images/logo.png`;
 const SEO_PUBLIC_ROBOTS = "index, follow, max-image-preview:large";
 const SEO_PRIVATE_ROBOTS = "noindex, nofollow";
@@ -12921,6 +13000,7 @@ await ensureCommunitySchema();
 await ensurePlaylistsSchema();
 await ensureBattlesSchema();
 await removeInvalidQueueSelfRatings();
+await ensureScalabilityIndexes();
     app.listen(APP_PORT, () => {
       console.log(`Server running on ${APP_BASE_URL} (port ${APP_PORT})`);
       syncTelegramWebhooks().catch((error) => {
