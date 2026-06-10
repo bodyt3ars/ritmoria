@@ -20,6 +20,41 @@
   let currentMode = null;
   let lastScPosition = 0;
   let lastScDuration = 0;
+  let remixEngine = null;
+  let activeRemixPreset = "original";
+
+  const REMIX_PRESETS = {
+    original: {
+      label: "Original",
+      playbackRate: 1
+    },
+    slowedReverb: {
+      label: "Slowed + Reverb",
+      playbackRate: 0.85,
+      delayTime: 0.24,
+      feedback: 0.28,
+      wet: 0.22
+    },
+    speedUp: {
+      label: "Speed Up",
+      playbackRate: 1.3
+    },
+    bassBoost: {
+      label: "Bass Boost",
+      playbackRate: 1,
+      frequency: 120,
+      gain: 8
+    },
+    lofi: {
+      label: "Lo-fi",
+      playbackRate: 1,
+      frequency: 3500
+    },
+    nightcore: {
+      label: "Nightcore",
+      playbackRate: 1.25
+    }
+  };
 
   function hasPlayerSession() {
     if (typeof window.hasSessionCache === "function") {
@@ -705,6 +740,269 @@
     return localStorage.getItem(REPEAT_KEY) === "1";
   }
 
+  function canUseWebAudio() {
+    return !!(window.AudioContext || window.webkitAudioContext);
+  }
+
+  function isSameOriginAudioSource(audioElement) {
+    const src = audioElement?.currentSrc || audioElement?.src || audioElement?.getAttribute?.("src") || "";
+    if (!src) return true;
+
+    try {
+      const url = new URL(src, window.location.href);
+      return url.origin === window.location.origin || url.protocol === "blob:" || url.protocol === "data:";
+    } catch {
+      return true;
+    }
+  }
+
+  function clearRemixNodes() {
+    if (!remixEngine) return;
+
+    remixEngine.nodes.forEach((node) => {
+      try {
+        node.disconnect();
+      } catch {}
+    });
+
+    remixEngine.nodes = [];
+  }
+
+  function updateRemixUi() {
+    const remixButton = document.getElementById("gp-remix");
+    const preset = REMIX_PRESETS[activeRemixPreset] || REMIX_PRESETS.original;
+
+    if (remixButton) {
+      remixButton.classList.toggle("active", activeRemixPreset !== "original");
+      remixButton.setAttribute("aria-label", `Remix: ${preset.label}`);
+      remixButton.setAttribute("title", `Remix: ${preset.label}`);
+    }
+
+    document.querySelectorAll("[data-remix-preset]").forEach((button) => {
+      const isActive = button.dataset.remixPreset === activeRemixPreset;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-checked", isActive ? "true" : "false");
+    });
+  }
+
+  function initRemixEngine(audioElement) {
+    if (!audioElement) return null;
+
+    const remixWrap = document.getElementById("gp-remix-wrap");
+
+    if (!canUseWebAudio()) {
+      remixWrap?.classList.add("gp-hidden");
+      console.warn("Ritmoria Remix: Web Audio API is not supported in this browser.");
+      return null;
+    }
+
+    if (!isSameOriginAudioSource(audioElement)) {
+      console.warn("Ritmoria Remix: audio source is cross-origin, so Web Audio effects are disabled for this track.");
+      return null;
+    }
+
+    if (remixEngine?.audioElement === audioElement) {
+      return remixEngine;
+    }
+
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+
+    try {
+      const context = remixEngine?.context || new AudioContextCtor();
+      const source = remixEngine?.source || context.createMediaElementSource(audioElement);
+
+      remixEngine = {
+        audioElement,
+        context,
+        source,
+        nodes: [],
+        isAvailable: true
+      };
+
+      rebuildAudioChain();
+      return remixEngine;
+    } catch (error) {
+      console.warn("Ritmoria Remix: audio could not be connected to Web Audio. Falling back to normal playback.", error);
+      remixEngine = {
+        audioElement,
+        context: null,
+        source: null,
+        nodes: [],
+        isAvailable: false
+      };
+      return null;
+    }
+  }
+
+  function resetRemixPreset() {
+    activeRemixPreset = "original";
+
+    if (audioEl) {
+      audioEl.playbackRate = 1;
+      audioEl.preservesPitch = true;
+      audioEl.mozPreservesPitch = true;
+      audioEl.webkitPreservesPitch = true;
+    }
+
+    rebuildAudioChain();
+    updateRemixUi();
+  }
+
+  function buildSoftClipCurve(amount = 1.6, samples = 2048) {
+    const curve = new Float32Array(samples);
+    const limit = samples - 1;
+
+    for (let i = 0; i < samples; i += 1) {
+      const x = (i * 2) / limit - 1;
+      curve[i] = Math.tanh(amount * x);
+    }
+
+    return curve;
+  }
+
+  function rebuildAudioChain() {
+    if (!remixEngine?.source || !remixEngine?.context || !remixEngine?.isAvailable) return;
+
+    const { context, source } = remixEngine;
+    const preset = REMIX_PRESETS[activeRemixPreset] || REMIX_PRESETS.original;
+
+    try {
+      source.disconnect();
+    } catch {}
+
+    clearRemixNodes();
+
+    if (audioEl) {
+      audioEl.playbackRate = preset.playbackRate || 1;
+      audioEl.preservesPitch = true;
+      audioEl.mozPreservesPitch = true;
+      audioEl.webkitPreservesPitch = true;
+    }
+
+    try {
+      if (activeRemixPreset === "slowedReverb") {
+        const dryGain = context.createGain();
+        const delay = context.createDelay(1);
+        const feedback = context.createGain();
+        const wetGain = context.createGain();
+
+        delay.delayTime.value = preset.delayTime;
+        feedback.gain.value = preset.feedback;
+        wetGain.gain.value = preset.wet;
+
+        source.connect(dryGain);
+        dryGain.connect(context.destination);
+        source.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(wetGain);
+        wetGain.connect(context.destination);
+        remixEngine.nodes = [dryGain, delay, feedback, wetGain];
+        return;
+      }
+
+      if (activeRemixPreset === "bassBoost") {
+        const bass = context.createBiquadFilter();
+        bass.type = "lowshelf";
+        bass.frequency.value = preset.frequency;
+        bass.gain.value = preset.gain;
+        source.connect(bass);
+        bass.connect(context.destination);
+        remixEngine.nodes = [bass];
+        return;
+      }
+
+      if (activeRemixPreset === "lofi") {
+        const lowpass = context.createBiquadFilter();
+        const shaper = context.createWaveShaper();
+
+        lowpass.type = "lowpass";
+        lowpass.frequency.value = preset.frequency;
+        lowpass.Q.value = 0.7;
+        shaper.curve = buildSoftClipCurve();
+        shaper.oversample = "2x";
+
+        source.connect(lowpass);
+        lowpass.connect(shaper);
+        shaper.connect(context.destination);
+        remixEngine.nodes = [lowpass, shaper];
+        return;
+      }
+
+      source.connect(context.destination);
+    } catch (error) {
+      console.warn("Ritmoria Remix: failed to rebuild audio chain. Falling back to Original.", error);
+      activeRemixPreset = "original";
+      try {
+        source.disconnect();
+        source.connect(context.destination);
+      } catch {}
+    }
+  }
+
+  function applyRemixPreset(presetName) {
+    const safePreset = REMIX_PRESETS[presetName] ? presetName : "original";
+
+    if (!audioEl) return;
+
+    const engine = initRemixEngine(audioEl);
+    if (!engine?.isAvailable) {
+      resetRemixPreset();
+      return;
+    }
+
+    if (engine.context?.state === "suspended") {
+      engine.context.resume().catch(() => {});
+    }
+
+    activeRemixPreset = safePreset;
+    rebuildAudioChain();
+    updateRemixUi();
+  }
+
+  function positionRemixMenu() {
+    const remixButton = document.getElementById("gp-remix");
+    const remixMenu = document.getElementById("gp-remix-menu");
+
+    if (!remixButton || !remixMenu) return;
+
+    const rect = remixButton.getBoundingClientRect();
+    const menuRect = remixMenu.getBoundingClientRect();
+    const margin = 10;
+    const width = menuRect.width || 230;
+    const height = menuRect.height || 260;
+    const left = Math.max(margin, Math.min(window.innerWidth - width - margin, rect.left + rect.width / 2 - width / 2));
+    let top = rect.top - height - 10;
+
+    if (top < margin) {
+      top = rect.bottom + 10;
+    }
+
+    top = Math.max(margin, Math.min(window.innerHeight - height - margin, top));
+    remixMenu.style.left = `${left}px`;
+    remixMenu.style.top = `${top}px`;
+  }
+
+  function openRemixMenu() {
+    const remixMenu = document.getElementById("gp-remix-menu");
+    const remixButton = document.getElementById("gp-remix");
+
+    if (!remixMenu || !remixButton) return;
+
+    remixMenu.classList.remove("gp-hidden");
+    remixButton.setAttribute("aria-expanded", "true");
+    updateRemixUi();
+    requestAnimationFrame(positionRemixMenu);
+  }
+
+  function closeRemixMenu() {
+    const remixMenu = document.getElementById("gp-remix-menu");
+    const remixButton = document.getElementById("gp-remix");
+
+    remixMenu?.classList.add("gp-hidden");
+    remixButton?.setAttribute("aria-expanded", "false");
+  }
+
   function ensurePlayerMarkup() {
     let host = document.getElementById("player");
 
@@ -751,6 +1049,13 @@
               <button id="gp-repeat" class="gp-control-btn gp-repeat-btn" type="button" title="Повтор текущего трека">
                 <i class="fa-solid fa-repeat"></i>
               </button>
+
+              <div id="gp-remix-wrap" class="gp-remix-wrap">
+                <button id="gp-remix" class="gp-remix-btn" type="button" title="Remix" aria-haspopup="true" aria-expanded="false">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  <span>Remix</span>
+                </button>
+              </div>
             </div>
 
             <div class="gp-progress-row">
@@ -902,6 +1207,27 @@
             </button>
           </div>
 
+          <div id="gp-remix-menu" class="gp-remix-menu gp-hidden" role="menu" aria-label="Remix effects">
+            <button class="gp-remix-option active" type="button" role="menuitemradio" aria-checked="true" data-remix-preset="original">
+              <span>Original</span>
+            </button>
+            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="slowedReverb">
+              <span>Slowed + Reverb</span>
+            </button>
+            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="speedUp">
+              <span>Speed Up</span>
+            </button>
+            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="bassBoost">
+              <span>Bass Boost</span>
+            </button>
+            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="lofi">
+              <span>Lo-fi</span>
+            </button>
+            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="nightcore">
+              <span>Nightcore</span>
+            </button>
+          </div>
+
           <audio id="global-audio"></audio>
           <div id="gp-sc-host" class="gp-sc-host"></div>
       `;
@@ -918,6 +1244,10 @@
     const prevBtn = document.getElementById("gp-prev");
     const nextBtn = document.getElementById("gp-next");
     const repeatBtn = document.getElementById("gp-repeat");
+    const remixWrap = document.getElementById("gp-remix-wrap");
+    const remixBtn = document.getElementById("gp-remix");
+    const remixMenu = document.getElementById("gp-remix-menu");
+    const remixOptions = Array.from(document.querySelectorAll("[data-remix-preset]"));
     const progress = document.getElementById("gp-progress");
     const volume = document.getElementById("gp-volume");
     const volumeToggleBtn = document.getElementById("gp-volume-toggle");
@@ -1488,6 +1818,11 @@
     applyVolume(getStoredVolume(), { persist: false, remember: true });
     syncRepeatButtonState();
     syncProgressFill();
+    updateRemixUi();
+
+    if (!canUseWebAudio()) {
+      remixWrap?.classList.add("gp-hidden");
+    }
 
     function renderFavoritesShortcut(track) {
       if (!favoritesShortcut || !window.RitmoriaPlaylists) return;
@@ -1708,6 +2043,29 @@
       toggleQueuePanel("queue");
     });
 
+    remixBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+
+      if (!canUseWebAudio()) {
+        console.warn("Ritmoria Remix: Web Audio API is not supported in this browser.");
+        remixWrap?.classList.add("gp-hidden");
+        return;
+      }
+
+      if (remixMenu?.classList.contains("gp-hidden")) {
+        openRemixMenu();
+      } else {
+        closeRemixMenu();
+      }
+    });
+
+    remixOptions.forEach((button) => {
+      button.addEventListener("click", () => {
+        applyRemixPreset(button.dataset.remixPreset);
+        closeRemixMenu();
+      });
+    });
+
     queueCloseBtn?.addEventListener("click", () => {
       closeQueuePanel();
     });
@@ -1852,6 +2210,14 @@
       if (!contextMenu?.classList.contains("gp-hidden") && !e.target.closest("#gp-context-menu")) {
         closeContextMenu();
       }
+
+      if (
+        !remixMenu?.classList.contains("gp-hidden") &&
+        !e.target.closest("#gp-remix-menu") &&
+        !e.target.closest("#gp-remix-wrap")
+      ) {
+        closeRemixMenu();
+      }
     });
 
     document.addEventListener("keydown", (e) => {
@@ -1861,6 +2227,7 @@
       closePlaylistModal();
       closeCreatePlaylistModal();
       closeQueuePanel();
+      closeRemixMenu();
     });
 
     window.addEventListener("resize", () => {
@@ -1873,10 +2240,15 @@
       if (!createPlaylistModal?.classList.contains("gp-hidden")) {
         positionCreatePlaylistModal(createPlaylistModalAnchor || openCreatePlaylistBtn || addBtn);
       }
+
+      if (!remixMenu?.classList.contains("gp-hidden")) {
+        positionRemixMenu();
+      }
     });
 
     window.addEventListener("scroll", () => {
       closeContextMenu();
+      closeRemixMenu();
     }, true);
 
     window.addEventListener("ritmoria:playlists-updated", () => {
@@ -1891,11 +2263,13 @@
 
     window.addEventListener("ritmoria:global-player-track-change", () => {
       closeContextMenu();
+      closeRemixMenu();
       syncAddButtonState();
       syncContextMenuState();
       syncRepeatButtonState();
       syncProgressFill(0);
       syncLikeButtonState();
+      resetRemixPreset();
       renderQueuePanel();
     });
 
@@ -1917,6 +2291,8 @@
       closeContextMenu();
       closePlaylistModal();
       closeCreatePlaylistModal();
+      closeRemixMenu();
+      resetRemixPreset();
       syncProgressFill(0);
     });
 
@@ -1965,6 +2341,11 @@
       });
 
       audioEl.addEventListener("play", () => {
+        if (activeRemixPreset !== "original") {
+          const engine = initRemixEngine(audioEl);
+          engine?.context?.resume?.().catch(() => {});
+        }
+
         setPlayingUI(true);
         window.dispatchEvent(
           new CustomEvent("ritmoria:global-player-play", {

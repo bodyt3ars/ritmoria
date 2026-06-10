@@ -1546,6 +1546,110 @@ body {
   box-shadow: inset 0 0 0 1px rgba(203, 125, 163, 0.1);
 }
 
+.gp-remix-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.gp-remix-btn {
+  min-width: 92px;
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.82);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.gp-remix-btn:hover,
+.gp-remix-btn:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+.gp-remix-btn.active {
+  color: #ffe2ef;
+  background: rgba(203, 125, 163, 0.16);
+  border-color: rgba(203, 125, 163, 0.28);
+}
+
+.gp-remix-menu {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100125;
+  width: min(230px, calc(100vw - 20px));
+  padding: 8px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(31, 21, 27, 0.98), rgba(22, 15, 20, 0.98));
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.gp-remix-menu:not(.gp-hidden) {
+  animation: gp-popover-in 0.18s ease;
+}
+
+.gp-remix-option {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.76);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.gp-remix-option:hover,
+.gp-remix-option:focus-visible {
+  outline: none;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gp-remix-option.active {
+  color: #ffd9ea;
+  background: rgba(203, 125, 163, 0.14);
+  border-color: rgba(203, 125, 163, 0.26);
+}
+
+.gp-remix-option.active::after {
+  content: "\f00c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 12px;
+  color: #ffd9ea;
+}
+
 .gp-progress-row {
   gap: 8px;
   max-width: 640px;
@@ -1893,6 +1997,18 @@ body {
     height: 34px;
   }
 
+  .gp-remix-btn {
+    min-width: 38px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  .gp-remix-btn span {
+    display: none;
+  }
+
   .gp-playlist-modal-card {
     width: min(calc(100vw - 20px), 320px);
     max-height: min(420px, calc(100vh - 112px));
@@ -2074,6 +2190,11 @@ body {
   .gp-btn {
     width: 32px;
     height: 32px;
+  }
+
+  .gp-remix-btn {
+    width: 36px;
+    height: 36px;
   }
 
   .gp-btn-play {
