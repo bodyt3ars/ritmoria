@@ -53,10 +53,50 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 10px;
   width: fit-content;
   max-width: 100%;
   margin-bottom: 18px;
   padding: 0 0 12px 18px;
+}
+
+.home-page .home-panel-toggle {
+  border: 0;
+  background: transparent;
+  color: #f5efe8;
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-page .home-panel-toggle i {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 233, 243, 0.82);
+  font-size: 12px;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.home-page .home-panel-toggle:hover i,
+.home-page .home-panel-toggle:focus-visible i {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.home-page .home-panel-toggle:focus-visible {
+  outline: none;
+}
+
+.home-page .home-collapsible-panel.is-collapsed .home-panel-toggle i {
+  transform: rotate(-90deg);
+}
+
+.home-page .home-collapsible-panel.is-collapsed .home-side-list {
+  display: none;
 }
 
 .home-page .home-panel-title-decorated::before {

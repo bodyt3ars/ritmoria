@@ -1,7 +1,17 @@
+async function hasProfileClientSession({ force = false } = {}) {
+  if (!force && (window.currentUser || window.hasSessionCache?.())) {
+    return true;
+  }
+
+  if (typeof window.hasActiveSession === "function") {
+    return window.hasActiveSession({ force });
+  }
+
+  return !!localStorage.getItem("token");
+}
+
 async function getCurrentViewerProfile() {
-  const hasSession = typeof window.hasActiveSession === "function"
-    ? await window.hasActiveSession()
-    : !!localStorage.getItem("token");
+  const hasSession = await hasProfileClientSession();
 
   if (!hasSession) return null;
 
@@ -82,9 +92,7 @@ async function handleProfileUI() {
 }
 
 async function initProfilePageFull() {
-  const hasSession = typeof window.hasActiveSession === "function"
-    ? await window.hasActiveSession()
-    : !!localStorage.getItem("token");
+  const hasSession = await hasProfileClientSession();
 
   if (!hasSession) {
     navigate("/login");

@@ -17,6 +17,25 @@ let homeRecommendationsState = {
 };
 let homeRecommendationsObserver = null;
 
+function bindHomeTopTracksToggle() {
+  const panel = document.getElementById("homeTopTracksPanel");
+  const toggle = document.getElementById("homeTopTracksToggle");
+  if (!panel || !toggle || toggle.dataset.bound === "1") return;
+
+  toggle.dataset.bound = "1";
+
+  const sync = () => {
+    const isCollapsed = panel.classList.contains("is-collapsed");
+    toggle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+  };
+
+  sync();
+  toggle.addEventListener("click", () => {
+    panel.classList.toggle("is-collapsed");
+    sync();
+  });
+}
+
 function formatHomeCount(value) {
   return new Intl.NumberFormat("ru-RU").format(Math.max(0, Number(value || 0)));
 }
@@ -826,6 +845,8 @@ async function loadMoreHomeRecommendations() {
 }
 
 function bindHomeInteractions(homeData) {
+  bindHomeTopTracksToggle();
+
   if (typeof window.initPostUiBindings === "function") {
     window.initPostUiBindings();
   }
@@ -1020,6 +1041,7 @@ window.initHomePage = async function initHomePage() {
   if (!root) return;
   root.querySelector(".home-left-panel")?.style.removeProperty("display");
   root.querySelector(".home-right-panel")?.style.removeProperty("display");
+  bindHomeTopTracksToggle();
 
   try {
     const data = await loadHomePageData();

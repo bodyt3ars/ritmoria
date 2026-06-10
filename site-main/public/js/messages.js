@@ -16,6 +16,18 @@ let messagesState = {
   isSending: false
 };
 
+async function hasMessagesClientSession({ force = false } = {}) {
+  if (!force && (window.currentUser || window.hasSessionCache?.())) {
+    return true;
+  }
+
+  if (typeof window.hasActiveSession === "function") {
+    return window.hasActiveSession({ force });
+  }
+
+  return !!localStorage.getItem("token");
+}
+
 function msgEscape(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -1722,8 +1734,7 @@ function closeConversationMediaBrowser() {
 }
 
 window.initMessagesPage = async function initMessagesPage() {
-  const token = localStorage.getItem("token");
-  if (!token) {
+  if (!(await hasMessagesClientSession())) {
     navigate("/login");
     return;
   }
