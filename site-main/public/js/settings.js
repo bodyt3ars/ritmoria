@@ -1982,10 +1982,29 @@ async function hasSettingsClientSession({ force = false } = {}) {
   }
 
   if (typeof window.hasActiveSession === "function") {
-    return window.hasActiveSession({ force });
+    const active = await window.hasActiveSession({ force });
+    if (active) return true;
   }
 
-  return !!settingsGetToken();
+  if (settingsGetToken()) return true;
+
+  try {
+    const res = await fetch("/me", {
+      cache: "no-store",
+      credentials: "same-origin"
+    });
+
+    if (!res.ok) return false;
+
+    const user = await res.json().catch(() => null);
+    if (user) {
+      window.currentUser = user;
+      window.markActiveSession?.(true, user);
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 window.initSettingsPage = async function () {

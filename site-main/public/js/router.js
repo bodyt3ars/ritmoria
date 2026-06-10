@@ -14,7 +14,7 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260610-settingsauth";
+const ASSET_VERSION = "20260610-settingsme";
 
 const DEFAULT_SEO = {
   title: "Ритмория — музыкальная платформа для артистов",
@@ -88,9 +88,32 @@ async function requireActiveSession() {
     return true;
   }
 
+  const verifySessionWithMe = async () => {
+    try {
+      const res = await fetch("/me", {
+        cache: "no-store",
+        credentials: "same-origin"
+      });
+
+      if (!res.ok) return false;
+
+      const user = await res.json().catch(() => null);
+      if (user) {
+        window.currentUser = user;
+        window.markActiveSession?.(true, user);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   if (typeof window.hasActiveSession === "function") {
     const active = await window.hasActiveSession({ force: true });
     if (!active) {
+      if (await verifySessionWithMe()) {
+        return true;
+      }
       navigate("/login");
       return false;
     }
@@ -98,6 +121,9 @@ async function requireActiveSession() {
   }
 
   if (!localStorage.getItem("token")) {
+    if (await verifySessionWithMe()) {
+      return true;
+    }
     navigate("/login");
     return false;
   }
