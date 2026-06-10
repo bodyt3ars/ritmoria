@@ -14,7 +14,7 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260610-settingsme";
+const ASSET_VERSION = "20260610-settingshardfix";
 
 const DEFAULT_SEO = {
   title: "Ритмория — музыкальная платформа для артистов",
@@ -658,10 +658,7 @@ export async function renderPage(path) {
       "/styles/privacy.css"
     ],
     scriptSrc: "/js/settings.js",
-    initName: "initSettingsPage",
-      beforeRender: async () => {
-        return requireActiveSession();
-      }
+    initName: "initSettingsPage"
     });
     if (!ok || renderToken !== currentRenderToken) return;
     return;

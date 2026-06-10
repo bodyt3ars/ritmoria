@@ -74,20 +74,47 @@
       return authState.pending;
     }
 
+    const verifyWithMe = async () => {
+      try {
+        const response = await fetch("/me", {
+          cache: "no-store",
+          credentials: "same-origin"
+        });
+
+        if (!response.ok) return false;
+
+        const user = await response.json().catch(() => null);
+        setCachedSession(true, user || authState.user || readCachedUser());
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
     authState.pending = fetch("/api/auth/session", {
-      cache: "no-store"
+      cache: "no-store",
+      credentials: "same-origin"
     })
       .then(async (response) => {
         if (!response.ok) {
+          if (await verifyWithMe()) {
+            return true;
+          }
           setCachedSession(false, null);
           return false;
         }
 
         const data = await response.json().catch(() => ({}));
+        if (data.authenticated !== true && await verifyWithMe()) {
+          return true;
+        }
         setCachedSession(data.authenticated === true, data.user || null);
         return authState.active;
       })
-      .catch(() => {
+      .catch(async () => {
+        if (await verifyWithMe()) {
+          return true;
+        }
         setCachedSession(false, null);
         return false;
       })
