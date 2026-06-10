@@ -515,13 +515,13 @@ function renderMentionsList() {
 
 async function loadPosts() {
   const token = localStorage.getItem("token");
-  if (!token) return;
   const container = document.getElementById("postsContainer");
   currentPostsContainerId = "postsContainer";
+  const headers = token ? { Authorization: "Bearer " + token } : {};
 
   try {
     const meRes = await fetch("/me", {
-      headers: { Authorization: "Bearer " + token }
+      headers
     });
     if (!meRes.ok) return;
 
@@ -531,7 +531,7 @@ async function loadPosts() {
     const url = !tag ? "/my-posts" : `/posts?tag=${encodeURIComponent(tag)}`;
 
     const res = await fetch(url, {
-      headers: { Authorization: "Bearer " + token }
+      headers
     });
     if (!res.ok) {
       console.error("Ошибка загрузки постов");

@@ -511,6 +511,61 @@ button {
     min-height: 42px;
   }
 
+  .profile-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 18px 0 0 !important;
+    gap: 0 !important;
+    overflow: visible !important;
+    padding: 0 0 8px !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: transparent !important;
+  }
+
+  .profile-tabs::before,
+  .profile-tabs::after {
+    display: none !important;
+  }
+
+  .profile-tab-btn {
+    position: relative !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 22px !important;
+    background: transparent !important;
+  }
+
+  .profile-tab-btn span {
+    display: none !important;
+  }
+
+  .profile-tab-btn.active {
+    box-shadow: none !important;
+    background: transparent !important;
+    color: #fff !important;
+  }
+
+  .profile-tab-btn.active::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: -8px;
+    height: 2px;
+    border-radius: 999px;
+    background: #fff;
+  }
+
   .profile-page-header,
   .profile-page-actions,
   .profile-follow-stats,
