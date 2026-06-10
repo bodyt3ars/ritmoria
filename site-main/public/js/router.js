@@ -14,7 +14,7 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260610-profilefix";
+const ASSET_VERSION = "20260610-logofix";
 
 const DEFAULT_SEO = {
   title: "Ритмория — музыкальная платформа для артистов",

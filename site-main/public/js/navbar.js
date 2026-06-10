@@ -375,7 +375,7 @@ async function loadNavbar() {
   if (!container) return;
 
   try {
-    const res = await fetch("/html/components/navbar.html?v=20260610-profilefix", {
+    const res = await fetch("/html/components/navbar.html?v=20260610-avatarfix", {
       cache: "no-store"
     });
     const html = await res.text();
@@ -451,11 +451,6 @@ function initMobileNavbar() {
     }
   });
 
-  document.getElementById("navMobileProfileLink")?.addEventListener("click", (e) => {
-    closeMobileMenu();
-    goToProfile(e);
-  });
-
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".navbar")) {
       closeMobileMenu();
@@ -478,7 +473,6 @@ async function loadNavbarUser() {
   const navMessagesLink = document.getElementById("navMessagesLink");
   const navNotificationsWrap = document.getElementById("navNotificationsWrap");
   const navMessagesBadge = document.getElementById("navMessagesBadge");
-  const navMobileProfileLink = document.getElementById("navMobileProfileLink");
 
   if (!navGuest || !navUser || !navAvatar) return;
 
@@ -495,10 +489,8 @@ async function loadNavbarUser() {
     navUser.classList.add("navbar-hidden");
     navMessagesLink?.classList.add("navbar-hidden");
     navNotificationsWrap?.classList.add("navbar-hidden");
-    navMobileProfileLink?.classList.add("navbar-hidden");
     navMessagesLink?.style.setProperty("display", "none", "important");
     navNotificationsWrap?.style.setProperty("display", "none", "important");
-    navMobileProfileLink?.style.setProperty("display", "none", "important");
     setNavbarBadgeState(navMessagesBadge, 0);
     navGuest.style.removeProperty("display");
     navUser.style.setProperty("display", "none", "important");
@@ -524,10 +516,8 @@ async function loadNavbarUser() {
     navUser.classList.remove("navbar-hidden");
     navMessagesLink?.classList.remove("navbar-hidden");
     navNotificationsWrap?.classList.remove("navbar-hidden");
-    navMobileProfileLink?.classList.remove("navbar-hidden");
     navMessagesLink?.style.removeProperty("display");
     navNotificationsWrap?.style.removeProperty("display");
-    navMobileProfileLink?.style.removeProperty("display");
     navGuest.style.setProperty("display", "none", "important");
     navUser.style.removeProperty("display");
 
@@ -545,10 +535,8 @@ async function loadNavbarUser() {
     navUser.classList.add("navbar-hidden");
     navMessagesLink?.classList.add("navbar-hidden");
     navNotificationsWrap?.classList.add("navbar-hidden");
-    navMobileProfileLink?.classList.add("navbar-hidden");
     navMessagesLink?.style.setProperty("display", "none", "important");
     navNotificationsWrap?.style.setProperty("display", "none", "important");
-    navMobileProfileLink?.style.setProperty("display", "none", "important");
     setNavbarBadgeState(navMessagesBadge, 0);
     navGuest.style.removeProperty("display");
     navUser.style.setProperty("display", "none", "important");
@@ -578,7 +566,7 @@ function initDropdown() {
     e.stopPropagation();
 
     if (window.matchMedia?.("(max-width: 700px)")?.matches) {
-      goToProfile(e);
+      goToProfileFromMobileAvatar(e);
       return;
     }
 
@@ -835,6 +823,39 @@ async function goToProfile(e) {
   } catch (err) {
     console.error("goToProfile error", err);
     window.clearAuthClientState?.();
+    navigate("/profile");
+  }
+}
+
+async function goToProfileFromMobileAvatar(e) {
+  if (e) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+  }
+
+  closeNavbarProfileDropdown();
+
+  const cachedTag = String(
+    window.currentUser?.username_tag ||
+    window.getSessionUserTag?.() ||
+    ""
+  ).trim();
+
+  if (cachedTag) {
+    navigate(buildNavbarProfilePath(cachedTag));
+    return;
+  }
+
+  try {
+    const res = await fetch("/me", { cache: "no-store" });
+    if (!res.ok) throw new Error("Unauthorized");
+
+    const user = await res.json();
+    window.currentUser = user;
+    window.markActiveSession?.(true, user);
+    navigate(buildNavbarProfilePath(user.username_tag));
+  } catch (err) {
+    console.error("mobile avatar profile error", err);
     navigate("/profile");
   }
 }
