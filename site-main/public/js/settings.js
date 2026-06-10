@@ -1976,14 +1976,26 @@ window.respondToCollectiveInvite = respondToCollectiveInvite;
 window.deleteCollective = deleteCollective;
 window.toggleCollectiveMembers = toggleCollectiveMembers;
 window.loadCollectiveSection = loadCollectiveSection;
-window.initSettingsPage = function () {
+async function hasSettingsClientSession({ force = false } = {}) {
+  if (!force && (window.currentUser || window.hasSessionCache?.())) {
+    return true;
+  }
+
+  if (typeof window.hasActiveSession === "function") {
+    return window.hasActiveSession({ force });
+  }
+
+  return !!settingsGetToken();
+}
+
+window.initSettingsPage = async function () {
   const root = document.querySelector(".settings-page");
   if (!root) {
     console.log("❌ settings page not found");
     return;
   }
 
-  if (!settingsGetToken()) {
+  if (!(await hasSettingsClientSession())) {
     navigate("/login");
     return;
   }
