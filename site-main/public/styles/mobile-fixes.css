@@ -674,3 +674,99 @@ button {
     max-width: 96% !important;
   }
 }
+
+@media (max-width: 700px) {
+  .navbar.mobile-open .navbar-right-extra {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 44px 44px 44px !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .navbar.mobile-open .navbar-language-switch {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .navbar.mobile-open .navbar-icon-link,
+  .navbar.mobile-open .navbar-notifications-wrap,
+  .navbar.mobile-open .navbar-user-wrap {
+    width: 44px !important;
+    min-width: 44px !important;
+    justify-self: center !important;
+  }
+
+  .navbar.mobile-open .navbar-icon-link,
+  .navbar.mobile-open .navbar-user {
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+  }
+
+  .navbar.mobile-open .navbar-user-wrap {
+    justify-content: center !important;
+  }
+
+  .navbar.mobile-open .navbar-dropdown {
+    display: none !important;
+  }
+
+  .profile-page {
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .profile-page-container {
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    overflow-x: hidden !important;
+  }
+
+  .profile-page-card,
+  .profile-page-content,
+  .profile-tab-content,
+  #postsContainer,
+  #tracksContainer,
+  #repostsContainer,
+  #mentionsContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .profile-page .post-card,
+  .profile-page .track-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .profile-page .post-media-wrapper,
+  .profile-page .post-media-wrapper img,
+  .profile-page .post-media-wrapper video,
+  .profile-page .video-player,
+  .profile-page .video-element {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .profile-page .post-text,
+  .profile-page .post-text p,
+  .profile-page .post-username,
+  .profile-page .track-title,
+  .profile-page .track-artist {
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+}
