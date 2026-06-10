@@ -100,10 +100,16 @@
   font-size: 26px;
   letter-spacing: -0.5px;
   line-height: 1;
+  white-space: nowrap;
   background: linear-gradient(135deg, #ffffff, #e9d5ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   transition: 0.25s;
+}
+
+.app-sidebar-logo span {
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .navbar .navbar-logo:hover {
@@ -516,6 +522,10 @@
 
 .navbar .navbar-telegram-link:hover .navbar-telegram-icon {
   color: #45c2ff;
+}
+
+.navbar .navbar-mobile-profile-link {
+  display: none;
 }
 
 /* ===== INDICATOR ===== */
@@ -963,6 +973,18 @@
 
   .navbar .navbar-language-switch {
     order: -1;
+  }
+
+  .navbar .navbar-mobile-profile-link:not(.navbar-hidden) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    color: #fff;
+    cursor: pointer;
   }
 
   .navbar .navbar-user-wrap {

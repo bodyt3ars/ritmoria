@@ -91,11 +91,7 @@
   outline: none;
 }
 
-.home-page .home-collapsible-panel.is-collapsed .home-panel-toggle i {
-  transform: rotate(-90deg);
-}
-
-.home-page .home-collapsible-panel.is-collapsed .home-side-list {
+.home-page .home-panel-toggle i {
   display: none;
 }
 
@@ -1899,5 +1895,19 @@
   .home-page .home-artist-card {
     border-radius: 24px;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .home-page .home-panel-toggle i {
+    display: inline-flex;
+  }
+
+  .home-page .home-collapsible-panel.is-collapsed .home-panel-toggle i {
+    transform: rotate(-90deg);
+  }
+
+  .home-page .home-collapsible-panel.is-collapsed .home-side-list {
+    display: none;
   }
 }

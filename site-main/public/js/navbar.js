@@ -375,7 +375,9 @@ async function loadNavbar() {
   if (!container) return;
 
   try {
-    const res = await fetch("/html/components/navbar.html");
+    const res = await fetch("/html/components/navbar.html?v=20260610-profilefix", {
+      cache: "no-store"
+    });
     const html = await res.text();
 
     container.innerHTML = html;
@@ -449,6 +451,11 @@ function initMobileNavbar() {
     }
   });
 
+  document.getElementById("navMobileProfileLink")?.addEventListener("click", (e) => {
+    closeMobileMenu();
+    goToProfile(e);
+  });
+
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".navbar")) {
       closeMobileMenu();
@@ -471,6 +478,7 @@ async function loadNavbarUser() {
   const navMessagesLink = document.getElementById("navMessagesLink");
   const navNotificationsWrap = document.getElementById("navNotificationsWrap");
   const navMessagesBadge = document.getElementById("navMessagesBadge");
+  const navMobileProfileLink = document.getElementById("navMobileProfileLink");
 
   if (!navGuest || !navUser || !navAvatar) return;
 
@@ -487,8 +495,10 @@ async function loadNavbarUser() {
     navUser.classList.add("navbar-hidden");
     navMessagesLink?.classList.add("navbar-hidden");
     navNotificationsWrap?.classList.add("navbar-hidden");
+    navMobileProfileLink?.classList.add("navbar-hidden");
     navMessagesLink?.style.setProperty("display", "none", "important");
     navNotificationsWrap?.style.setProperty("display", "none", "important");
+    navMobileProfileLink?.style.setProperty("display", "none", "important");
     setNavbarBadgeState(navMessagesBadge, 0);
     navGuest.style.removeProperty("display");
     navUser.style.setProperty("display", "none", "important");
@@ -514,8 +524,10 @@ async function loadNavbarUser() {
     navUser.classList.remove("navbar-hidden");
     navMessagesLink?.classList.remove("navbar-hidden");
     navNotificationsWrap?.classList.remove("navbar-hidden");
+    navMobileProfileLink?.classList.remove("navbar-hidden");
     navMessagesLink?.style.removeProperty("display");
     navNotificationsWrap?.style.removeProperty("display");
+    navMobileProfileLink?.style.removeProperty("display");
     navGuest.style.setProperty("display", "none", "important");
     navUser.style.removeProperty("display");
 
@@ -533,8 +545,10 @@ async function loadNavbarUser() {
     navUser.classList.add("navbar-hidden");
     navMessagesLink?.classList.add("navbar-hidden");
     navNotificationsWrap?.classList.add("navbar-hidden");
+    navMobileProfileLink?.classList.add("navbar-hidden");
     navMessagesLink?.style.setProperty("display", "none", "important");
     navNotificationsWrap?.style.setProperty("display", "none", "important");
+    navMobileProfileLink?.style.setProperty("display", "none", "important");
     setNavbarBadgeState(navMessagesBadge, 0);
     navGuest.style.removeProperty("display");
     navUser.style.setProperty("display", "none", "important");
@@ -562,6 +576,12 @@ function initDropdown() {
 
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
+
+    if (window.matchMedia?.("(max-width: 700px)")?.matches) {
+      goToProfile(e);
+      return;
+    }
+
     const willOpen = !dropdown.classList.contains("active");
     dropdown.classList.toggle("active", willOpen);
     btn.setAttribute("aria-expanded", willOpen ? "true" : "false");

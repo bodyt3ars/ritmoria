@@ -23,17 +23,31 @@ function bindHomeTopTracksToggle() {
   if (!panel || !toggle || toggle.dataset.bound === "1") return;
 
   toggle.dataset.bound = "1";
+  const mobileQuery = window.matchMedia("(max-width: 700px)");
 
   const sync = () => {
     const isCollapsed = panel.classList.contains("is-collapsed");
     toggle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
   };
 
+  const syncByViewport = () => {
+    if (mobileQuery.matches) {
+      panel.classList.add("is-collapsed");
+    } else {
+      panel.classList.remove("is-collapsed");
+    }
+    sync();
+  };
+
+  syncByViewport();
   sync();
   toggle.addEventListener("click", () => {
+    if (!mobileQuery.matches) return;
     panel.classList.toggle("is-collapsed");
     sync();
   });
+
+  mobileQuery.addEventListener?.("change", syncByViewport);
 }
 
 function formatHomeCount(value) {
