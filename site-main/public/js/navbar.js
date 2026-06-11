@@ -465,6 +465,7 @@ function initMobileNavbar() {
 }
 
 async function loadNavbarUser() {
+  const navbar = document.querySelector(".navbar");
   const navGuest = document.getElementById("navGuest");
   const navUser = document.getElementById("navUser");
   const navAvatar = document.getElementById("navAvatar");
@@ -483,6 +484,8 @@ async function loadNavbarUser() {
   navDropdown?.classList.remove("active");
 
   if (!(await hasNavbarSession())) {
+    navbar?.classList.add("navbar-guest-mode");
+    navbar?.classList.remove("navbar-user-mode");
     navAvatar.src = "/images/default-avatar.jpg";
     updateSidebarRank(0);
     navGuest.classList.remove("navbar-hidden");
@@ -505,6 +508,8 @@ async function loadNavbarUser() {
 
     const user = await res.json();
     window.currentUser = user;
+    navbar?.classList.add("navbar-user-mode");
+    navbar?.classList.remove("navbar-guest-mode");
     window.markActiveSession?.(true, user);
     updateSidebarRank(user.rank_state || user.xp || 0);
 
@@ -529,6 +534,8 @@ async function loadNavbarUser() {
     console.error("Navbar user error:", err);
     window.clearAuthClientState?.();
     updateSidebarRank(0);
+    navbar?.classList.add("navbar-guest-mode");
+    navbar?.classList.remove("navbar-user-mode");
 
     navAvatar.src = "/images/default-avatar.jpg";
     navGuest.classList.remove("navbar-hidden");
