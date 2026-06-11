@@ -772,24 +772,33 @@ button {
   .navbar.auth-navbar.mobile-open .navbar-right-extra {
     display: grid !important;
     grid-template-columns: 1fr !important;
+    align-items: stretch !important;
     gap: 10px !important;
     width: 100% !important;
   }
 
   .navbar.auth-navbar.mobile-open .navbar-language-switch {
     width: 100% !important;
+    max-width: 100% !important;
+    grid-column: 1 / -1 !important;
+    justify-self: stretch !important;
     justify-content: flex-start !important;
   }
 
   .navbar.auth-navbar.mobile-open .navbar-guest {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-column: 1 / -1 !important;
     gap: 10px !important;
     width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
   }
 
   .navbar.auth-navbar.mobile-open .navbar-guest .navbar-link {
     width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     min-height: 44px !important;
     display: inline-flex !important;
     align-items: center !important;
