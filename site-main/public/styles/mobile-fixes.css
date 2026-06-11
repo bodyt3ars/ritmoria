@@ -32,27 +32,6 @@ button {
   max-width: 100%;
 }
 
-.navbar,
-.app-sidebar,
-.global-player,
-.auth-card,
-.profile-page-card,
-.track-page-card,
-.track-page-panel,
-.queue-track-main,
-.settings-page-card,
-.settings-page-modal-content,
-.profile-modal-content,
-.profile-post-modal-content,
-.profile-post-comments-modal-content,
-.messages-shell,
-.opens-create-panel,
-.opens-feed-panel,
-.opens-side-panel,
-.playlists-page .playlist-card {
-  max-width: 100%;
-}
-
 .profile-page,
 .settings-page,
 .track-page,
@@ -97,19 +76,6 @@ button {
   -webkit-overflow-scrolling: touch;
 }
 
-.track-page-judge-popup,
-.track-page-judge-modal-content,
-.settings-page-modal-content,
-.profile-modal-content,
-.profile-post-modal-content,
-.profile-post-comments-modal-content,
-.messages-modal,
-.auth-code-modal-content,
-.app-confirm-dialog {
-  width: min(100%, calc(100vw - 24px));
-  max-width: calc(100vw - 24px);
-}
-
 .track-page-judge-popup-content,
 .track-page-judge-table,
 .settings-page-modal-body,
@@ -120,6 +86,40 @@ button {
 }
 
 @media (max-width: 1023px) {
+  .navbar,
+  .app-sidebar,
+  .global-player,
+  .auth-card,
+  .profile-page-card,
+  .track-page-card,
+  .track-page-panel,
+  .queue-track-main,
+  .settings-page-card,
+  .settings-page-modal-content,
+  .profile-modal-content,
+  .profile-post-modal-content,
+  .profile-post-comments-modal-content,
+  .messages-shell,
+  .opens-create-panel,
+  .opens-feed-panel,
+  .opens-side-panel,
+  .playlists-page .playlist-card {
+    max-width: 100%;
+  }
+
+  .track-page-judge-popup,
+  .track-page-judge-modal-content,
+  .settings-page-modal-content,
+  .profile-modal-content,
+  .profile-post-modal-content,
+  .profile-post-comments-modal-content,
+  .messages-modal,
+  .auth-code-modal-content,
+  .app-confirm-dialog {
+    width: min(100%, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+  }
+
   #app {
     padding-left: 0 !important;
   }
