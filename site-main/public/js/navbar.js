@@ -13,6 +13,29 @@ const NAVBAR_REALTIME_POLL_MS = 30000;
 const NAVBAR_FOCUS_REFRESH_COOLDOWN_MS = 10000;
 let navbarLastFocusRefreshAt = 0;
 
+const NAVBAR_RESERVED_PROFILE_ROUTES = new Set([
+  "admin",
+  "api",
+  "auth",
+  "discover",
+  "html",
+  "judge",
+  "login",
+  "logout",
+  "me",
+  "messages",
+  "opens",
+  "playlists",
+  "privacy",
+  "profile",
+  "queue",
+  "register",
+  "settings",
+  "submit",
+  "support",
+  "track"
+]);
+
 const NAVBAR_RANK_TIERS = [
   { rank: 1, rankName: "Новичок", rankKey: "rank.newbie", minXp: 0 },
   { rank: 2, rankName: "Слушатель", rankKey: "rank.listener", minXp: 500 },
@@ -55,6 +78,10 @@ async function hasNavbarSession() {
 function buildNavbarProfilePath(tag) {
   const safeTag = String(tag || "").trim();
   return safeTag ? `/${encodeURIComponent(safeTag)}` : "/profile";
+}
+
+function isNavbarReservedProfileTag(tag) {
+  return NAVBAR_RESERVED_PROFILE_ROUTES.has(String(tag || "").trim().toLowerCase());
 }
 
 function getNavbarRankState(rankStateOrXp = 0) {
@@ -822,7 +849,7 @@ async function goToProfile(e) {
     const user = await res.json();
     const tag = user.username_tag;
 
-    if (tag) {
+    if (tag && !isNavbarReservedProfileTag(tag)) {
       navigate(buildNavbarProfilePath(tag));
     } else {
       navigate("/profile");
@@ -848,7 +875,7 @@ async function goToProfileFromMobileAvatar(e) {
     ""
   ).trim();
 
-  if (cachedTag) {
+  if (cachedTag && !isNavbarReservedProfileTag(cachedTag)) {
     navigate(buildNavbarProfilePath(cachedTag));
     return;
   }
@@ -860,7 +887,8 @@ async function goToProfileFromMobileAvatar(e) {
     const user = await res.json();
     window.currentUser = user;
     window.markActiveSession?.(true, user);
-    navigate(buildNavbarProfilePath(user.username_tag));
+    const tag = String(user.username_tag || "").trim();
+    navigate(tag && !isNavbarReservedProfileTag(tag) ? buildNavbarProfilePath(tag) : "/profile");
   } catch (err) {
     console.error("mobile avatar profile error", err);
     navigate("/profile");

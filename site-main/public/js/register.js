@@ -213,6 +213,12 @@ function initRegisterPage() {
           if (data.available) {
             setStatusText(tagStatus, "Доступно", "#22c55e");
             setFieldState(usernameTagInput, "valid");
+          } else if (data.error === "reserved_username_tag") {
+            setStatusText(tagStatus, "Занято системной страницей", "#ef4444");
+            setFieldState(usernameTagInput, "invalid");
+          } else if (data.error === "invalid_username_tag") {
+            setStatusText(tagStatus, "Недопустимый username", "#ef4444");
+            setFieldState(usernameTagInput, "invalid");
           } else {
             setStatusText(tagStatus, "Уже занято", "#ef4444");
             setFieldState(usernameTagInput, "invalid");
@@ -243,6 +249,18 @@ function initRegisterPage() {
 
     if (username_tag.length < 3) {
       setRegisterError("Username минимум 3 символа");
+      return;
+    }
+
+    try {
+      const tagData = await checkTagAvailability(username_tag);
+      if (!tagData.available) {
+        setRegisterError(window.getApiErrorMessage?.(tagData, "Этот username уже занят") || "Этот username уже занят");
+        return;
+      }
+    } catch (error) {
+      console.error("Tag submit check error:", error);
+      setRegisterError("Не удалось проверить username");
       return;
     }
 

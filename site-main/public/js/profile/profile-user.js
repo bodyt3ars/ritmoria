@@ -724,6 +724,11 @@ async function saveUsername() {
         return;
       }
 
+      if (data.error === "reserved_username_tag") {
+        setText("usernameError", "Этот username занят системной страницей. Выбери другой.");
+        return;
+      }
+
     setText("usernameError", window.getApiErrorMessage?.(data, "Не удалось изменить ник") || "Не удалось изменить ник");
       return;
     }
@@ -823,6 +828,11 @@ async function saveProfile() {
 
       if (data.error === "username_tag_taken") {
         setText("editProfileError", "Этот username уже занят");
+        return;
+      }
+
+      if (data.error === "reserved_username_tag") {
+        setText("editProfileError", "Этот username занят системной страницей. Выбери другой.");
         return;
       }
 

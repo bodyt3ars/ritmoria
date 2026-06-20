@@ -524,6 +524,12 @@ function initPostEditor() {
         if (data.available) {
           statusEl.innerText = "Свободно ✅";
           statusEl.className = "profile-input-status ok";
+        } else if (data.error === "reserved_username_tag") {
+          statusEl.innerText = "Занято системной страницей";
+          statusEl.className = "profile-input-status error";
+        } else if (data.error === "invalid_username_tag") {
+          statusEl.innerText = "Недопустимый username";
+          statusEl.className = "profile-input-status error";
         } else {
           statusEl.innerText = "Занято ❌";
           statusEl.className = "profile-input-status error";

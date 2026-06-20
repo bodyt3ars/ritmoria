@@ -295,7 +295,8 @@ function optimizePageMedia(root = document) {
 
 function initProfileAfterRenderDeferred() {
   runAfterPaint(async () => {
-    if (!(await requireActiveSession())) {
+    const profileTag = String(window.__profileTag || "").trim();
+    if (!profileTag && !(await requireActiveSession())) {
       return;
     }
     await safeCall("initProfilePageFull");

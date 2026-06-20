@@ -242,6 +242,7 @@ const PUBLIC_ERROR_MESSAGES = {
   no_token: "Нужно войти в аккаунт.",
   invalid_token: "Сессия устарела. Войди в аккаунт заново.",
   invalid_username_tag: "Username содержит недопустимые символы.",
+  reserved_username_tag: "Этот username занят системной страницей. Выбери другой.",
   "Нет токена": "Нужно войти в аккаунт.",
   "Неверный токен": "Сессия устарела. Войди в аккаунт заново.",
   "No file uploaded": "Сначала выбери файл.",
@@ -721,6 +722,12 @@ async function getUniqueUsernameTag(name) {
   let counter = 1;
 
   while (true) {
+    if (isReservedUsernameTag(usernameTag)) {
+      usernameTag = `${baseTag}${counter}`;
+      counter++;
+      continue;
+    }
+
     const check = await pool.query(
       "SELECT id FROM users WHERE LOWER(username_tag) = LOWER($1)",
       [usernameTag]
@@ -1705,7 +1712,52 @@ const SEO_DEFAULT_IMAGE = `${APP_BASE_URL}/images/logo.png`;
 const SEO_PUBLIC_ROBOTS = "index, follow, max-image-preview:large";
 const SEO_PRIVATE_ROBOTS = "noindex, nofollow";
 const SEO_RESERVED_PROFILE_ROUTES = new Set([
+  "add-track-comment",
+  "add-user-track",
+  "api",
+  "archive-post",
+  "archive-track",
+  "archived-posts",
+  "archived-tracks",
+  "auth",
+  "change-email-confirm",
+  "change-email-send-code",
+  "change-password",
+  "check-email",
+  "check-tag",
+  "comment-like",
+  "create-post",
+  "delete-account-confirm",
+  "delete-account-send-code",
+  "delete-post",
+  "delete-track",
+  "discover-tracks",
+  "download",
+  "feed",
+  "follow",
+  "follow-status",
+  "followers",
+  "followers-count",
+  "following",
+  "following-count",
+  "healthz",
+  "images",
+  "js",
+  "logout",
+  "me",
+  "my-posts",
+  "my-tracks",
+  "posts",
+  "send-code",
+  "set-password",
+  "styles",
+  "support",
+  "telegram-auth",
+  "telegram-login",
+  "test",
   "track",
+  "track-action",
+  "track-comments",
   "judge",
   "profile",
   "submit",
@@ -1720,12 +1772,16 @@ const SEO_RESERVED_PROFILE_ROUTES = new Set([
   "settings",
   "html",
   "privacy",
-  "api",
-  "images",
-  "styles",
-  "js",
+  "update-post",
+  "update-profile",
+  "update-track",
+  "upload-avatar",
   "uploads"
 ]);
+
+function isReservedUsernameTag(value) {
+  return SEO_RESERVED_PROFILE_ROUTES.has(String(value || "").trim().toLowerCase());
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -4019,6 +4075,10 @@ app.get("/check-tag/:tag", async (req, res) => {
     return res.json({ available: false, error: "invalid_username_tag" });
   }
 
+  if (isReservedUsernameTag(normalizedTag)) {
+    return res.json({ available: false, error: "reserved_username_tag" });
+  }
+
   const result = await pool.query(
     "SELECT 1 FROM users WHERE LOWER(username_tag) = LOWER($1)",
     [normalizedTag]
@@ -4724,12 +4784,21 @@ app.post("/register", async (req, res) => {
     if (requestedTag && !isValidUsernameTag(requestedTag)) {
       return res.status(400).json({ error: "invalid_username_tag" });
     }
+    if (requestedTag && isReservedUsernameTag(requestedTag)) {
+      return res.status(400).json({ error: "reserved_username_tag" });
+    }
 
     let baseTag = requestedTag || generateUsernameTag(cleanUsername);
     let finalUsernameTag = baseTag;
     let counter = 1;
 
     while (true) {
+      if (isReservedUsernameTag(finalUsernameTag)) {
+        finalUsernameTag = baseTag + counter;
+        counter++;
+        continue;
+      }
+
       const check = await pool.query(
         "SELECT id FROM users WHERE LOWER(username_tag) = LOWER($1)",
         [finalUsernameTag]
@@ -5366,6 +5435,9 @@ app.put("/update-profile", authMiddleware, async (req, res) => {
       const requestedUsernameTag = normalizeUsernameTagInput(req.body.username_tag);
       if (!isValidUsernameTag(requestedUsernameTag)) {
         return res.status(400).json({ error: "invalid_username_tag" });
+      }
+      if (isReservedUsernameTag(requestedUsernameTag)) {
+        return res.status(400).json({ error: "reserved_username_tag" });
       }
       username_tag = requestedUsernameTag;
     }
@@ -9862,6 +9934,12 @@ app.post("/telegram-login", async (req, res) => {
       let counter = 1;
 
       while (true) {
+        if (isReservedUsernameTag(username_tag)) {
+          username_tag = baseTag + counter;
+          counter++;
+          continue;
+        }
+
         const check = await pool.query(
           "SELECT id FROM users WHERE LOWER(username_tag) = LOWER($1)",
           [username_tag]
