@@ -14,7 +14,7 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260622-liquid-glass-2";
+const ASSET_VERSION = "20260621-ai-remix-ui";
 
 const DEFAULT_SEO = {
   title: "Ритмория — музыкальная платформа для артистов",
@@ -187,8 +187,7 @@ async function addPageStyles(styles = []) {
     ...styles,
     "/styles/official-theme.css",
     "/styles/themes.css",
-    "/styles/mobile-fixes.css",
-    "/styles/liquid-glass.css"
+    "/styles/mobile-fixes.css"
   ])];
 
   const newLinks = [];
