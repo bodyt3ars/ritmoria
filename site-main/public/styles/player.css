@@ -1552,12 +1552,12 @@ body {
 }
 
 .gp-remix-btn {
-  min-width: 92px;
+  min-width: 112px;
   height: 38px;
   padding: 0 13px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.055);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(85, 132, 138, 0.08));
   color: rgba(255, 255, 255, 0.82);
   display: inline-flex;
   align-items: center;
@@ -1582,9 +1582,16 @@ body {
 }
 
 .gp-remix-btn.active {
-  color: #ffe2ef;
-  background: rgba(203, 125, 163, 0.16);
-  border-color: rgba(203, 125, 163, 0.28);
+  color: #fff4fa;
+  background: linear-gradient(135deg, rgba(203, 125, 163, 0.22), rgba(80, 148, 154, 0.18));
+  border-color: rgba(255, 210, 230, 0.22);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.global-player[data-remix]:not([data-remix="original"]) .gp-remix-btn i {
+  animation: gp-remix-spark 1.8s ease-in-out infinite;
 }
 
 .gp-remix-menu {
@@ -1592,13 +1599,16 @@ body {
   top: 12px;
   left: 12px;
   z-index: 100125;
-  width: min(230px, calc(100vw - 20px));
-  padding: 8px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(31, 21, 27, 0.98), rgba(22, 15, 20, 0.98));
+  width: min(356px, calc(100vw - 20px));
+  max-height: min(560px, calc(100vh - 24px));
+  padding: 10px;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 211, 231, 0.12);
+  background:
+    linear-gradient(135deg, rgba(42, 24, 35, 0.98), rgba(17, 21, 27, 0.98));
   box-shadow:
-    0 22px 48px rgba(0, 0, 0, 0.36),
+    0 24px 54px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -1608,17 +1618,81 @@ body {
   animation: gp-popover-in 0.18s ease;
 }
 
-.gp-remix-option {
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid transparent;
-  border-radius: 13px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.76);
+.gp-remix-menu-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  gap: 14px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.gp-remix-kicker {
+  color: rgba(143, 218, 215, 0.74);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gp-remix-title {
+  margin-top: 3px;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.gp-remix-live {
+  min-width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(143, 218, 215, 0.12);
+  border: 1px solid rgba(143, 218, 215, 0.2);
+  color: #bff2ef;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.gp-remix-options {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: min(430px, calc(100vh - 124px));
+  overflow-y: auto;
+  padding-top: 9px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.gp-remix-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.gp-remix-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gp-remix-options::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+.gp-remix-option {
+  width: 100%;
+  min-height: 66px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.76);
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
   text-align: left;
   cursor: pointer;
   font-size: 13px;
@@ -1633,13 +1707,13 @@ body {
 .gp-remix-option:focus-visible {
   outline: none;
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.065);
 }
 
 .gp-remix-option.active {
-  color: #ffd9ea;
-  background: rgba(203, 125, 163, 0.14);
-  border-color: rgba(203, 125, 163, 0.26);
+  color: #fff;
+  background: linear-gradient(135deg, rgba(203, 125, 163, 0.16), rgba(80, 148, 154, 0.12));
+  border-color: rgba(255, 211, 231, 0.18);
 }
 
 .gp-remix-option.active::after {
@@ -1648,6 +1722,63 @@ body {
   font-weight: 900;
   font-size: 12px;
   color: #ffd9ea;
+  justify-self: center;
+}
+
+.gp-remix-option-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 220, 235, 0.88);
+}
+
+.gp-remix-option.active .gp-remix-option-icon {
+  background: rgba(143, 218, 215, 0.12);
+  color: #bff2ef;
+}
+
+.gp-remix-option-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gp-remix-option-title {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.gp-remix-option-desc {
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.28;
+}
+
+.gp-remix-option.active .gp-remix-option-desc {
+  color: rgba(255, 246, 251, 0.68);
+}
+
+@keyframes gp-remix-spark {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  46% {
+    transform: rotate(-8deg) scale(1.08);
+  }
+
+  72% {
+    transform: rotate(7deg) scale(1.02);
+  }
 }
 
 .gp-progress-row {

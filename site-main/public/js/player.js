@@ -26,33 +26,59 @@
   const REMIX_PRESETS = {
     original: {
       label: "Original",
-      playbackRate: 1
-    },
-    slowedReverb: {
-      label: "Slowed + Reverb",
-      playbackRate: 0.85,
-      delayTime: 0.24,
-      feedback: 0.28,
-      wet: 0.22
-    },
-    speedUp: {
-      label: "Speed Up",
-      playbackRate: 1.3
-    },
-    bassBoost: {
-      label: "Bass Boost",
+      shortLabel: "AI Remix",
+      description: "Чистый трек без вмешательства.",
+      icon: "fa-wave-square",
       playbackRate: 1,
-      frequency: 120,
-      gain: 8
+      preservePitch: true
     },
-    lofi: {
-      label: "Lo-fi",
+    aiMaster: {
+      label: "AI Master",
+      shortLabel: "Master",
+      description: "Собирает микс плотнее: низ, воздух и громкость без грязи.",
+      icon: "fa-microchip",
       playbackRate: 1,
-      frequency: 3500
+      preservePitch: true
     },
-    nightcore: {
-      label: "Nightcore",
-      playbackRate: 1.25
+    neuralClub: {
+      label: "Neural Club",
+      shortLabel: "Club",
+      description: "Пульс, саб и компрессия, будто трек ушел в клубный сет.",
+      icon: "fa-brain",
+      playbackRate: 1.04,
+      preservePitch: true
+    },
+    ghostVocal: {
+      label: "Ghost Vocal",
+      shortLabel: "Ghost",
+      description: "Призрачный дубль и хвосты вокруг вокала.",
+      icon: "fa-ghost",
+      playbackRate: 0.98,
+      preservePitch: true
+    },
+    hyperpopGlitch: {
+      label: "Hyperpop Glitch",
+      shortLabel: "Glitch",
+      description: "Питч вверх, яркий сатурейшн и нервная нарезка.",
+      icon: "fa-bolt",
+      playbackRate: 1.18,
+      preservePitch: false
+    },
+    phonkMutation: {
+      label: "Phonk Mutation",
+      shortLabel: "Phonk",
+      description: "Темный pitched-down низ, грязь и кассетный хвост.",
+      icon: "fa-skull",
+      playbackRate: 0.82,
+      preservePitch: false
+    },
+    orbitRoom: {
+      label: "Orbit Room",
+      shortLabel: "Orbit",
+      description: "Широкая космическая комната с мягким дрейфом.",
+      icon: "fa-satellite",
+      playbackRate: 0.96,
+      preservePitch: true
     }
   };
 
@@ -563,6 +589,21 @@
       .replace(/'/g, "&#039;");
   }
 
+  function renderRemixOptionsMarkup() {
+    return Object.entries(REMIX_PRESETS)
+      .map(([presetName, preset]) => `
+            <button class="gp-remix-option${presetName === "original" ? " active" : ""}" type="button" role="menuitemradio" aria-checked="${presetName === "original" ? "true" : "false"}" data-remix-preset="${escapePlayerMetaHtml(presetName)}">
+              <span class="gp-remix-option-icon">
+                <i class="fa-solid ${escapePlayerMetaHtml(preset.icon || "fa-wand-magic-sparkles")}"></i>
+              </span>
+              <span class="gp-remix-option-copy">
+                <span class="gp-remix-option-title">${escapePlayerMetaHtml(preset.label)}</span>
+                <span class="gp-remix-option-desc">${escapePlayerMetaHtml(preset.description || "")}</span>
+              </span>
+            </button>`)
+      .join("");
+  }
+
   function renderStoredPlayerArtistMarkup(track, { clickable = true } = {}) {
     const artistValue = String(track?.artist || "Unknown artist");
     const mentions = Array.isArray(track?.artist_mentions) ? track.artist_mentions : [];
@@ -761,6 +802,12 @@
 
     remixEngine.nodes.forEach((node) => {
       try {
+        if (typeof node.stop === "function") {
+          node.stop(0);
+        }
+      } catch {}
+
+      try {
         node.disconnect();
       } catch {}
     });
@@ -770,12 +817,22 @@
 
   function updateRemixUi() {
     const remixButton = document.getElementById("gp-remix");
+    const remixLabel = document.getElementById("gp-remix-label");
+    const player = document.getElementById("global-player");
     const preset = REMIX_PRESETS[activeRemixPreset] || REMIX_PRESETS.original;
+
+    if (player) {
+      player.dataset.remix = activeRemixPreset;
+    }
 
     if (remixButton) {
       remixButton.classList.toggle("active", activeRemixPreset !== "original");
-      remixButton.setAttribute("aria-label", `Remix: ${preset.label}`);
-      remixButton.setAttribute("title", `Remix: ${preset.label}`);
+      remixButton.setAttribute("aria-label", `AI Remix: ${preset.label}`);
+      remixButton.setAttribute("title", `AI Remix: ${preset.label}`);
+    }
+
+    if (remixLabel) {
+      remixLabel.textContent = preset.shortLabel || preset.label || "AI Remix";
     }
 
     document.querySelectorAll("[data-remix-preset]").forEach((button) => {
@@ -848,6 +905,11 @@
     updateRemixUi();
   }
 
+  function setAudioParamValue(param, value) {
+    if (!param || !Number.isFinite(value)) return;
+    param.value = value;
+  }
+
   function buildSoftClipCurve(amount = 1.6, samples = 2048) {
     const curve = new Float32Array(samples);
     const limit = samples - 1;
@@ -858,6 +920,60 @@
     }
 
     return curve;
+  }
+
+  function createFilterNode(context, type, frequency, gain = 0, q = 0.7) {
+    const filter = context.createBiquadFilter();
+    filter.type = type;
+    setAudioParamValue(filter.frequency, frequency);
+    setAudioParamValue(filter.gain, gain);
+    setAudioParamValue(filter.Q, q);
+    return filter;
+  }
+
+  function createCompressorNode(context, threshold = -18, ratio = 4, attack = 0.006, release = 0.18) {
+    const compressor = context.createDynamicsCompressor();
+    setAudioParamValue(compressor.threshold, threshold);
+    setAudioParamValue(compressor.ratio, ratio);
+    setAudioParamValue(compressor.attack, attack);
+    setAudioParamValue(compressor.release, release);
+    return compressor;
+  }
+
+  function createSaturationNode(context, amount = 1.8) {
+    const shaper = context.createWaveShaper();
+    shaper.curve = buildSoftClipCurve(amount);
+    shaper.oversample = "2x";
+    return shaper;
+  }
+
+  function createReverbNode(context, duration = 1.4, decay = 2.2, reverse = false) {
+    const sampleRate = context.sampleRate;
+    const length = Math.max(1, Math.floor(sampleRate * duration));
+    const impulse = context.createBuffer(2, length, sampleRate);
+
+    for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+      const data = impulse.getChannelData(channel);
+      for (let i = 0; i < length; i += 1) {
+        const index = reverse ? length - i : i;
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - index / length, decay);
+      }
+    }
+
+    const convolver = context.createConvolver();
+    convolver.buffer = impulse;
+    return convolver;
+  }
+
+  function connectSeries(source, destination, nodes) {
+    let previous = source;
+
+    nodes.forEach((node) => {
+      previous.connect(node);
+      previous = node;
+    });
+
+    previous.connect(destination);
   }
 
   function rebuildAudioChain() {
@@ -874,58 +990,156 @@
 
     if (audioEl) {
       audioEl.playbackRate = preset.playbackRate || 1;
-      audioEl.preservesPitch = true;
-      audioEl.mozPreservesPitch = true;
-      audioEl.webkitPreservesPitch = true;
+      audioEl.preservesPitch = preset.preservePitch !== false;
+      audioEl.mozPreservesPitch = preset.preservePitch !== false;
+      audioEl.webkitPreservesPitch = preset.preservePitch !== false;
     }
 
     try {
-      if (activeRemixPreset === "slowedReverb") {
+      if (activeRemixPreset === "aiMaster") {
+        const highpass = createFilterNode(context, "highpass", 32, 0, 0.65);
+        const bass = createFilterNode(context, "lowshelf", 92, 3.5);
+        const body = createFilterNode(context, "peaking", 780, -1.4, 0.9);
+        const presence = createFilterNode(context, "peaking", 2600, 2.6, 0.85);
+        const air = createFilterNode(context, "highshelf", 7200, 2.2);
+        const compressor = createCompressorNode(context, -19, 3.4, 0.005, 0.16);
+
+        connectSeries(source, context.destination, [highpass, bass, body, presence, air, compressor]);
+        remixEngine.nodes = [highpass, bass, body, presence, air, compressor];
+        return;
+      }
+
+      if (activeRemixPreset === "neuralClub") {
+        const bass = createFilterNode(context, "lowshelf", 82, 8.5);
+        const punch = createFilterNode(context, "peaking", 155, 3.2, 1.1);
+        const air = createFilterNode(context, "highshelf", 6800, 1.8);
+        const compressor = createCompressorNode(context, -23, 5.5, 0.004, 0.11);
+        const pump = context.createGain();
+        const pumpOsc = context.createOscillator();
+        const pumpDepth = context.createGain();
+
+        pump.gain.value = 0.86;
+        pumpOsc.type = "sine";
+        pumpOsc.frequency.value = 2.15;
+        pumpDepth.gain.value = 0.08;
+        pumpOsc.connect(pumpDepth);
+        pumpDepth.connect(pump.gain);
+        pumpOsc.start();
+
+        connectSeries(source, context.destination, [bass, punch, compressor, pump, air]);
+        remixEngine.nodes = [bass, punch, compressor, pump, pumpOsc, pumpDepth, air];
+        return;
+      }
+
+      if (activeRemixPreset === "ghostVocal") {
         const dryGain = context.createGain();
-        const delay = context.createDelay(1);
+        const bandpass = createFilterNode(context, "bandpass", 1650, 0, 0.82);
+        const delay = context.createDelay(0.4);
         const feedback = context.createGain();
+        const reverb = createReverbNode(context, 1.2, 2.8);
         const wetGain = context.createGain();
 
-        delay.delayTime.value = preset.delayTime;
-        feedback.gain.value = preset.feedback;
-        wetGain.gain.value = preset.wet;
+        dryGain.gain.value = 0.78;
+        delay.delayTime.value = 0.064;
+        feedback.gain.value = 0.18;
+        wetGain.gain.value = 0.34;
 
         source.connect(dryGain);
         dryGain.connect(context.destination);
+        source.connect(bandpass);
+        bandpass.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(reverb);
+        reverb.connect(wetGain);
+        wetGain.connect(context.destination);
+        remixEngine.nodes = [dryGain, bandpass, delay, feedback, reverb, wetGain];
+        return;
+      }
+
+      if (activeRemixPreset === "hyperpopGlitch") {
+        const highpass = createFilterNode(context, "highpass", 78, 0, 0.72);
+        const shine = createFilterNode(context, "highshelf", 5200, 6.8);
+        const bite = createFilterNode(context, "peaking", 1800, 3.4, 1.4);
+        const shaper = createSaturationNode(context, 2.9);
+        const stutter = context.createGain();
+        const stutterOsc = context.createOscillator();
+        const stutterDepth = context.createGain();
+        const compressor = createCompressorNode(context, -20, 4.8, 0.003, 0.09);
+        const slap = context.createDelay(0.2);
+        const slapGain = context.createGain();
+
+        stutter.gain.value = 0.88;
+        stutterOsc.type = "square";
+        stutterOsc.frequency.value = 8.5;
+        stutterDepth.gain.value = 0.055;
+        stutterOsc.connect(stutterDepth);
+        stutterDepth.connect(stutter.gain);
+        stutterOsc.start();
+        slap.delayTime.value = 0.082;
+        slapGain.gain.value = 0.12;
+
+        connectSeries(source, context.destination, [highpass, shaper, stutter, bite, shine, compressor]);
+        source.connect(slap);
+        slap.connect(slapGain);
+        slapGain.connect(context.destination);
+        remixEngine.nodes = [highpass, shine, bite, shaper, stutter, stutterOsc, stutterDepth, compressor, slap, slapGain];
+        return;
+      }
+
+      if (activeRemixPreset === "phonkMutation") {
+        const highpass = createFilterNode(context, "highpass", 28, 0, 0.65);
+        const bass = createFilterNode(context, "lowshelf", 74, 10.5);
+        const lowpass = createFilterNode(context, "lowpass", 4300, 0, 0.76);
+        const shaper = createSaturationNode(context, 3.2);
+        const compressor = createCompressorNode(context, -18, 5, 0.006, 0.18);
+        const delay = context.createDelay(0.8);
+        const feedback = context.createGain();
+        const wetGain = context.createGain();
+
+        delay.delayTime.value = 0.22;
+        feedback.gain.value = 0.24;
+        wetGain.gain.value = 0.18;
+
+        connectSeries(source, context.destination, [highpass, bass, lowpass, shaper, compressor]);
         source.connect(delay);
         delay.connect(feedback);
         feedback.connect(delay);
         delay.connect(wetGain);
         wetGain.connect(context.destination);
-        remixEngine.nodes = [dryGain, delay, feedback, wetGain];
+        remixEngine.nodes = [highpass, bass, lowpass, shaper, compressor, delay, feedback, wetGain];
         return;
       }
 
-      if (activeRemixPreset === "bassBoost") {
-        const bass = context.createBiquadFilter();
-        bass.type = "lowshelf";
-        bass.frequency.value = preset.frequency;
-        bass.gain.value = preset.gain;
-        source.connect(bass);
-        bass.connect(context.destination);
-        remixEngine.nodes = [bass];
-        return;
-      }
+      if (activeRemixPreset === "orbitRoom") {
+        const dryGain = context.createGain();
+        const highpass = createFilterNode(context, "highpass", 94, 0, 0.64);
+        const air = createFilterNode(context, "highshelf", 6200, 3.4);
+        const reverb = createReverbNode(context, 2.8, 2.4);
+        const wetGain = context.createGain();
+        const delay = context.createDelay(1);
+        const feedback = context.createGain();
+        const echoGain = context.createGain();
 
-      if (activeRemixPreset === "lofi") {
-        const lowpass = context.createBiquadFilter();
-        const shaper = context.createWaveShaper();
+        dryGain.gain.value = 0.64;
+        wetGain.gain.value = 0.38;
+        delay.delayTime.value = 0.34;
+        feedback.gain.value = 0.2;
+        echoGain.gain.value = 0.16;
 
-        lowpass.type = "lowpass";
-        lowpass.frequency.value = preset.frequency;
-        lowpass.Q.value = 0.7;
-        shaper.curve = buildSoftClipCurve();
-        shaper.oversample = "2x";
-
-        source.connect(lowpass);
-        lowpass.connect(shaper);
-        shaper.connect(context.destination);
-        remixEngine.nodes = [lowpass, shaper];
+        source.connect(dryGain);
+        dryGain.connect(context.destination);
+        source.connect(highpass);
+        highpass.connect(air);
+        air.connect(reverb);
+        reverb.connect(wetGain);
+        wetGain.connect(context.destination);
+        air.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(echoGain);
+        echoGain.connect(context.destination);
+        remixEngine.nodes = [dryGain, highpass, air, reverb, wetGain, delay, feedback, echoGain];
         return;
       }
 
@@ -969,8 +1183,8 @@
     const rect = remixButton.getBoundingClientRect();
     const menuRect = remixMenu.getBoundingClientRect();
     const margin = 10;
-    const width = menuRect.width || 230;
-    const height = menuRect.height || 260;
+    const width = menuRect.width || 356;
+    const height = menuRect.height || 480;
     const left = Math.max(margin, Math.min(window.innerWidth - width - margin, rect.left + rect.width / 2 - width / 2));
     let top = rect.top - height - 10;
 
@@ -1051,9 +1265,9 @@
               </button>
 
               <div id="gp-remix-wrap" class="gp-remix-wrap">
-                <button id="gp-remix" class="gp-remix-btn" type="button" title="Remix" aria-haspopup="true" aria-expanded="false">
+                <button id="gp-remix" class="gp-remix-btn" type="button" title="AI Remix" aria-haspopup="true" aria-expanded="false">
                   <i class="fa-solid fa-wand-magic-sparkles"></i>
-                  <span>Remix</span>
+                  <span id="gp-remix-label">AI Remix</span>
                 </button>
               </div>
             </div>
@@ -1207,25 +1421,17 @@
             </button>
           </div>
 
-          <div id="gp-remix-menu" class="gp-remix-menu gp-hidden" role="menu" aria-label="Remix effects">
-            <button class="gp-remix-option active" type="button" role="menuitemradio" aria-checked="true" data-remix-preset="original">
-              <span>Original</span>
-            </button>
-            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="slowedReverb">
-              <span>Slowed + Reverb</span>
-            </button>
-            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="speedUp">
-              <span>Speed Up</span>
-            </button>
-            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="bassBoost">
-              <span>Bass Boost</span>
-            </button>
-            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="lofi">
-              <span>Lo-fi</span>
-            </button>
-            <button class="gp-remix-option" type="button" role="menuitemradio" aria-checked="false" data-remix-preset="nightcore">
-              <span>Nightcore</span>
-            </button>
+          <div id="gp-remix-menu" class="gp-remix-menu gp-hidden" role="menu" aria-label="AI Remix Lab">
+            <div class="gp-remix-menu-head">
+              <div>
+                <div class="gp-remix-kicker">Встроенный AI</div>
+                <div class="gp-remix-title">Remix Lab</div>
+              </div>
+              <div class="gp-remix-live">LIVE</div>
+            </div>
+            <div class="gp-remix-options">
+              ${renderRemixOptionsMarkup()}
+            </div>
           </div>
 
           <audio id="global-audio"></audio>
