@@ -4,10 +4,10 @@
   --lg-accent-strong-rgb: var(--theme-strong-rgb, 240, 181, 204);
   --lg-cool-rgb: 134, 220, 216;
   --lg-ink: #f9f5f8;
-  --lg-muted: rgba(249, 245, 248, 0.78);
-  --lg-soft: rgba(249, 245, 248, 0.58);
-  --lg-fill: rgba(25, 27, 35, 0.58);
-  --lg-fill-strong: rgba(28, 30, 39, 0.72);
+  --lg-muted: rgba(249, 245, 248, 0.68);
+  --lg-soft: rgba(249, 245, 248, 0.5);
+  --lg-fill: rgba(19, 21, 28, 0.56);
+  --lg-fill-strong: rgba(23, 25, 32, 0.72);
   --lg-fill-soft: rgba(255, 255, 255, 0.07);
   --lg-line: rgba(255, 255, 255, 0.16);
   --lg-line-strong: rgba(255, 255, 255, 0.24);
@@ -687,23 +687,6 @@ select:focus,
   .navbar .navbar-logo-text {
     font-size: 19px;
     max-width: min(176px, calc(100vw - 148px));
-  }
-
-  .navbar .navbar-mobile-toggle {
-    position: fixed !important;
-    top: 22px !important;
-    right: 18px !important;
-    z-index: 1005;
-    display: inline-flex !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-  }
-
-  .navbar .navbar-mobile-toggle span {
-    display: block !important;
-    background: rgba(255, 255, 255, 0.92) !important;
-    opacity: 1 !important;
   }
 
   .navbar.mobile-open .navbar-center,
