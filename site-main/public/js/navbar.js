@@ -402,7 +402,7 @@ async function loadNavbar() {
   if (!container) return;
 
   try {
-    const res = await fetch("/html/components/navbar.html?v=20260610-avatarfix", {
+    const res = await fetch("/html/components/navbar.html?v=20260622-liquid-glass-3", {
       cache: "no-store"
     });
     const html = await res.text();
