@@ -27,7 +27,7 @@
     original: {
       label: "Original",
       shortLabel: "AI Remix",
-      description: "Чистый трек без вмешательства.",
+      description: "Без обработки",
       icon: "fa-wave-square",
       playbackRate: 1,
       preservePitch: true
@@ -35,7 +35,7 @@
     aiMaster: {
       label: "AI Master",
       shortLabel: "Master",
-      description: "Собирает микс плотнее: низ, воздух и громкость без грязи.",
+      description: "Громче, чище, плотнее",
       icon: "fa-microchip",
       playbackRate: 1,
       preservePitch: true
@@ -43,7 +43,7 @@
     neuralClub: {
       label: "Neural Club",
       shortLabel: "Club",
-      description: "Пульс, саб и компрессия, будто трек ушел в клубный сет.",
+      description: "Саб и клубный пульс",
       icon: "fa-brain",
       playbackRate: 1.04,
       preservePitch: true
@@ -51,7 +51,7 @@
     ghostVocal: {
       label: "Ghost Vocal",
       shortLabel: "Ghost",
-      description: "Призрачный дубль и хвосты вокруг вокала.",
+      description: "Эхо вокруг вокала",
       icon: "fa-ghost",
       playbackRate: 0.98,
       preservePitch: true
@@ -59,7 +59,7 @@
     hyperpopGlitch: {
       label: "Hyperpop Glitch",
       shortLabel: "Glitch",
-      description: "Питч вверх, яркий сатурейшн и нервная нарезка.",
+      description: "Питч и резкая нарезка",
       icon: "fa-bolt",
       playbackRate: 1.18,
       preservePitch: false
@@ -67,7 +67,7 @@
     phonkMutation: {
       label: "Phonk Mutation",
       shortLabel: "Phonk",
-      description: "Темный pitched-down низ, грязь и кассетный хвост.",
+      description: "Темный низ и грязь",
       icon: "fa-skull",
       playbackRate: 0.82,
       preservePitch: false
@@ -75,7 +75,7 @@
     orbitRoom: {
       label: "Orbit Room",
       shortLabel: "Orbit",
-      description: "Широкая космическая комната с мягким дрейфом.",
+      description: "Широкая комната",
       icon: "fa-satellite",
       playbackRate: 0.96,
       preservePitch: true
@@ -596,9 +596,12 @@
               <span class="gp-remix-option-icon">
                 <i class="fa-solid ${escapePlayerMetaHtml(preset.icon || "fa-wand-magic-sparkles")}"></i>
               </span>
-              <span class="gp-remix-option-copy">
-                <span class="gp-remix-option-title">${escapePlayerMetaHtml(preset.label)}</span>
+              <span class="gp-remix-option-main">
+                <span class="gp-remix-option-name">${escapePlayerMetaHtml(preset.label)}</span>
                 <span class="gp-remix-option-desc">${escapePlayerMetaHtml(preset.description || "")}</span>
+              </span>
+              <span class="gp-remix-option-check">
+                <i class="fa-solid fa-check"></i>
               </span>
             </button>`)
       .join("");
@@ -1183,8 +1186,8 @@
     const rect = remixButton.getBoundingClientRect();
     const menuRect = remixMenu.getBoundingClientRect();
     const margin = 10;
-    const width = menuRect.width || 356;
-    const height = menuRect.height || 480;
+    const width = menuRect.width || 312;
+    const height = menuRect.height || 420;
     const left = Math.max(margin, Math.min(window.innerWidth - width - margin, rect.left + rect.width / 2 - width / 2));
     let top = rect.top - height - 10;
 
@@ -1423,9 +1426,9 @@
 
           <div id="gp-remix-menu" class="gp-remix-menu gp-hidden" role="menu" aria-label="AI Remix Lab">
             <div class="gp-remix-menu-head">
-              <div>
-                <div class="gp-remix-kicker">Встроенный AI</div>
-                <div class="gp-remix-title">Remix Lab</div>
+              <div class="gp-remix-head-copy">
+                <div class="gp-remix-title">AI Remix</div>
+                <div class="gp-remix-subtitle">Live-обработка трека</div>
               </div>
               <div class="gp-remix-live">LIVE</div>
             </div>
