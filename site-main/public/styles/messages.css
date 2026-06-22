@@ -3350,3 +3350,118 @@ body.messages-mode .messages-send-btn:disabled {
     max-height: 320px;
   }
 }
+
+/* Tighten Ritmoria chat layout and make media messages feel native */
+body.messages-mode .messages-shell {
+  padding-bottom: 16px;
+}
+
+body.messages-mode .messages-chat {
+  min-height: 0;
+}
+
+body.messages-mode .messages-bubble.has-image-attachment,
+body.messages-mode .messages-bubble.has-video-attachment {
+  position: relative;
+  width: fit-content;
+  max-width: min(540px, 52vw);
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2);
+}
+
+body.messages-mode .messages-bubble.mine.has-image-attachment,
+body.messages-mode .messages-bubble.mine.has-video-attachment {
+  background: transparent;
+  border: 0;
+}
+
+body.messages-mode .messages-attachment-card.is-media {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #050608;
+}
+
+body.messages-mode .messages-attachment-card.is-image img,
+body.messages-mode .messages-attachment-card.is-video video {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(540px, 52vw);
+  max-height: min(560px, 64vh);
+  border-radius: 18px;
+  object-fit: contain;
+  background: #050608;
+}
+
+body.messages-mode .messages-attachment-card.is-video video {
+  width: min(540px, 52vw);
+  max-height: min(420px, 54vh);
+  object-fit: contain;
+}
+
+body.messages-mode .messages-bubble.has-image-attachment .messages-bubble-meta,
+body.messages-mode .messages-bubble.has-video-attachment .messages-bubble-meta {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  margin: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(5, 6, 8, 0.48);
+  color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+body.messages-mode .messages-bubble.has-image-attachment:has(.messages-bubble-text),
+body.messages-mode .messages-bubble.has-video-attachment:has(.messages-bubble-text) {
+  padding-bottom: 8px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+body.messages-mode .messages-bubble.mine.has-image-attachment:has(.messages-bubble-text),
+body.messages-mode .messages-bubble.mine.has-video-attachment:has(.messages-bubble-text) {
+  background: rgba(70, 132, 196, 0.62);
+}
+
+body.messages-mode .messages-bubble.has-image-attachment:has(.messages-bubble-text) .messages-bubble-text,
+body.messages-mode .messages-bubble.has-video-attachment:has(.messages-bubble-text) .messages-bubble-text {
+  padding: 8px 10px 0;
+}
+
+body.messages-mode .messages-bubble.has-image-attachment:has(.messages-bubble-text) .messages-bubble-meta,
+body.messages-mode .messages-bubble.has-video-attachment:has(.messages-bubble-text) .messages-bubble-meta {
+  position: static;
+  align-self: flex-end;
+  margin: 4px 8px 0 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+@media (max-width: 1023px) {
+  body.messages-mode .messages-shell {
+    padding-bottom: 16px;
+  }
+
+  body.messages-mode .messages-bubble.has-image-attachment,
+  body.messages-mode .messages-bubble.has-video-attachment,
+  body.messages-mode .messages-attachment-card.is-image img,
+  body.messages-mode .messages-attachment-card.is-video video {
+    max-width: min(86vw, 420px) !important;
+  }
+
+  body.messages-mode .messages-attachment-card.is-image img,
+  body.messages-mode .messages-attachment-card.is-video video {
+    max-height: 440px;
+  }
+}
