@@ -3465,3 +3465,89 @@ body.messages-mode .messages-bubble.has-video-attachment:has(.messages-bubble-te
     max-height: 440px;
   }
 }
+
+/* Final media-only hard reset: the photo/video is the bubble, no wrapper frame */
+body.messages-mode .messages-bubble-row.mine.has-image-attachment,
+body.messages-mode .messages-bubble-row.mine.has-video-attachment {
+  justify-content: flex-end;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)),
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) {
+  display: inline-block !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: min(540px, 52vw) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24) !important;
+  line-height: 0 !important;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.mine.has-image-attachment:not(:has(.messages-bubble-text)),
+body.messages-mode .messages-bubble.messages-message-bubble.mine.has-video-attachment:not(:has(.messages-bubble-text)) {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card,
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card {
+  display: inline-block !important;
+  width: auto !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  line-height: 0 !important;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card img,
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card video {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: min(540px, 52vw) !important;
+  max-height: min(560px, 64vh) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card video {
+  width: min(540px, 52vw) !important;
+  background: #050608 !important;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-bubble-meta,
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-bubble-meta {
+  position: absolute !important;
+  right: 8px !important;
+  bottom: 8px !important;
+  z-index: 2 !important;
+  margin: 0 !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  background: rgba(5, 6, 8, 0.48) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  line-height: 1 !important;
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 1023px) {
+  body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)),
+  body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)),
+  body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card img,
+  body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card video {
+    max-width: min(86vw, 460px) !important;
+  }
+}
