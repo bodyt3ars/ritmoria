@@ -885,7 +885,7 @@ window.initPlaylistsPage = async function () {
         <div class="empty-state">
           <div class="empty-icon"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
           <h3>${playlistsT("Загружаем публичные плейлисты")}</h3>
-          <p>${playlistsT("Собираем подборки пользователей")}</p>
+          <p>${playlistsT("Собираем системные месячные подборки и плейлисты пользователей")}</p>
         </div>
       `;
       return;
@@ -1248,6 +1248,11 @@ window.initPlaylistsPage = async function () {
 
     if (track.username_tag && track.slug && typeof navigate === "function") {
       navigate(`/${track.username_tag}/${track.slug}`);
+      return;
+    }
+
+    if (track.id && typeof navigate === "function") {
+      navigate(`/track/${Number(track.id)}`);
     }
   };
 

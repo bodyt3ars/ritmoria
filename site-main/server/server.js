@@ -3747,6 +3747,26 @@ function normalizePlaylistsForStorage(playlists) {
   return ordered;
 }
 
+const RATED_PLAYLIST_MONTHS_RU = [
+  "Январь",
+  "Февраль",
+  "Март",
+  "Апрель",
+  "Май",
+  "Июнь",
+  "Июль",
+  "Август",
+  "Сентябрь",
+  "Октябрь",
+  "Ноябрь",
+  "Декабрь"
+];
+
+function getRatedMonthPlaylistName(year, month) {
+  const monthName = RATED_PLAYLIST_MONTHS_RU[Math.max(0, Math.min(11, Number(month || 1) - 1))] || "Месяц";
+  return `${monthName}, ${year}`;
+}
+
 async function ensurePlaylistsSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_playlists (
@@ -4010,6 +4030,142 @@ app.put("/api/playlists", auth, async (req, res) => {
 app.get("/api/public-playlists", async (req, res) => {
   try {
     const search = String(req.query.search || "").trim();
+    const systemRatedRes = await pool.query(
+      `
+      WITH rating_source AS (
+        SELECT
+          t.id,
+          t.title,
+          t.artist,
+          t.cover,
+          t.audio,
+          t.soundcloud,
+          COALESCE(
+            t.rated_at,
+            NULLIF(GREATEST(
+              COALESCE(user_stats.latest_rating_at, 'epoch'::timestamp),
+              COALESCE(judge_stats.latest_rating_at, 'epoch'::timestamp)
+            ), 'epoch'::timestamp),
+            t.createdAt
+          ) AS rating_at,
+          COALESCE(ROUND(user_stats.avg_score::numeric, 1), 0) AS user_score,
+          COALESCE(ROUND(judge_stats.avg_score::numeric, 1), 0) AS judge_score,
+          COALESCE(user_stats.votes_count, 0)::int AS user_votes_count,
+          COALESCE(judge_stats.votes_count, 0)::int AS judge_votes_count,
+          COALESCE(u.username, u.username_tag, t.artist, 'Артист') AS username,
+          u.username_tag
+        FROM tracks t
+        LEFT JOIN users u ON u.id = t.user_id
+        LEFT JOIN LATERAL (
+          SELECT AVG(score) AS avg_score, COUNT(*) AS votes_count, MAX(created_at) AS latest_rating_at
+          FROM track_ratings
+          WHERE track_id = t.id AND type = 'user'
+        ) user_stats ON true
+        LEFT JOIN LATERAL (
+          SELECT AVG(score) AS avg_score, COUNT(*) AS votes_count, MAX(created_at) AS latest_rating_at
+          FROM track_ratings
+          WHERE track_id = t.id AND type = 'judge'
+        ) judge_stats ON true
+        WHERE COALESCE(t.status, 'pending') = 'rated'
+          OR EXISTS (
+            SELECT 1
+            FROM track_ratings tr
+            WHERE tr.track_id = t.id
+          )
+      ),
+      rating_ranked AS (
+        SELECT
+          *,
+          (
+            CASE
+              WHEN user_votes_count > 0 AND judge_votes_count > 0 THEN
+                (COALESCE(user_score, 0) + COALESCE(judge_score, 0)) / 2.0
+              WHEN judge_votes_count > 0 THEN COALESCE(judge_score, 0)
+              ELSE COALESCE(user_score, 0)
+            END
+          ) AS total_score,
+          (user_votes_count + judge_votes_count)::int AS total_votes_count
+        FROM rating_source
+        WHERE user_votes_count + judge_votes_count > 0
+      )
+      SELECT
+        id,
+        title,
+        artist,
+        cover,
+        audio,
+        soundcloud,
+        rating_at,
+        EXTRACT(YEAR FROM rating_at)::int AS rating_year,
+        EXTRACT(MONTH FROM rating_at)::int AS rating_month,
+        username,
+        username_tag,
+        user_score,
+        judge_score,
+        total_score,
+        total_votes_count
+      FROM rating_ranked
+      ORDER BY rating_at DESC, judge_score DESC, total_score DESC, total_votes_count DESC, id DESC
+      `
+    );
+
+    const systemPlaylistsByMonth = new Map();
+    systemRatedRes.rows.forEach((track) => {
+      const year = Number(track.rating_year || 0);
+      const month = Number(track.rating_month || 0);
+      if (!year || !month) return;
+
+      const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+      const playlistId = `system_rated_${year}_${String(month).padStart(2, "0")}`;
+      const playlistName = getRatedMonthPlaylistName(year, month);
+      const current = systemPlaylistsByMonth.get(monthKey) || {
+        id: playlistId,
+        name: playlistName,
+        system: true,
+        public: true,
+        cover: track.cover || "",
+        month_key: monthKey,
+        year,
+        month,
+        tracks: []
+      };
+
+      current.tracks.push({
+        id: Number(track.id || 0),
+        title: track.title || "Без названия",
+        artist: track.artist || track.username || "Артист",
+        cover: track.cover || "/images/default-cover.jpg",
+        audioSrc: track.audio || "",
+        audio: track.audio || "",
+        soundcloud: track.soundcloud || "",
+        username_tag: track.username_tag || "",
+        duration: 0,
+        addedAt: track.rating_at || Date.now(),
+        rating_score: Number(track.total_score || 0),
+        judge_score: Number(track.judge_score || 0),
+        user_score: Number(track.user_score || 0)
+      });
+
+      if (!current.cover && track.cover) {
+        current.cover = track.cover;
+      }
+
+      systemPlaylistsByMonth.set(monthKey, current);
+    });
+
+    const searchLower = search.toLowerCase();
+    const systemPlaylists = Array.from(systemPlaylistsByMonth.values())
+      .filter((playlist) => {
+        if (!playlist.tracks.length) return false;
+        if (!searchLower) return true;
+        return String(playlist.name || "").toLowerCase().includes(searchLower);
+      })
+      .map((playlist) => ({
+        ...playlist,
+        tracks_count: playlist.tracks.length,
+        updated_at: playlist.tracks[0]?.addedAt || null
+      }));
+
     const result = await pool.query(
       `
       WITH expanded AS (
@@ -4044,7 +4200,7 @@ app.get("/api/public-playlists", async (req, res) => {
       [search]
     );
 
-    const playlists = result.rows
+    const userPublicPlaylists = result.rows
       .map((row) => {
         const playlist = normalizePlaylistsForStorage([row.playlist])
           .find((item) => item.id !== "favorites");
@@ -4067,7 +4223,7 @@ app.get("/api/public-playlists", async (req, res) => {
       })
       .filter(Boolean);
 
-    res.json({ playlists });
+    res.json({ playlists: [...systemPlaylists, ...userPublicPlaylists] });
   } catch (err) {
     console.error("PUBLIC PLAYLISTS LOAD ERROR:", err);
     res.status(500).json({ error: "public_playlists_load_failed" });
