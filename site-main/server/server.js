@@ -3767,6 +3767,24 @@ function getRatedMonthPlaylistName(year, month) {
   return `${monthName}, ${year}`;
 }
 
+function sortRatedPlaylistTracks(tracks) {
+  return [...(Array.isArray(tracks) ? tracks : [])].sort((a, b) => {
+    const judgeDiff = Number(b.judge_score || 0) - Number(a.judge_score || 0);
+    if (judgeDiff) return judgeDiff;
+
+    const judgeVotesDiff = Number(b.judge_votes_count || 0) - Number(a.judge_votes_count || 0);
+    if (judgeVotesDiff) return judgeVotesDiff;
+
+    const ratingDiff = Number(b.rating_score || 0) - Number(a.rating_score || 0);
+    if (ratingDiff) return ratingDiff;
+
+    const totalVotesDiff = Number(b.total_votes_count || 0) - Number(a.total_votes_count || 0);
+    if (totalVotesDiff) return totalVotesDiff;
+
+    return new Date(b.addedAt || 0).getTime() - new Date(a.addedAt || 0).getTime();
+  });
+}
+
 async function ensurePlaylistsSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_playlists (
@@ -4151,7 +4169,9 @@ app.get("/api/public-playlists", async (req, res) => {
         addedAt: track.rating_at || Date.now(),
         rating_score: Number(track.total_score || 0),
         judge_score: Number(track.judge_score || 0),
-        user_score: Number(track.user_score || 0)
+        judge_votes_count: Number(track.judge_votes_count || 0),
+        user_score: Number(track.user_score || 0),
+        total_votes_count: Number(track.total_votes_count || 0)
       });
 
       if (!current.cover && track.cover) {
@@ -4170,8 +4190,12 @@ app.get("/api/public-playlists", async (req, res) => {
       })
       .map((playlist) => ({
         ...playlist,
+        tracks: sortRatedPlaylistTracks(playlist.tracks),
         tracks_count: playlist.tracks.length,
-        updated_at: playlist.tracks[0]?.addedAt || null
+        updated_at: playlist.tracks.reduce((latest, track) => {
+          const value = new Date(track?.addedAt || 0).getTime();
+          return value > latest ? value : latest;
+        }, 0) || null
       }));
 
     const result = await pool.query(

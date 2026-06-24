@@ -617,6 +617,28 @@ window.initPlaylistsPage = async function () {
     );
   }
 
+  function sortSystemPlaylistTracks(playlist) {
+    if (!playlist?.system || !Array.isArray(playlist.tracks)) return playlist;
+
+    playlist.tracks = [...playlist.tracks].sort((a, b) => {
+      const judgeDiff = Number(b?.judge_score || 0) - Number(a?.judge_score || 0);
+      if (judgeDiff) return judgeDiff;
+
+      const judgeVotesDiff = Number(b?.judge_votes_count || 0) - Number(a?.judge_votes_count || 0);
+      if (judgeVotesDiff) return judgeVotesDiff;
+
+      const ratingDiff = Number(b?.rating_score || 0) - Number(a?.rating_score || 0);
+      if (ratingDiff) return ratingDiff;
+
+      const totalVotesDiff = Number(b?.total_votes_count || 0) - Number(a?.total_votes_count || 0);
+      if (totalVotesDiff) return totalVotesDiff;
+
+      return new Date(b?.addedAt || 0).getTime() - new Date(a?.addedAt || 0).getTime();
+    });
+
+    return playlist;
+  }
+
   async function loadPublicPlaylists() {
     if (playlistsDestroyed) return;
 
@@ -638,7 +660,9 @@ window.initPlaylistsPage = async function () {
       const data = await res.json();
       if (playlistsDestroyed) return;
 
-      publicPlaylists = Array.isArray(data.playlists) ? data.playlists : [];
+      publicPlaylists = Array.isArray(data.playlists)
+        ? data.playlists.map((playlist) => sortSystemPlaylistTracks(playlist))
+        : [];
       externalPlaylistsById.clear();
       publicPlaylists.forEach((playlist) => {
         if (playlist?.id) {
