@@ -967,6 +967,33 @@ async function ensureScalabilityIndexes() {
   }
 }
 
+async function ensureQueueTrackLifecycleSchema() {
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF to_regclass('public.tracks') IS NOT NULL THEN
+        ALTER TABLE tracks
+          ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'pending';
+
+        ALTER TABLE tracks
+          ADD COLUMN IF NOT EXISTS rated_at timestamp without time zone;
+
+        UPDATE tracks
+        SET status = 'pending'
+        WHERE status IS NULL OR status = '';
+
+        CREATE INDEX IF NOT EXISTS idx_tracks_status_createdat
+          ON tracks(status, createdAt DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_tracks_rated_at
+          ON tracks(rated_at DESC)
+          WHERE status = 'rated';
+      END IF;
+    END
+    $$;
+  `);
+}
+
 async function ensureSupportSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS support_tickets (
@@ -8114,7 +8141,7 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_votes_count
 
         FROM tracks t
-
+        WHERE COALESCE(t.status, 'pending') = 'pending'
         ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
       `;
 
@@ -8150,7 +8177,7 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_votes_count
 
         FROM tracks t
-
+        WHERE COALESCE(t.status, 'pending') = 'pending'
         ORDER BY t.createdAt ASC
       `;
     }
@@ -8188,6 +8215,189 @@ app.get("/api/tracks/queue", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Ошибка загрузки очереди" });
+  }
+});
+
+app.get("/api/rating", async (req, res) => {
+  try {
+    const rawLimit = Number(req.query.limit || 20);
+    const rawOffset = Number(req.query.offset || 0);
+    const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? rawLimit : 20, 50));
+    const offset = Math.max(0, Number.isFinite(rawOffset) ? rawOffset : 0);
+    const sort = String(req.query.sort || "score").trim().toLowerCase();
+    const search = String(req.query.q || "").trim().toLowerCase();
+    const year = Number(req.query.year || 0);
+    const month = Number(req.query.month || 0);
+    const period = String(req.query.period || "all").trim().toLowerCase();
+
+    const values = [];
+    const whereParts = [
+      "(status = 'rated' OR (user_votes_count + judge_votes_count) > 0)"
+    ];
+
+    const addValue = (value) => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    const hasValidYear = Number.isInteger(year) && year >= 2020 && year <= 2100;
+    const hasValidMonth = Number.isInteger(month) && month >= 1 && month <= 12;
+    let startDate = null;
+    let endDate = null;
+
+    if (hasValidYear) {
+      startDate = new Date(Date.UTC(year, hasValidMonth ? month - 1 : 0, 1));
+      endDate = new Date(Date.UTC(year, hasValidMonth ? month : 12, 1));
+    } else if (period === "week") {
+      startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    } else if (period === "month") {
+      startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    if (startDate) {
+      whereParts.push(`rating_at >= ${addValue(startDate.toISOString())}`);
+    }
+
+    if (endDate) {
+      whereParts.push(`rating_at < ${addValue(endDate.toISOString())}`);
+    }
+
+    if (search) {
+      const searchParam = addValue(`%${search}%`);
+      whereParts.push(`(
+        LOWER(COALESCE(title, '')) LIKE ${searchParam}
+        OR LOWER(COALESCE(artist, '')) LIKE ${searchParam}
+        OR LOWER(COALESCE(username, '')) LIKE ${searchParam}
+        OR LOWER(COALESCE(username_tag, '')) LIKE ${searchParam}
+      )`);
+    }
+
+    const whereSql = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
+    const orderSql = {
+      score: "rating_score DESC, total_score DESC, judge_score DESC, total_votes_count DESC, rating_at DESC",
+      judge: "judge_score DESC, judge_votes_count DESC, total_score DESC, rating_at DESC",
+      user: "user_score DESC, user_votes_count DESC, total_score DESC, rating_at DESC",
+      votes: "total_votes_count DESC, rating_score DESC, rating_at DESC",
+      newest: "rating_at DESC, rating_score DESC"
+    }[sort] || "rating_score DESC, total_score DESC, judge_score DESC, total_votes_count DESC, rating_at DESC";
+
+    const ratingCte = `
+      WITH rating_source AS (
+        SELECT
+          t.id,
+          t.user_id,
+          t.title,
+          t.artist,
+          t.cover,
+          t.audio,
+          t.soundcloud,
+          t.createdAt,
+          COALESCE(t.status, 'pending') AS status,
+          COALESCE(
+            t.rated_at,
+            NULLIF(GREATEST(
+              COALESCE(user_stats.latest_rating_at, 'epoch'::timestamp),
+              COALESCE(judge_stats.latest_rating_at, 'epoch'::timestamp)
+            ), 'epoch'::timestamp),
+            t.createdAt
+          ) AS rating_at,
+          COALESCE(u.username, u.username_tag, t.artist, 'Артист') AS username,
+          u.username_tag,
+          u.avatar,
+          COALESCE(ROUND(user_stats.avg_score::numeric, 1), 0) AS user_score,
+          COALESCE(ROUND(judge_stats.avg_score::numeric, 1), 0) AS judge_score,
+          COALESCE(user_stats.votes_count, 0)::int AS user_votes_count,
+          COALESCE(judge_stats.votes_count, 0)::int AS judge_votes_count,
+          (
+            CASE
+              WHEN COALESCE(user_stats.votes_count, 0) > 0 AND COALESCE(judge_stats.votes_count, 0) > 0 THEN
+                (COALESCE(user_stats.avg_score, 0) + COALESCE(judge_stats.avg_score, 0)) / 2.0
+              WHEN COALESCE(judge_stats.votes_count, 0) > 0 THEN COALESCE(judge_stats.avg_score, 0)
+              ELSE COALESCE(user_stats.avg_score, 0)
+            END
+          )::numeric(10,1) AS total_score
+        FROM tracks t
+        LEFT JOIN users u ON u.id = t.user_id
+        LEFT JOIN LATERAL (
+          SELECT AVG(score) AS avg_score, COUNT(*) AS votes_count, MAX(created_at) AS latest_rating_at
+          FROM track_ratings
+          WHERE track_id = t.id AND type = 'user'
+        ) user_stats ON true
+        LEFT JOIN LATERAL (
+          SELECT AVG(score) AS avg_score, COUNT(*) AS votes_count, MAX(created_at) AS latest_rating_at
+          FROM track_ratings
+          WHERE track_id = t.id AND type = 'judge'
+        ) judge_stats ON true
+      ),
+      rating_base AS (
+        SELECT *
+        FROM rating_source
+        ${whereSql}
+      ),
+      rating_ranked AS (
+        SELECT
+          *,
+          (user_votes_count + judge_votes_count)::int AS total_votes_count,
+          ROUND((
+            total_score * LEAST(1, LN((user_votes_count + judge_votes_count) + 1) / LN(12))
+            + 50 * (1 - LEAST(1, LN((user_votes_count + judge_votes_count) + 1) / LN(12)))
+          )::numeric, 1) AS rating_score
+        FROM rating_base
+      )
+    `;
+
+    const trackValues = [...values, limit, offset];
+    const tracksRes = await pool.query(
+      `
+      ${ratingCte}
+      SELECT
+        *,
+        COUNT(*) OVER()::int AS total_count
+      FROM rating_ranked
+      ORDER BY ${orderSql}
+      LIMIT $${values.length + 1}
+      OFFSET $${values.length + 2}
+      `,
+      trackValues
+    );
+
+    const artistsRes = await pool.query(
+      `
+      ${ratingCte}
+      SELECT
+        user_id,
+        COALESCE(MAX(username), MAX(artist), 'Артист') AS username,
+        MAX(username_tag) AS username_tag,
+        MAX(avatar) AS avatar,
+        COUNT(*)::int AS tracks_count,
+        ROUND(AVG(total_score)::numeric, 1) AS avg_total_score,
+        ROUND(AVG(rating_score)::numeric, 1) AS avg_rating_score,
+        SUM(total_votes_count)::int AS total_votes_count,
+        MAX(rating_at) AS latest_rating_at
+      FROM rating_ranked
+      GROUP BY user_id
+      ORDER BY avg_rating_score DESC, avg_total_score DESC, total_votes_count DESC, latest_rating_at DESC
+      LIMIT 12
+      `,
+      values
+    );
+
+    res.json({
+      tracks: tracksRes.rows,
+      artists: artistsRes.rows,
+      meta: {
+        total: Number(tracksRes.rows[0]?.total_count || 0),
+        limit,
+        offset,
+        sort,
+        period,
+        year: hasValidYear ? year : null,
+        month: hasValidMonth ? month : null
+      }
+    });
+  } catch (err) {
+    console.error("RATING LOAD ERROR:", err);
+    res.status(500).json({ error: "rating_load_failed" });
   }
 });
 
@@ -9337,6 +9547,7 @@ app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), as
       SELECT id
       FROM tracks
       WHERE user_id = $1
+        AND COALESCE(status, 'pending') = 'pending'
         AND (
           ($2::text <> '' AND audio = $2)
           OR ($3::text <> '' AND soundcloud = $3)
@@ -9775,34 +9986,77 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
 
     const currentState = await getCachedQueueState();
 
-    // При новом открытии после завершённого стрима очищаем только активную очередь:
-    // сами queue-треки и все их queue-оценки/реакции. Snapshot главной не трогаем.
+    // При новом открытии после завершённого стрима переносим оцененные
+    // треки в рейтинг, а из новой активной очереди чистим только неоцененные.
     if (state === "open" && currentState === "closed") {
-      const trackIdsRes = await pool.query("SELECT id FROM tracks");
-      const trackIds = trackIdsRes.rows
+      const pendingTrackIdsRes = await pool.query(
+        "SELECT id FROM tracks WHERE COALESCE(status, 'pending') = 'pending'"
+      );
+      const pendingTrackIds = pendingTrackIdsRes.rows
         .map((row) => Number(row.id || 0))
         .filter(Boolean);
 
-      if (trackIds.length) {
-        await pool.query(
-          "DELETE FROM track_rating_details WHERE track_id = ANY($1::int[])",
-          [trackIds]
+      if (pendingTrackIds.length) {
+        const ratedTrackIdsRes = await pool.query(
+          `
+          SELECT DISTINCT t.id
+          FROM tracks t
+          WHERE t.id = ANY($1::int[])
+            AND EXISTS (
+              SELECT 1
+              FROM track_ratings tr
+              WHERE tr.track_id = t.id
+            )
+          `,
+          [pendingTrackIds]
         );
-        await pool.query(
-          "DELETE FROM track_ratings WHERE track_id = ANY($1::int[])",
-          [trackIds]
-        );
+        const ratedTrackIds = ratedTrackIdsRes.rows
+          .map((row) => Number(row.id || 0))
+          .filter(Boolean);
+        const ratedTrackIdSet = new Set(ratedTrackIds);
+        const unratedTrackIds = pendingTrackIds.filter((id) => !ratedTrackIdSet.has(id));
+
+        if (ratedTrackIds.length) {
+          await pool.query(
+            `
+            UPDATE tracks
+            SET status = 'rated',
+                rated_at = COALESCE(rated_at, now())
+            WHERE id = ANY($1::int[])
+            `,
+            [ratedTrackIds]
+          );
+        }
+
+        if (unratedTrackIds.length) {
+          await pool.query(
+            "DELETE FROM track_rating_details WHERE track_id = ANY($1::int[])",
+            [unratedTrackIds]
+          );
+          await pool.query(
+            "DELETE FROM track_ratings WHERE track_id = ANY($1::int[])",
+            [unratedTrackIds]
+          );
+          await pool.query(
+            `
+            DELETE FROM track_actions
+            WHERE track_id = ANY($1::int[])
+              AND COALESCE(entity_type, 'profile') = 'queue'
+            `,
+            [unratedTrackIds]
+          );
+          await pool.query("DELETE FROM tracks WHERE id = ANY($1::int[])", [unratedTrackIds]);
+        }
+
         await pool.query(
           `
           DELETE FROM track_actions
           WHERE track_id = ANY($1::int[])
             AND COALESCE(entity_type, 'profile') = 'queue'
           `,
-          [trackIds]
+          [ratedTrackIds]
         );
       }
-
-      await pool.query("DELETE FROM tracks");
     }
 
     await pool.query(
@@ -13089,6 +13343,7 @@ await ensureUserBadgeSchema();
 await ensureCommunitySchema();
 await ensurePlaylistsSchema();
 await ensureBattlesSchema();
+await ensureQueueTrackLifecycleSchema();
 await removeInvalidQueueSelfRatings();
 await ensureScalabilityIndexes();
     app.listen(APP_PORT, () => {

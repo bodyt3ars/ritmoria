@@ -14,7 +14,7 @@ function hideLoader() {
 const pageCache = {};
 const loadedScripts = new Set();
 let currentRenderToken = 0;
-const ASSET_VERSION = "20260622-messages-media-fix";
+const ASSET_VERSION = "20260624-rating";
 
 const DEFAULT_SEO = {
   title: "Ритмория — музыкальная платформа для артистов",
@@ -254,6 +254,7 @@ function isReservedSecondLevelRoute(tag) {
     "queue",
     "opens",
     "playlists",
+    "rating",
     "discover",
     "admin",
     "messages",
@@ -360,6 +361,8 @@ export async function renderPage(path) {
   }
 
   safeCall("destroyDiscoverPage");
+  safeCall("destroyPlaylistsPage");
+  safeCall("destroyRatingPage");
   safeCall("destroyMessagesPage");
 
   const app = document.getElementById("app");
@@ -435,6 +438,24 @@ export async function renderPage(path) {
       styles: ["/styles/queue.css"],
       scriptSrc: "/js/queue.js",
       initName: "initQueuePage"
+    });
+    if (!ok || renderToken !== currentRenderToken) return;
+    return;
+  }
+
+  // RATING
+  if (routePath === "/rating") {
+    setSeoMeta({
+      title: "Рейтинг — Ритмория",
+      description: "Рейтинг оцененных треков и артистов Ритмории.",
+      canonical: "https://ritmoria.com/rating"
+    });
+    const ok = await renderSimplePage({
+      app,
+      htmlUrl: "/html/rating.html",
+      styles: ["/styles/rating.css"],
+      scriptSrc: "/js/rating.js",
+      initName: "initRatingPage"
     });
     if (!ok || renderToken !== currentRenderToken) return;
     return;

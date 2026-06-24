@@ -1,5 +1,72 @@
 window.initPlaylistsPage = async function () {
+  window.__playlistsPageCleanup?.();
+
+  const playlistAbortController = typeof AbortController === "function"
+    ? new AbortController()
+    : null;
+  const playlistListenerOptions = playlistAbortController
+    ? { signal: playlistAbortController.signal }
+    : undefined;
+  const playlistPageToken = {};
+  const playlistGlobalNames = [
+    "__removeTrackFromPlaylistView",
+    "__playPlaylistTrack",
+    "__togglePlaylistTrackPlayback",
+    "__playPlaylistFromStart",
+    "__togglePlaylistPlayback",
+    "__playlistSecondaryAction",
+    "__togglePlaylistVisibility",
+    "__togglePlaylistFavorites",
+    "__openPlaylistTrack",
+    "__openPlaylistAuthor"
+  ];
+  const previousPlaylistGlobals = new Map(
+    playlistGlobalNames.map((name) => [name, window[name]])
+  );
+  const previousPlaylistApi = window.RitmoriaPlaylists || null;
+  let playlistsDestroyed = false;
+  let pagePlaylistApi = null;
+
+  window.__playlistsPageToken = playlistPageToken;
+  const cleanupPlaylistsPage = () => {
+    if (playlistsDestroyed) return;
+
+    playlistsDestroyed = true;
+    playlistAbortController?.abort();
+    clearTimeout(window.__playlistsPublicSearchTimer);
+
+    if (window.RitmoriaPlaylists === pagePlaylistApi) {
+      if (previousPlaylistApi) {
+        window.RitmoriaPlaylists = previousPlaylistApi;
+      } else {
+        delete window.RitmoriaPlaylists;
+      }
+    }
+
+    playlistGlobalNames.forEach((name) => {
+      const previous = previousPlaylistGlobals.get(name);
+      if (typeof previous === "undefined") {
+        delete window[name];
+      } else {
+        window[name] = previous;
+      }
+    });
+
+    if (window.__playlistsPageToken === playlistPageToken) {
+      delete window.__playlistsPageToken;
+    }
+
+    if (window.__playlistsPageCleanup === cleanupPlaylistsPage) {
+      delete window.__playlistsPageCleanup;
+    }
+  };
+  window.__playlistsPageCleanup = cleanupPlaylistsPage;
+  window.destroyPlaylistsPage = () => {
+    window.__playlistsPageCleanup?.();
+  };
+
   await window.RitmoriaPlaylistStore?.ensureInitialized?.({ force: true });
+  if (playlistsDestroyed) return;
 
   const root = document.querySelector(".playlists-page");
   if (!root) return;
@@ -551,6 +618,8 @@ window.initPlaylistsPage = async function () {
   }
 
   async function loadPublicPlaylists() {
+    if (playlistsDestroyed) return;
+
     publicPlaylistsLoading = true;
     renderPlaylists();
 
@@ -564,8 +633,11 @@ window.initPlaylistsPage = async function () {
       });
 
       if (!res.ok) throw new Error("public_playlists_failed");
+      if (playlistsDestroyed) return;
 
       const data = await res.json();
+      if (playlistsDestroyed) return;
+
       publicPlaylists = Array.isArray(data.playlists) ? data.playlists : [];
       externalPlaylistsById.clear();
       publicPlaylists.forEach((playlist) => {
@@ -574,18 +646,24 @@ window.initPlaylistsPage = async function () {
         }
       });
     } catch (err) {
+      if (playlistsDestroyed) return;
+
       console.error("loadPublicPlaylists error", err);
       publicPlaylists = [];
     } finally {
+      if (playlistsDestroyed) return;
+
       publicPlaylistsLoading = false;
       renderPlaylists();
     }
   }
 
   function schedulePublicPlaylistsLoad() {
+    if (playlistsDestroyed) return;
+
     window.clearTimeout(window.__playlistsPublicSearchTimer);
     window.__playlistsPublicSearchTimer = window.setTimeout(() => {
-      if (activePlaylistsTab === "public") {
+      if (!playlistsDestroyed && activePlaylistsTab === "public") {
         loadPublicPlaylists();
       }
     }, 240);
@@ -667,6 +745,7 @@ window.initPlaylistsPage = async function () {
   }
 
   function renderPlaylistTracks(playlist, { canEdit = true } = {}) {
+    if (playlistsDestroyed) return;
     if (!playlist) return;
 
     hydratePlaylistDurations(playlist);
@@ -728,6 +807,8 @@ window.initPlaylistsPage = async function () {
   }
 
   function updatePlaylistView() {
+    if (playlistsDestroyed) return;
+
     const playlists = getPlaylists();
     const externalPlaylist = currentExternalPlaylistId
       ? externalPlaylistsById.get(String(currentExternalPlaylistId))
@@ -790,6 +871,8 @@ window.initPlaylistsPage = async function () {
   }
 
   function renderPlaylists() {
+    if (playlistsDestroyed) return;
+
     tabs.forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.playlistsTab === activePlaylistsTab);
     });
@@ -1241,7 +1324,7 @@ window.initPlaylistsPage = async function () {
     if (!e.target.closest(".playlist-menu")) {
       closeAllMenus();
     }
-  });
+  }, playlistListenerOptions);
 
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -1255,49 +1338,49 @@ window.initPlaylistsPage = async function () {
       if (activePlaylistsTab === "public") {
         loadPublicPlaylists();
       }
-    });
+    }, playlistListenerOptions);
   });
 
   searchInput.addEventListener("input", () => {
     playlistSearchQuery = searchInput.value.trim();
     renderPlaylists();
     schedulePublicPlaylistsLoad();
-  });
+  }, playlistListenerOptions);
 
   window.addEventListener("ritmoria:global-player-track-change", () => {
     renderPlaylists();
     if (currentPlaylistIndex !== null) {
       updatePlaylistView();
     }
-  });
+  }, playlistListenerOptions);
 
   window.addEventListener("ritmoria:global-player-play", () => {
     renderPlaylists();
     if (currentPlaylistIndex !== null) {
       updatePlaylistView();
     }
-  });
+  }, playlistListenerOptions);
 
   window.addEventListener("ritmoria:global-player-pause", () => {
     renderPlaylists();
     if (currentPlaylistIndex !== null) {
       updatePlaylistView();
     }
-  });
+  }, playlistListenerOptions);
 
   window.addEventListener("ritmoria:global-player-stopped", () => {
     renderPlaylists();
     if (currentPlaylistIndex !== null) {
       updatePlaylistView();
     }
-  });
+  }, playlistListenerOptions);
 
   savePlaylists(getPlaylists());
   renderPlaylists();
 
   const existingApi = window.RitmoriaPlaylists || {};
 
-  window.RitmoriaPlaylists = {
+  pagePlaylistApi = {
     ...existingApi,
     
     getAll() {
@@ -1371,4 +1454,6 @@ window.initPlaylistsPage = async function () {
       renderPlaylists();
     }
   };
+
+  window.RitmoriaPlaylists = pagePlaylistApi;
 };

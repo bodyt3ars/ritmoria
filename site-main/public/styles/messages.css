@@ -3551,3 +3551,142 @@ body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment
     max-width: min(86vw, 460px) !important;
   }
 }
+
+/* Compact chat scale: keep media elegant instead of dominating the screen */
+body.messages-mode .messages-shell {
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 14px;
+  padding: 72px 20px 118px;
+}
+
+body.messages-mode .messages-sidebar {
+  padding: 14px 10px 10px;
+}
+
+body.messages-mode .messages-title {
+  font-size: 24px;
+}
+
+body.messages-mode .messages-input {
+  min-height: 42px;
+  font-size: 14px;
+}
+
+body.messages-mode .messages-conversation-item {
+  min-height: 68px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+
+body.messages-mode .messages-conversation-avatar,
+body.messages-mode .messages-chat-head-avatar,
+body.messages-mode .messages-bubble-avatar {
+  width: 44px;
+  height: 44px;
+}
+
+body.messages-mode .messages-conversation-name {
+  font-size: 15px;
+}
+
+body.messages-mode .messages-chat {
+  grid-template-rows: 66px minmax(0, 1fr) auto auto;
+}
+
+body.messages-mode .messages-chat-head,
+body.messages-mode .messages-chat-head-bar,
+body.messages-mode .messages-chat-head-link {
+  min-height: 66px;
+  height: 66px;
+}
+
+body.messages-mode .messages-chat-head-copy .messages-conversation-name {
+  font-size: 16px;
+}
+
+body.messages-mode .messages-chat-pref-btn,
+body.messages-mode .messages-chat-primary-btn,
+body.messages-mode .messages-create-btn {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+}
+
+body.messages-mode .messages-thread {
+  padding: 14px 20px;
+}
+
+body.messages-mode .messages-bubble {
+  max-width: min(52%, 500px);
+  font-size: 14px;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)),
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) {
+  max-width: min(360px, 34vw) !important;
+  border-radius: 16px !important;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card,
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card,
+body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card img,
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card video {
+  max-width: min(360px, 34vw) !important;
+  border-radius: 16px !important;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card img,
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card video {
+  max-height: min(420px, 46vh) !important;
+}
+
+body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card video {
+  width: min(360px, 34vw) !important;
+}
+
+body.messages-mode .messages-composer {
+  grid-template-columns: 42px minmax(0, 1fr) 48px;
+  padding: 10px 16px 12px;
+}
+
+body.messages-mode .messages-attach-picker,
+body.messages-mode .messages-attach-btn {
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  height: 42px;
+  min-height: 42px;
+}
+
+body.messages-mode .messages-composer-input {
+  min-height: 42px;
+  padding: 10px 0;
+  font-size: 15px;
+}
+
+body.messages-mode .messages-send-btn {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+}
+
+@media (max-width: 1023px) {
+  body.messages-mode .messages-shell {
+    padding: 92px 10px 112px;
+  }
+
+  body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)),
+  body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)),
+  body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card img,
+  body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card video {
+    max-width: min(74vw, 340px) !important;
+  }
+
+  body.messages-mode .messages-bubble.messages-message-bubble.has-image-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card img,
+  body.messages-mode .messages-bubble.messages-message-bubble.has-video-attachment:not(:has(.messages-bubble-text)) .messages-attachment-card video {
+    max-height: 380px !important;
+  }
+}

@@ -29,6 +29,7 @@ const NAVBAR_RESERVED_PROFILE_ROUTES = new Set([
   "privacy",
   "profile",
   "queue",
+  "rating",
   "register",
   "settings",
   "submit",
@@ -1150,6 +1151,7 @@ function highlightActivePage() {
   else if (path.includes("playlists")) page = "playlists";
   else if (path.includes("submit")) page = "submit";
   else if (path.includes("queue")) page = "queue";
+  else if (path.includes("rating")) page = "rating";
   else if (path.includes("opens")) page = "opens";
   else if (path.includes("discover")) page = "discover";
   else if (path.includes("battle")) page = "battle";

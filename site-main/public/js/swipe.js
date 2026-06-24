@@ -1,7 +1,7 @@
 let discoverTracks = [];
 let discoverCurrentTrack = 0;
 let discoverHistory = [];
-let seenTracks = JSON.parse(localStorage.getItem("seenDiscoverTracks") || "[]");
+let seenTracks = [];
 
 let discoverRoot = null;
 let discoverCard = null;
@@ -44,13 +44,59 @@ let discoverSwipeUnlockTimer = null;
 let discoverPointerEventsBound = false;
 let discoverDragSafetyTimer = null;
 let discoverSwipeSequence = 0;
+let discoverSeenPersistTimer = null;
+let discoverPlaylistApiInitialized = false;
+let discoverLoadAbortController = null;
+let discoverActionQueue = [];
+let discoverActionInFlight = false;
+let discoverActionFlushTimer = null;
 
 const DISCOVER_VOLUME_KEY = "discoverVolume";
 const DISCOVER_MUTED_KEY = "discoverMuted";
 const DISCOVER_PLAYLIST_KEY = "discoverSelectedPlaylist";
+const DISCOVER_SEEN_KEY = "seenDiscoverTracks";
+const DISCOVER_SEEN_LIMIT = 500;
+const DISCOVER_HISTORY_LIMIT = 50;
+const DISCOVER_TRACK_BUFFER_LIMIT = 160;
+
+seenTracks = readDiscoverSeenTracks();
 
 if (window.stopGlobalTrack) {
   window.stopGlobalTrack();
+}
+
+function readDiscoverSeenTracks() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DISCOVER_SEEN_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+
+    const unique = [];
+    const seen = new Set();
+
+    parsed.slice(-DISCOVER_SEEN_LIMIT).forEach((trackId) => {
+      if (!trackId || seen.has(trackId)) return;
+      seen.add(trackId);
+      unique.push(trackId);
+    });
+
+    return unique;
+  } catch {
+    return [];
+  }
+}
+
+function persistSeenTracksNow() {
+  clearTimeout(discoverSeenPersistTimer);
+  discoverSeenPersistTimer = null;
+
+  try {
+    localStorage.setItem(DISCOVER_SEEN_KEY, JSON.stringify(seenTracks.slice(-DISCOVER_SEEN_LIMIT)));
+  } catch {}
+}
+
+function scheduleSeenTracksPersist() {
+  clearTimeout(discoverSeenPersistTimer);
+  discoverSeenPersistTimer = setTimeout(persistSeenTracksNow, 350);
 }
 
 function discoverEscapeHtml(value) {
@@ -106,16 +152,49 @@ function normalizeDiscoverTrack(track) {
   };
 }
 
-function ensureDiscoverPlaylistApi() {
-  try {
-    window.RitmoriaPlaylists?.ensureInitialized?.();
-  } catch {}
-  return window.RitmoriaPlaylists || null;
+function ensureDiscoverPlaylistApi({ initialize = false } = {}) {
+  const api = window.RitmoriaPlaylists || null;
+
+  if (initialize && api?.ensureInitialized && !discoverPlaylistApiInitialized) {
+    discoverPlaylistApiInitialized = true;
+
+    try {
+      const maybePromise = api.ensureInitialized();
+
+      if (maybePromise && typeof maybePromise.then === "function") {
+        maybePromise
+          .then(() => {
+            updateDiscoverPlaylistLabel();
+            renderDiscoverPlaylistOptions();
+          })
+          .catch((err) => {
+            console.error("discover playlist init error", err);
+          });
+      }
+    } catch (err) {
+      console.error("discover playlist init error", err);
+    }
+  }
+
+  return api;
 }
 
 function getDiscoverAvailablePlaylists() {
   const api = ensureDiscoverPlaylistApi();
-  const playlists = api?.getAll?.();
+  let playlists = null;
+
+  try {
+    playlists = api?.getAll?.();
+  } catch (err) {
+    console.error("discover playlists read error", err);
+  }
+
+  if (!Array.isArray(playlists)) {
+    try {
+      playlists = window.RitmoriaPlaylistStore?.getLocal?.();
+    } catch {}
+  }
+
   return Array.isArray(playlists) ? playlists : [];
 }
 
@@ -160,6 +239,7 @@ function updateDiscoverPlaylistLabel() {
 
 function renderDiscoverPlaylistOptions() {
   if (!discoverPlaylistList) return;
+  if (discoverPlaylistPanel?.classList.contains("discover-hidden")) return;
 
   const playlists = getDiscoverAvailablePlaylists();
   const selectedId = getSelectedDiscoverPlaylistId();
@@ -193,8 +273,8 @@ function renderDiscoverPlaylistOptions() {
 }
 
 function openDiscoverPlaylistPanel() {
-  renderDiscoverPlaylistOptions();
   discoverPlaylistPanel?.classList.remove("discover-hidden");
+  renderDiscoverPlaylistOptions();
 }
 
 function closeDiscoverPlaylistPanel() {
@@ -392,9 +472,11 @@ function rememberSeenTrack(trackId) {
   if (!seenTracks.includes(trackId)) {
     seenTracks.push(trackId);
 
-    try {
-      localStorage.setItem("seenDiscoverTracks", JSON.stringify(seenTracks));
-    } catch {}
+    if (seenTracks.length > DISCOVER_SEEN_LIMIT) {
+      seenTracks = seenTracks.slice(-DISCOVER_SEEN_LIMIT);
+    }
+
+    scheduleSeenTracksPersist();
   }
 }
 
@@ -541,14 +623,11 @@ function appendUniqueDiscoverTracks(tracks) {
   }
 
   if (!uniqueNew.length) {
-    const fallback = tracks.filter(Boolean);
-    if (fallback.length) {
-      discoverTracks.push(...shuffleArray(fallback));
-    }
     return;
   }
 
   discoverTracks.push(...shuffleArray(uniqueNew));
+  trimDiscoverTrackBuffer();
 }
 
 function reorderDiscoverTracksToAvoidImmediateRepeat() {
@@ -592,14 +671,39 @@ function reorderDiscoverTracksToAvoidImmediateRepeat() {
   }
 }
 
-function preloadNextDiscoverTrack() {
-  const next = getNextTrack();
-  if (!next?.audioSrc) return;
+function trimDiscoverTrackBuffer() {
+  if (discoverTracks.length <= DISCOVER_TRACK_BUFFER_LIMIT) return;
+
+  const currentTrackRef = discoverTracks[discoverCurrentTrack] || null;
+  const startIndex = Math.max(0, discoverCurrentTrack - 2);
+  const trimmed = discoverTracks.slice(startIndex, startIndex + DISCOVER_TRACK_BUFFER_LIMIT);
+  const nextCurrentIndex = currentTrackRef ? trimmed.indexOf(currentTrackRef) : -1;
+
+  discoverTracks = trimmed;
+  discoverCurrentTrack = nextCurrentIndex >= 0 ? nextCurrentIndex : 0;
+}
+
+function clearDiscoverPreloadAudio() {
+  if (!discoverPreloadAudio) return;
 
   try {
-    if (discoverPreloadAudio) {
-      discoverPreloadAudio.src = "";
-    }
+    discoverPreloadAudio.pause?.();
+    discoverPreloadAudio.removeAttribute?.("src");
+    discoverPreloadAudio.load?.();
+  } catch {}
+
+  discoverPreloadAudio = null;
+}
+
+function preloadNextDiscoverTrack() {
+  const next = getNextTrack();
+  if (!next?.audioSrc) {
+    clearDiscoverPreloadAudio();
+    return;
+  }
+
+  try {
+    clearDiscoverPreloadAudio();
 
     discoverPreloadAudio = new Audio();
     discoverPreloadAudio.preload = "metadata";
@@ -719,6 +823,77 @@ function playCurrentDiscoverTrack() {
   updateDiscoverPlayButton();
 }
 
+function runDiscoverIdleTask(callback) {
+  const run = () => {
+    try {
+      callback();
+    } catch (err) {
+      console.error("discover idle task error", err);
+    }
+  };
+
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(run, { timeout: 700 });
+  } else {
+    setTimeout(run, 0);
+  }
+}
+
+function scheduleDiscoverActionFlush() {
+  if (discoverActionFlushTimer || discoverActionInFlight) return;
+
+  discoverActionFlushTimer = setTimeout(() => {
+    discoverActionFlushTimer = null;
+    flushDiscoverActionQueue();
+  }, 80);
+}
+
+function flushDiscoverActionQueue() {
+  if (discoverActionInFlight) return;
+
+  const nextAction = discoverActionQueue.shift();
+  if (!nextAction) return;
+
+  discoverActionInFlight = true;
+
+  sendTrackAction(nextAction.trackId, nextAction.action)
+    .catch((err) => {
+      console.error("discover queued action error", err);
+    })
+    .finally(() => {
+      discoverActionInFlight = false;
+      if (discoverActionQueue.length) {
+        scheduleDiscoverActionFlush();
+      }
+    });
+}
+
+function queueDiscoverTrackAction(trackId, action) {
+  if (!trackId || !["like", "dislike"].includes(action)) return;
+
+  discoverActionQueue.push({ trackId, action });
+  scheduleDiscoverActionFlush();
+}
+
+function runDiscoverPostSwipeTasks(direction, track, options = {}) {
+  const {
+    skipAction = false,
+    skipPlaylistSave = false
+  } = options;
+
+  runDiscoverIdleTask(() => {
+    if (!skipAction) {
+      queueDiscoverTrackAction(track?.id, direction === "right" ? "like" : "dislike");
+    }
+
+    if (direction === "right" && !skipPlaylistSave) {
+      saveLikedDiscoverTrack(track).catch((err) => {
+        console.error("discover playlist save error", err);
+      });
+    }
+  });
+}
+
 async function sendTrackAction(trackId, action) {
   try {
     await fetch("/track-action", {
@@ -759,9 +934,12 @@ async function loadDiscoverTracks(options = {}) {
 
   if (discoverIsLoading) return;
   discoverIsLoading = true;
+  const controller = new AbortController();
+  discoverLoadAbortController = controller;
 
   try {
     const res = await fetch("/discover-tracks", {
+      signal: controller.signal,
       headers: {
         Authorization: "Bearer " + localStorage.getItem("token")
       }
@@ -805,6 +983,7 @@ async function loadDiscoverTracks(options = {}) {
         discoverCurrentTrack = 0;
       }
 
+      trimDiscoverTrackBuffer();
       reorderDiscoverTracksToAvoidImmediateRepeat();
     } else {
       if (discoverTracks.length > 0) {
@@ -826,12 +1005,17 @@ async function loadDiscoverTracks(options = {}) {
       reorderDiscoverTracksToAvoidImmediateRepeat();
     }
   } catch (err) {
+    if (err?.name === "AbortError") return;
+
     console.error("discover load error", err);
 
     if (discoverTracks.length === 0 && !silent) {
       renderDiscoverCards();
     }
   } finally {
+    if (discoverLoadAbortController === controller) {
+      discoverLoadAbortController = null;
+    }
     discoverIsLoading = false;
   }
 }
@@ -854,6 +1038,11 @@ function goToNextDiscoverTrack() {
       index: discoverCurrentTrack,
       track: current
     });
+
+    if (discoverHistory.length > DISCOVER_HISTORY_LIMIT) {
+      discoverHistory = discoverHistory.slice(-DISCOVER_HISTORY_LIMIT);
+    }
+
     discoverLastTrackId = current.id;
   }
 
@@ -904,32 +1093,6 @@ async function swipeCurrentTrack(direction, options = {}) {
       : "translate3d(-1400px, 0, 0) rotate(-28deg)";
   discoverCard.style.opacity = "0";
 
-  const pendingTasks = [];
-
-  if (direction === "right") {
-    if (!skipAction) {
-      pendingTasks.push(
-        sendTrackAction(current.id, "like").catch((err) => {
-          console.error("discover like action error", err);
-        })
-      );
-    }
-
-    if (!skipPlaylistSave) {
-      pendingTasks.push(
-        saveLikedDiscoverTrack(current).catch((err) => {
-          console.error("discover playlist save error", err);
-        })
-      );
-    }
-  } else if (!skipAction) {
-    pendingTasks.push(
-      sendTrackAction(current.id, "dislike").catch((err) => {
-        console.error("discover dislike action error", err);
-      })
-    );
-  }
-
   setTimeout(() => {
     if (swipeToken !== discoverSwipeSequence) return;
 
@@ -943,6 +1106,8 @@ async function swipeCurrentTrack(direction, options = {}) {
     } finally {
       unlockDiscoverSwipe();
     }
+
+    runDiscoverPostSwipeTasks(direction, current, { skipAction, skipPlaylistSave });
   }, 260);
 
   discoverSwipeUnlockTimer = setTimeout(() => {
@@ -953,8 +1118,6 @@ async function swipeCurrentTrack(direction, options = {}) {
     cancelDiscoverDrag(false);
     renderDiscoverCards();
   }, 900);
-
-  Promise.allSettled(pendingTasks).catch(() => {});
 }
 
 function resetDraggedCard() {
@@ -1285,6 +1448,7 @@ window.initDiscoverPage = function () {
   discoverDragging = false;
   discoverPointerId = null;
   discoverDeltaX = 0;
+  discoverPlaylistApiInitialized = false;
 
   bindDiscoverCardEvents();
   bindDiscoverPointerEvents();
@@ -1293,6 +1457,7 @@ window.initDiscoverPage = function () {
   bindDiscoverVolumeEvents();
   bindDiscoverButtonEvents();
 
+  ensureDiscoverPlaylistApi({ initialize: true });
   readDiscoverVolumeState();
   updateDiscoverFill();
   updateDiscoverPlaylistLabel();
@@ -1328,6 +1493,7 @@ window.initDiscoverPage = function () {
   window.addEventListener(
     "beforeunload",
     window.__discoverBeforeUnloadHandler = () => {
+      persistSeenTracksNow();
       document.body.classList.remove("discover-mode");
     },
     { once: true }
@@ -1340,6 +1506,15 @@ window.destroyDiscoverPage = function () {
   cancelDiscoverDrag(false);
   unbindDiscoverCardEvents();
   unbindDiscoverPointerEvents();
+  persistSeenTracksNow();
+  clearDiscoverPreloadAudio();
+
+  if (discoverLoadAbortController) {
+    try {
+      discoverLoadAbortController.abort();
+    } catch {}
+    discoverLoadAbortController = null;
+  }
 
   if (discoverAudio) {
     discoverAudio.pause();
@@ -1365,6 +1540,11 @@ window.destroyDiscoverPage = function () {
   if (window.__discoverPlaylistsUpdatedHandler) {
     window.removeEventListener("ritmoria:playlists-updated", window.__discoverPlaylistsUpdatedHandler);
     delete window.__discoverPlaylistsUpdatedHandler;
+  }
+
+  if (window.__discoverBeforeUnloadHandler) {
+    window.removeEventListener("beforeunload", window.__discoverBeforeUnloadHandler);
+    delete window.__discoverBeforeUnloadHandler;
   }
 
   document.body.classList.remove("discover-mode");
@@ -1398,8 +1578,8 @@ window.destroyDiscoverPage = function () {
   discoverDeltaX = 0;
   discoverPointerId = null;
   discoverSwipeLocked = false;
-  clearTimeout(discoverSwipeUnlockTimer);
-  discoverSwipeUnlockTimer = null;
+  clearDiscoverSwipeUnlockTimer();
+  clearDiscoverDragSafetyTimer();
   discoverPreloadAudio = null;
   discoverIsLoading = false;
   discoverInited = false;

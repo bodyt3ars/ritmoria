@@ -1,0 +1,89 @@
+<div class="rating-page">
+  <div class="rating-head">
+    <div>
+      <div class="rating-kicker">Оцененные треки</div>
+      <h1 class="rating-title">Рейтинг</h1>
+    </div>
+    <button type="button" class="rating-refresh-btn" id="ratingRefreshBtn" title="Обновить">
+      <i class="fa-solid fa-rotate-right"></i>
+    </button>
+  </div>
+
+  <div class="rating-toolbar">
+    <label class="rating-field">
+      <span>Год</span>
+      <select id="ratingYear">
+        <option value="">Все</option>
+      </select>
+    </label>
+
+    <label class="rating-field">
+      <span>Месяц</span>
+      <select id="ratingMonth">
+        <option value="">Все</option>
+        <option value="1">Январь</option>
+        <option value="2">Февраль</option>
+        <option value="3">Март</option>
+        <option value="4">Апрель</option>
+        <option value="5">Май</option>
+        <option value="6">Июнь</option>
+        <option value="7">Июль</option>
+        <option value="8">Август</option>
+        <option value="9">Сентябрь</option>
+        <option value="10">Октябрь</option>
+        <option value="11">Ноябрь</option>
+        <option value="12">Декабрь</option>
+      </select>
+    </label>
+
+    <label class="rating-field">
+      <span>Сортировка</span>
+      <select id="ratingSort">
+        <option value="score">Итоговый рейтинг</option>
+        <option value="judge">Оценка судей</option>
+        <option value="user">Оценка пользователей</option>
+        <option value="votes">Количество голосов</option>
+        <option value="newest">Новые оценки</option>
+      </select>
+    </label>
+
+    <label class="rating-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input id="ratingSearch" type="search" placeholder="Поиск" autocomplete="off">
+    </label>
+  </div>
+
+  <div class="rating-summary" id="ratingSummary">
+    <div class="rating-summary-item">
+      <span>Треков</span>
+      <strong id="ratingTotal">0</strong>
+    </div>
+    <div class="rating-summary-item">
+      <span>Лидеры</span>
+      <strong id="ratingArtistsCount">0</strong>
+    </div>
+    <div class="rating-summary-item">
+      <span>Период</span>
+      <strong id="ratingPeriodLabel">Все</strong>
+    </div>
+  </div>
+
+  <div class="rating-layout">
+    <section class="rating-section rating-section-tracks">
+      <div class="rating-section-head">
+        <h2>Треки</h2>
+        <span id="ratingTracksMeta">загрузка...</span>
+      </div>
+      <div class="rating-list" id="ratingTracksList"></div>
+      <button type="button" class="rating-load-more" id="ratingLoadMore">Показать еще</button>
+    </section>
+
+    <section class="rating-section rating-section-artists">
+      <div class="rating-section-head">
+        <h2>Артисты</h2>
+        <span>топ по оцененным трекам</span>
+      </div>
+      <div class="rating-artist-list" id="ratingArtistsList"></div>
+    </section>
+  </div>
+</div>
