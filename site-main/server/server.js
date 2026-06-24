@@ -4105,7 +4105,15 @@ app.get("/api/public-playlists", async (req, res) => {
         total_score,
         total_votes_count
       FROM rating_ranked
-      ORDER BY rating_at DESC, judge_score DESC, total_score DESC, total_votes_count DESC, id DESC
+      ORDER BY
+        EXTRACT(YEAR FROM rating_at)::int DESC,
+        EXTRACT(MONTH FROM rating_at)::int DESC,
+        judge_score DESC,
+        judge_votes_count DESC,
+        total_score DESC,
+        total_votes_count DESC,
+        rating_at DESC,
+        id DESC
       `
     );
 
