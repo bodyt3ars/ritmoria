@@ -382,6 +382,69 @@ body.beat-rush-open {
   box-shadow:
     0 0 26px rgba(236, 135, 204, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    transform 0.14s ease,
+    background 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    color 0.14s ease;
+}
+
+.beat-rush-key::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 168, 221, 0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.beat-rush-key.pressed {
+  color: #fff;
+  transform: translateX(-50%) translateY(5px) scale(0.92);
+  border-color: rgba(255, 190, 231, 0.64);
+  background:
+    linear-gradient(135deg, rgba(244, 139, 209, 0.34), rgba(127, 146, 255, 0.22)),
+    rgba(255, 255, 255, 0.11);
+  box-shadow:
+    0 0 34px rgba(241, 144, 208, 0.42),
+    0 10px 26px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.beat-rush-key.pressed.hit {
+  border-color: rgba(111, 255, 185, 0.74);
+  background:
+    linear-gradient(135deg, rgba(91, 255, 172, 0.34), rgba(86, 212, 255, 0.18)),
+    rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 38px rgba(91, 255, 172, 0.48),
+    0 10px 26px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.beat-rush-key.pressed.miss {
+  border-color: rgba(255, 91, 119, 0.78);
+  background:
+    linear-gradient(135deg, rgba(255, 75, 110, 0.34), rgba(255, 128, 128, 0.16)),
+    rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 38px rgba(255, 75, 110, 0.44),
+    0 10px 26px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.beat-rush-key.pressed::after {
+  animation: beatRushKeyPulse 0.24s ease forwards;
+}
+
+.beat-rush-key.pressed.hit::after {
+  animation-name: beatRushKeyPulseHit;
+}
+
+.beat-rush-key.pressed.miss::after {
+  animation-name: beatRushKeyPulseMiss;
 }
 
 .beat-rush-hitline {
@@ -411,11 +474,15 @@ body.beat-rush-open {
 }
 
 .beat-rush-note.hit {
-  animation: beatRushHit 0.18s ease forwards;
+  opacity: 0;
+  filter: brightness(1.35);
+  transition: opacity 0.16s ease, filter 0.16s ease;
 }
 
 .beat-rush-note.missed {
-  animation: beatRushMiss 0.16s ease forwards;
+  opacity: 0;
+  filter: grayscale(0.8);
+  transition: opacity 0.16s ease, filter 0.16s ease;
 }
 
 .beat-rush-feedback {
@@ -470,17 +537,42 @@ body.beat-rush-open {
   }
 }
 
-@keyframes beatRushHit {
-  to {
-    transform: translate(-50%, 92%) scale(2.1);
+@keyframes beatRushKeyPulse {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.85);
+    border-color: rgba(255, 168, 221, 0.72);
+  }
+  100% {
     opacity: 0;
+    transform: scale(1.28);
+    border-color: rgba(255, 168, 221, 0);
   }
 }
 
-@keyframes beatRushMiss {
-  to {
-    transform: translate(-50%, 104%) scale(0.6);
+@keyframes beatRushKeyPulseHit {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.85);
+    border-color: rgba(111, 255, 185, 0.76);
+  }
+  100% {
     opacity: 0;
+    transform: scale(1.28);
+    border-color: rgba(111, 255, 185, 0);
+  }
+}
+
+@keyframes beatRushKeyPulseMiss {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.85);
+    border-color: rgba(255, 91, 119, 0.78);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+    border-color: rgba(255, 91, 119, 0);
   }
 }
 

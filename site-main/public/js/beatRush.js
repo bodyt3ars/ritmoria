@@ -24,10 +24,10 @@
   };
 
   const LANES = [
+    { key: "w", label: "W" },
     { key: "a", label: "A" },
     { key: "s", label: "S" },
-    { key: "d", label: "D" },
-    { key: "f", label: "F" }
+    { key: "d", label: "D" }
   ];
 
   let game = null;
@@ -115,7 +115,7 @@
         <div class="beat-rush-hero">
           <div class="beat-rush-kicker">Ritmoria Arcade</div>
           <h2>Beat Rush</h2>
-          <p>Попадай по ритму текущего трека. Ноты летят по четырём дорожкам, клавиши A S D F.</p>
+          <p>Попадай по ритму текущего трека. Ноты летят к нижним кнопкам, клавиши W A S D.</p>
         </div>
         <div class="beat-rush-track-card">
           <img src="${escapeHtml(track.cover || "/images/default-cover.jpg")}" alt="">
@@ -223,6 +223,7 @@
     const startMs = Math.max(0, Number(startState?.currentTime || 0) * 1000);
     const playableNotes = notes.filter((note) => Number(note.time || 0) >= startMs - 180);
     const lanes = Array.from(content.querySelectorAll(".beat-rush-lane"));
+    const stage = content.querySelector(".beat-rush-stage");
     const feedback = content.querySelector("[data-br-feedback]");
     const scoreEl = content.querySelector("[data-br-score]");
     const comboEl = content.querySelector("[data-br-combo]");
@@ -273,6 +274,21 @@
       note.el = el;
     };
 
+    const getLaneTargetTop = (laneIndex, noteEl) => {
+      const lane = lanes[laneIndex];
+      const key = lane?.querySelector(".beat-rush-key");
+      const stageRect = stage?.getBoundingClientRect();
+      const keyRect = key?.getBoundingClientRect();
+
+      if (!stageRect?.height || !keyRect?.height) {
+        return 0;
+      }
+
+      const noteHeight = Number(noteEl?.offsetHeight || 42);
+      const keyCenterY = keyRect.top - stageRect.top + keyRect.height / 2;
+      return keyCenterY - noteHeight / 2;
+    };
+
     const judgeNote = (laneIndex) => {
       if (!game?.running) return;
       const nowMs = Number(getState()?.currentTime || 0) * 1000;
@@ -283,16 +299,33 @@
         .sort((a, b) => a.delta - b.delta);
 
       const best = candidates[0];
-      lanes[laneIndex]?.classList.add("pressed");
-      window.setTimeout(() => lanes[laneIndex]?.classList.remove("pressed"), 120);
+      const lane = lanes[laneIndex];
+      const keyEl = lane?.querySelector(".beat-rush-key");
+      const flashKey = (state) => {
+        if (!keyEl) return;
+        keyEl.classList.remove("pressed", "hit", "miss");
+        void keyEl.offsetWidth;
+        keyEl.classList.add("pressed", state);
+        window.setTimeout(() => {
+          keyEl.classList.remove("pressed", state);
+        }, 220);
+      };
+
+      lane?.classList.add("pressed");
+      window.setTimeout(() => {
+        lane?.classList.remove("pressed");
+      }, 170);
 
       if (!best) {
+        flashKey("miss");
         game.combo = 0;
         game.miss += 1;
         showFeedback("MISS", "miss");
         updateHud();
         return;
       }
+
+      flashKey("hit");
 
       best.note.hit = true;
       best.note.el?.classList.add("hit");
@@ -347,10 +380,12 @@
 
         if (delta <= travelMs && delta >= -220) {
           createNoteEl(note);
-          const progress = 1 - (delta / travelMs);
-          const y = Math.max(-8, Math.min(101, progress * 100));
           if (note.el) {
-            note.el.style.transform = `translate(-50%, ${y}%) scale(${delta < 120 ? 1.08 : 1})`;
+            const progress = Math.max(0, Math.min(1.12, 1 - (delta / travelMs)));
+            const targetTop = getLaneTargetTop(note.lane, note.el);
+            const startTop = -Number(note.el.offsetHeight || 42) - 12;
+            const y = startTop + (targetTop - startTop) * progress;
+            note.el.style.transform = `translate(-50%, ${y}px) scale(${Math.abs(delta) < 120 ? 1.08 : 1})`;
             note.el.style.opacity = delta < -120 ? "0.25" : "1";
           }
         }

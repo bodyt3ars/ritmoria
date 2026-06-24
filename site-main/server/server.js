@@ -908,7 +908,7 @@ function createBeatRushBeatmap({ trackId, bpm = 120, difficulty = "medium", dura
     bpm: safeBpm,
     difficulty: safeDifficulty,
     lanes: 4,
-    keys: ["A", "S", "D", "F"],
+    keys: ["W", "A", "S", "D"],
     notes
   };
 }
