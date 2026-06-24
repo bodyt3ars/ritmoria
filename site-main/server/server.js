@@ -8224,7 +8224,7 @@ app.get("/api/rating", async (req, res) => {
     const rawOffset = Number(req.query.offset || 0);
     const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? rawLimit : 20, 50));
     const offset = Math.max(0, Number.isFinite(rawOffset) ? rawOffset : 0);
-    const sort = String(req.query.sort || "score").trim().toLowerCase();
+    const sort = String(req.query.sort || "judge").trim().toLowerCase();
     const search = String(req.query.q || "").trim().toLowerCase();
     const year = Number(req.query.year || 0);
     const month = Number(req.query.month || 0);
@@ -8279,7 +8279,7 @@ app.get("/api/rating", async (req, res) => {
       user: "user_score DESC, user_votes_count DESC, total_score DESC, rating_at DESC",
       votes: "total_votes_count DESC, rating_score DESC, rating_at DESC",
       newest: "rating_at DESC, rating_score DESC"
-    }[sort] || "rating_score DESC, total_score DESC, judge_score DESC, total_votes_count DESC, rating_at DESC";
+    }[sort] || "judge_score DESC, judge_votes_count DESC, total_score DESC, rating_at DESC";
 
     const ratingCte = `
       WITH rating_source AS (
@@ -8361,30 +8361,8 @@ app.get("/api/rating", async (req, res) => {
       trackValues
     );
 
-    const artistsRes = await pool.query(
-      `
-      ${ratingCte}
-      SELECT
-        user_id,
-        COALESCE(MAX(username), MAX(artist), 'Артист') AS username,
-        MAX(username_tag) AS username_tag,
-        MAX(avatar) AS avatar,
-        COUNT(*)::int AS tracks_count,
-        ROUND(AVG(total_score)::numeric, 1) AS avg_total_score,
-        ROUND(AVG(rating_score)::numeric, 1) AS avg_rating_score,
-        SUM(total_votes_count)::int AS total_votes_count,
-        MAX(rating_at) AS latest_rating_at
-      FROM rating_ranked
-      GROUP BY user_id
-      ORDER BY avg_rating_score DESC, avg_total_score DESC, total_votes_count DESC, latest_rating_at DESC
-      LIMIT 12
-      `,
-      values
-    );
-
     res.json({
       tracks: tracksRes.rows,
-      artists: artistsRes.rows,
       meta: {
         total: Number(tracksRes.rows[0]?.total_count || 0),
         limit,

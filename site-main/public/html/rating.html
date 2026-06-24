@@ -39,8 +39,8 @@
     <label class="rating-field">
       <span>Сортировка</span>
       <select id="ratingSort">
-        <option value="score">Итоговый рейтинг</option>
         <option value="judge">Оценка судей</option>
+        <option value="score">Итоговый рейтинг</option>
         <option value="user">Оценка пользователей</option>
         <option value="votes">Количество голосов</option>
         <option value="newest">Новые оценки</option>
@@ -59,10 +59,6 @@
       <strong id="ratingTotal">0</strong>
     </div>
     <div class="rating-summary-item">
-      <span>Лидеры</span>
-      <strong id="ratingArtistsCount">0</strong>
-    </div>
-    <div class="rating-summary-item">
       <span>Период</span>
       <strong id="ratingPeriodLabel">Все</strong>
     </div>
@@ -76,14 +72,6 @@
       </div>
       <div class="rating-list" id="ratingTracksList"></div>
       <button type="button" class="rating-load-more" id="ratingLoadMore">Показать еще</button>
-    </section>
-
-    <section class="rating-section rating-section-artists">
-      <div class="rating-section-head">
-        <h2>Артисты</h2>
-        <span>топ по оцененным трекам</span>
-      </div>
-      <div class="rating-artist-list" id="ratingArtistsList"></div>
     </section>
   </div>
 </div>

@@ -41,11 +41,9 @@ function ratingGetElements() {
     search: document.getElementById("ratingSearch"),
     refresh: document.getElementById("ratingRefreshBtn"),
     total: document.getElementById("ratingTotal"),
-    artistsCount: document.getElementById("ratingArtistsCount"),
     periodLabel: document.getElementById("ratingPeriodLabel"),
     tracksMeta: document.getElementById("ratingTracksMeta"),
     tracksList: document.getElementById("ratingTracksList"),
-    artistsList: document.getElementById("ratingArtistsList"),
     loadMore: document.getElementById("ratingLoadMore")
   };
 }
@@ -56,7 +54,7 @@ function ratingBuildQuery({ offset = 0 } = {}) {
 
   params.set("limit", String(ratingLimit));
   params.set("offset", String(offset));
-  params.set("sort", els.sort?.value || "score");
+  params.set("sort", els.sort?.value || "judge");
 
   const year = String(els.year?.value || "").trim();
   const month = String(els.month?.value || "").trim();
@@ -95,11 +93,81 @@ function ratingBuildPlayableTrack(track) {
   };
 }
 
+function ratingGetPlayerStateFromEvent(event) {
+  const detail = event?.detail || null;
+
+  if (detail?.track) return detail;
+  if (detail?.id || detail?.audioSrc || detail?.soundcloud) {
+    return {
+      track: detail,
+      isPlaying: detail.isPlaying !== false
+    };
+  }
+
+  return window.getGlobalPlayerState?.() || null;
+}
+
+function ratingIsSamePlayableTrack(track, playerTrack) {
+  if (!track || !playerTrack) return false;
+
+  const trackId = Number(track.id || 0);
+  const playerTrackId = Number(playerTrack.id || 0);
+  if (trackId && playerTrackId && trackId === playerTrackId) return true;
+
+  const playable = ratingBuildPlayableTrack(track);
+  if (playable.audioSrc && playerTrack.audioSrc && playable.audioSrc === playerTrack.audioSrc) return true;
+  if (playable.soundcloud && playerTrack.soundcloud && playable.soundcloud === playerTrack.soundcloud) return true;
+
+  return false;
+}
+
+function ratingSyncPlayButtons(state = null) {
+  const playerState = state || window.getGlobalPlayerState?.() || null;
+  const playerTrack = playerState?.track || null;
+  const isPlaying = !!playerState?.isPlaying;
+
+  document.querySelectorAll("[data-rating-track-id]").forEach((row) => {
+    const trackId = Number(row.dataset.ratingTrackId || 0);
+    const track = ratingTracksById.get(trackId);
+    const isCurrent = ratingIsSamePlayableTrack(track, playerTrack);
+    const isCurrentPlaying = isCurrent && isPlaying;
+    const button = row.querySelector("[data-rating-play]");
+
+    row.classList.toggle("is-playing", isCurrentPlaying);
+
+    if (button) {
+      button.classList.toggle("is-playing", isCurrentPlaying);
+      button.setAttribute("title", isCurrentPlaying ? "Пауза" : "Слушать");
+      button.setAttribute("aria-label", isCurrentPlaying ? "Пауза" : "Слушать");
+      button.innerHTML = isCurrentPlaying
+        ? `<i class="fa-solid fa-pause"></i>`
+        : `<i class="fa-solid fa-play"></i>`;
+    }
+  });
+}
+
 function ratingPlayTrack(track) {
   const playable = ratingBuildPlayableTrack(track);
+  const playerState = window.getGlobalPlayerState?.() || null;
+
+  if (ratingIsSamePlayableTrack(track, playerState?.track) && typeof window.toggleGlobalPlayerPlayback === "function") {
+    window.toggleGlobalPlayerPlayback();
+    ratingSyncPlayButtons({
+      ...playerState,
+      isPlaying: !playerState?.isPlaying
+    });
+    return;
+  }
+
+  if ((playable.audioSrc || playable.soundcloud) && typeof window.playTrackGlobal === "function") {
+    window.playTrackGlobal(playable);
+    ratingSyncPlayButtons({ track: playable, isPlaying: true });
+    return;
+  }
 
   if (typeof window.playTrackGlobal === "function") {
     window.playTrackGlobal(playable);
+    ratingSyncPlayButtons({ track: playable, isPlaying: true });
     return;
   }
 
@@ -142,31 +210,10 @@ function ratingRenderTrack(track, index) {
         <span class="rating-score-pill is-main" title="Итоговый рейтинг">${ratingEscapeHtml(ratingFormatScore(track.rating_score || track.total_score))}</span>
         <span class="rating-score-pill is-judge" title="Судьи">${ratingEscapeHtml(ratingFormatScore(track.judge_score))}</span>
         <span class="rating-score-pill" title="Пользователи">${ratingEscapeHtml(ratingFormatScore(track.user_score))}</span>
-        <button type="button" class="rating-play-btn" title="Слушать" data-rating-play="${Number(track.id)}">
+        <button type="button" class="rating-play-btn" title="Слушать" aria-label="Слушать" data-rating-play="${Number(track.id)}">
           <i class="fa-solid fa-play"></i>
         </button>
       </div>
-    </article>
-  `;
-}
-
-function ratingRenderArtist(artist, index) {
-  const avatar = ratingNormalizeMedia(artist.avatar, "/images/default-avatar.jpg");
-  const name = artist.username || artist.username_tag || "Артист";
-
-  return `
-    <article class="rating-artist-row" data-rating-artist-tag="${ratingEscapeHtml(artist.username_tag || "")}">
-      <img class="rating-artist-avatar" src="${ratingEscapeHtml(avatar)}" alt="">
-      <div>
-        <div class="rating-track-stats">
-          <span>#${index + 1}</span>
-          <span>${ratingFormatCount(artist.tracks_count)} треков</span>
-          <span>${ratingFormatCount(artist.total_votes_count)} голосов</span>
-        </div>
-        <div class="rating-artist-name">${ratingEscapeHtml(name)}</div>
-        <div class="rating-artist-meta">${artist.username_tag ? `@${ratingEscapeHtml(artist.username_tag)}` : "без тега"}</div>
-      </div>
-      <div class="rating-artist-score">${ratingEscapeHtml(ratingFormatScore(artist.avg_rating_score || artist.avg_total_score))}</div>
     </article>
   `;
 }
@@ -176,16 +223,12 @@ function ratingSetLoading(append = false) {
   if (!append && els.tracksList) {
     els.tracksList.innerHTML = `<div class="rating-empty">Загружаем рейтинг...</div>`;
   }
-  if (!append && els.artistsList) {
-    els.artistsList.innerHTML = `<div class="rating-empty">Загружаем артистов...</div>`;
-  }
   if (els.tracksMeta) els.tracksMeta.textContent = "загрузка...";
 }
 
 function ratingApplyResponse(data, { append = false } = {}) {
   const els = ratingGetElements();
   const tracks = Array.isArray(data?.tracks) ? data.tracks : [];
-  const artists = Array.isArray(data?.artists) ? data.artists : [];
   const meta = data?.meta || {};
 
   ratingTotal = Number(meta.total || tracks[0]?.total_count || 0) || 0;
@@ -199,7 +242,6 @@ function ratingApplyResponse(data, { append = false } = {}) {
   });
 
   if (els.total) els.total.textContent = ratingFormatCount(ratingTotal);
-  if (els.artistsCount) els.artistsCount.textContent = ratingFormatCount(artists.length);
   if (els.periodLabel) els.periodLabel.textContent = ratingGetPeriodLabel();
 
   if (els.tracksMeta) {
@@ -214,10 +256,7 @@ function ratingApplyResponse(data, { append = false } = {}) {
     } else {
       els.tracksList.innerHTML = markup || `<div class="rating-empty">Оцененных треков пока нет</div>`;
     }
-  }
-
-  if (els.artistsList && !append) {
-    els.artistsList.innerHTML = artists.map(ratingRenderArtist).join("") || `<div class="rating-empty">Артистов пока нет</div>`;
+    ratingSyncPlayButtons();
   }
 
   ratingOffset += tracks.length;
@@ -257,9 +296,6 @@ async function loadRating({ append = false } = {}) {
 
     if (els.tracksList) {
       els.tracksList.innerHTML = `<div class="rating-error">Не удалось загрузить рейтинг</div>`;
-    }
-    if (els.artistsList) {
-      els.artistsList.innerHTML = "";
     }
     if (els.tracksMeta) els.tracksMeta.textContent = "ошибка";
   }
@@ -329,17 +365,20 @@ function bindRatingEvents() {
     }
   }, eventOptions);
 
-  els.artistsList?.addEventListener("click", (event) => {
-    const row = event.target.closest("[data-rating-artist-tag]");
-    const tag = row?.dataset.ratingArtistTag;
-    if (!tag) return;
-
-    if (typeof navigate === "function") {
-      navigate(`/${tag}`);
-    } else {
-      window.location.href = `/${tag}`;
-    }
-  }, eventOptions);
+  [
+    "ritmoria:global-player-track-change",
+    "ritmoria:global-player-play",
+    "ritmoria:global-player-pause",
+    "ritmoria:global-player-stopped"
+  ].forEach((eventName) => {
+    window.addEventListener(eventName, (event) => {
+      if (eventName === "ritmoria:global-player-stopped") {
+        ratingSyncPlayButtons({ track: null, isPlaying: false });
+        return;
+      }
+      ratingSyncPlayButtons(ratingGetPlayerStateFromEvent(event));
+    }, eventOptions);
+  });
 }
 
 window.initRatingPage = function () {

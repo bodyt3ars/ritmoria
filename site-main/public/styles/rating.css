@@ -118,7 +118,7 @@
 
 .rating-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 26px;
 }
@@ -152,10 +152,7 @@
 }
 
 .rating-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
-  gap: 28px;
-  align-items: start;
+  display: block;
 }
 
 .rating-section {
@@ -183,14 +180,12 @@
   font-weight: 700;
 }
 
-.rating-list,
-.rating-artist-list {
+.rating-list {
   display: grid;
   gap: 10px;
 }
 
-.rating-track-row,
-.rating-artist-row {
+.rating-track-row {
   min-width: 0;
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
@@ -214,6 +209,11 @@
   transform: translateY(-1px);
   border-color: rgba(240,168,202,0.28);
   background: rgba(35, 24, 34, 0.86);
+}
+
+.rating-track-row.is-playing {
+  border-color: rgba(240,168,202,0.42);
+  box-shadow: 0 18px 40px rgba(216,115,169,0.14);
 }
 
 .rating-place {
@@ -252,8 +252,7 @@
   font-weight: 800;
 }
 
-.rating-track-title,
-.rating-artist-name {
+.rating-track-title {
   overflow: hidden;
   color: #fff;
   font-size: 17px;
@@ -263,8 +262,7 @@
   white-space: nowrap;
 }
 
-.rating-track-artist,
-.rating-artist-meta {
+.rating-track-artist {
   margin-top: 5px;
   overflow: hidden;
   color: rgba(255,255,255,0.62);
@@ -322,32 +320,10 @@
   background: rgba(240,168,202,0.16);
 }
 
-.rating-artist-row {
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-}
-
-.rating-artist-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-.rating-artist-score {
-  min-width: 54px;
-  padding: 9px 10px;
-  border-radius: 12px;
-  text-align: center;
-  color: #fff;
-  font-weight: 950;
-  background: rgba(240,168,202,0.14);
-  border: 1px solid rgba(240,168,202,0.20);
+.rating-play-btn.is-playing {
+  border-color: rgba(240,168,202,0.45);
+  background: linear-gradient(135deg, #d873a9, #f0a8ca);
+  color: #160d13;
 }
 
 .rating-load-more {
@@ -390,13 +366,11 @@
 }
 
 @media (max-width: 1080px) {
-  .rating-toolbar,
-  .rating-layout {
+  .rating-toolbar {
     grid-template-columns: 1fr 1fr;
   }
 
   .rating-section-tracks,
-  .rating-section-artists,
   .rating-search {
     grid-column: 1 / -1;
   }
@@ -417,8 +391,7 @@
   }
 
   .rating-toolbar,
-  .rating-summary,
-  .rating-layout {
+  .rating-summary {
     grid-template-columns: 1fr;
   }
 
