@@ -42,7 +42,7 @@ function ratingHasDetailScores(track) {
 function ratingRenderScoreTooltip(track) {
   if (!ratingHasDetailScores(track)) {
     return `
-      <div class="rating-score-tooltip" role="tooltip">
+      <div class="rating-score-tooltip" role="tooltip" hidden>
         <div class="rating-score-tooltip-title">Подробные оценки</div>
         <div class="rating-score-tooltip-empty">Детальных критериев пока нет</div>
       </div>
@@ -50,7 +50,7 @@ function ratingRenderScoreTooltip(track) {
   }
 
   return `
-    <div class="rating-score-tooltip" role="tooltip">
+    <div class="rating-score-tooltip" role="tooltip" hidden>
       <div class="rating-score-tooltip-title">Средние оценки по критериям</div>
       <div class="rating-score-tooltip-sub">${ratingFormatCount(track.details_count)} рецензий от судей и пользователей</div>
       <div class="rating-score-tooltip-grid">
