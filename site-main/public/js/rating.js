@@ -8,12 +8,12 @@ let ratingEventsAbortController = null;
 let ratingScoreTooltipEl = null;
 
 const RATING_DETAIL_CRITERIA = [
-  { key: "rhymes_avg", label: "Рифмы" },
-  { key: "structure_avg", label: "Структура" },
-  { key: "style_avg", label: "Стиль" },
-  { key: "charisma_avg", label: "Харизма" },
-  { key: "vibe_avg", label: "Вайб" },
-  { key: "memory_avg", label: "Память" }
+  { key: "rhymes", label: "Рифмы" },
+  { key: "structure", label: "Структура" },
+  { key: "style", label: "Стиль" },
+  { key: "charisma", label: "Харизма" },
+  { key: "vibe", label: "Вайб" },
+  { key: "memory", label: "Память" }
 ];
 
 function ratingEscapeHtml(value) {
@@ -36,26 +36,61 @@ function ratingFormatCount(value) {
   return Number.isFinite(number) ? String(number) : "0";
 }
 
-function ratingHasDetailScores(track) {
-  return RATING_DETAIL_CRITERIA.some((item) => Number(track?.[item.key] || 0) > 0);
+function ratingGetScoreDetailConfig(type = "total") {
+  if (type === "judge") {
+    return {
+      prefix: "judge_",
+      countKey: "judge_details_count",
+      title: "Оценка судей",
+      empty: "Судейских критериев пока нет"
+    };
+  }
+
+  if (type === "user") {
+    return {
+      prefix: "user_",
+      countKey: "user_details_count",
+      title: "Оценка пользователей",
+      empty: "Пользовательских критериев пока нет"
+    };
+  }
+
+  return {
+    prefix: "",
+    countKey: "details_count",
+    title: "Итоговая оценка",
+    empty: "Детальных критериев пока нет"
+  };
 }
 
-function ratingBuildScoreTooltipHtml(track) {
-  if (!ratingHasDetailScores(track)) {
+function ratingGetDetailValue(track, item, type = "total") {
+  const config = ratingGetScoreDetailConfig(type);
+  return Number(track?.[`${config.prefix}${item.key}_avg`] || 0);
+}
+
+function ratingHasDetailScores(track, type = "total") {
+  return RATING_DETAIL_CRITERIA.some((item) => ratingGetDetailValue(track, item, type) > 0);
+}
+
+function ratingBuildScoreTooltipHtml(track, type = "total") {
+  const config = ratingGetScoreDetailConfig(type);
+  const count = Number(track?.[config.countKey] || 0);
+
+  if (!ratingHasDetailScores(track, type)) {
     return `
-      <div class="rating-score-tooltip-title">Подробные оценки</div>
-      <div class="rating-score-tooltip-empty">Детальных критериев пока нет</div>
+      <div class="rating-score-tooltip-title">${ratingEscapeHtml(config.title)}</div>
+      <div class="rating-score-tooltip-empty">${ratingEscapeHtml(config.empty)}</div>
     `;
   }
 
   return `
-    <div class="rating-score-tooltip-title">Средние оценки по критериям</div>
-    <div class="rating-score-tooltip-sub">${ratingFormatCount(track.details_count)} рецензий от судей и пользователей</div>
+    <div class="rating-score-tooltip-title">${ratingEscapeHtml(config.title)}</div>
+    <div class="rating-score-tooltip-sub">${ratingFormatCount(count)} рецензий</div>
     <div class="rating-score-tooltip-grid">
       ${RATING_DETAIL_CRITERIA.map((item) => `
         <div class="rating-score-tooltip-item">
           <span>${ratingEscapeHtml(item.label)}</span>
-          <strong>${ratingEscapeHtml(ratingFormatScore(track[item.key]))}</strong>
+          <strong>${ratingEscapeHtml(ratingFormatScore(ratingGetDetailValue(track, item, type)))}</strong>
         </div>
       `).join("")}
     </div>
@@ -90,11 +125,12 @@ function ratingPositionScoreTooltip(trigger, tooltip) {
 
 function ratingShowScoreTooltip(trigger) {
   const trackId = Number(trigger?.dataset.ratingScoreTrackId || 0);
+  const type = trigger?.dataset.ratingScoreType || "total";
   const track = ratingTracksById.get(trackId);
   if (!track) return;
 
   const tooltip = ratingGetScoreTooltipElement();
-  tooltip.innerHTML = ratingBuildScoreTooltipHtml(track);
+  tooltip.innerHTML = ratingBuildScoreTooltipHtml(track, type);
   tooltip.style.display = "block";
   tooltip.classList.remove("is-visible");
 
@@ -111,9 +147,9 @@ function ratingHideScoreTooltip() {
   ratingScoreTooltipEl.style.display = "none";
 }
 
-function ratingRenderScoreTrigger(track, { className = "", value, label }) {
+function ratingRenderScoreTrigger(track, { className = "", value, label, type = "total" }) {
   return `
-    <span class="rating-score-trigger" tabindex="0" aria-label="${ratingEscapeHtml(label)}" data-rating-score-trigger data-rating-score-track-id="${Number(track.id)}">
+    <span class="rating-score-trigger" tabindex="0" aria-label="${ratingEscapeHtml(label)}" data-rating-score-trigger data-rating-score-track-id="${Number(track.id)}" data-rating-score-type="${ratingEscapeHtml(type)}">
       <span class="rating-score-pill ${ratingEscapeHtml(className)}">${ratingEscapeHtml(ratingFormatScore(value))}</span>
     </span>
   `;
@@ -304,16 +340,19 @@ function ratingRenderTrack(track, index) {
           ${ratingRenderScoreTrigger(track, {
             className: "is-main",
             value: track.rating_score || track.total_score,
-            label: "Итоговый рейтинг. Наведите, чтобы увидеть критерии"
+            label: "Итоговый рейтинг. Наведите, чтобы увидеть критерии",
+            type: "total"
           })}
           ${ratingRenderScoreTrigger(track, {
             className: "is-judge",
             value: track.judge_score,
-            label: "Оценка судей. Наведите, чтобы увидеть критерии"
+            label: "Оценка судей. Наведите, чтобы увидеть критерии",
+            type: "judge"
           })}
           ${ratingRenderScoreTrigger(track, {
             value: track.user_score,
-            label: "Оценка пользователей. Наведите, чтобы увидеть критерии"
+            label: "Оценка пользователей. Наведите, чтобы увидеть критерии",
+            type: "user"
           })}
         </div>
         <button type="button" class="rating-play-btn" title="Слушать" aria-label="Слушать" data-rating-play="${Number(track.id)}">

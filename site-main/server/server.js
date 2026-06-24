@@ -8313,6 +8313,20 @@ app.get("/api/rating", async (req, res) => {
           COALESCE(detail_stats.charisma_avg, 0) AS charisma_avg,
           COALESCE(detail_stats.vibe_avg, 0) AS vibe_avg,
           COALESCE(detail_stats.memory_avg, 0) AS memory_avg,
+          COALESCE(user_detail_stats.details_count, 0)::int AS user_details_count,
+          COALESCE(user_detail_stats.rhymes_avg, 0) AS user_rhymes_avg,
+          COALESCE(user_detail_stats.structure_avg, 0) AS user_structure_avg,
+          COALESCE(user_detail_stats.style_avg, 0) AS user_style_avg,
+          COALESCE(user_detail_stats.charisma_avg, 0) AS user_charisma_avg,
+          COALESCE(user_detail_stats.vibe_avg, 0) AS user_vibe_avg,
+          COALESCE(user_detail_stats.memory_avg, 0) AS user_memory_avg,
+          COALESCE(judge_detail_stats.details_count, 0)::int AS judge_details_count,
+          COALESCE(judge_detail_stats.rhymes_avg, 0) AS judge_rhymes_avg,
+          COALESCE(judge_detail_stats.structure_avg, 0) AS judge_structure_avg,
+          COALESCE(judge_detail_stats.style_avg, 0) AS judge_style_avg,
+          COALESCE(judge_detail_stats.charisma_avg, 0) AS judge_charisma_avg,
+          COALESCE(judge_detail_stats.vibe_avg, 0) AS judge_vibe_avg,
+          COALESCE(judge_detail_stats.memory_avg, 0) AS judge_memory_avg,
           COALESCE(user_stats.votes_count, 0)::int AS user_votes_count,
           COALESCE(judge_stats.votes_count, 0)::int AS judge_votes_count,
           (
@@ -8347,6 +8361,30 @@ app.get("/api/rating", async (req, res) => {
           FROM track_rating_details
           WHERE track_id = t.id
         ) detail_stats ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*) AS details_count,
+            ROUND(AVG(rhymes)::numeric, 1) AS rhymes_avg,
+            ROUND(AVG(structure)::numeric, 1) AS structure_avg,
+            ROUND(AVG(style)::numeric, 1) AS style_avg,
+            ROUND(AVG(charisma)::numeric, 1) AS charisma_avg,
+            ROUND(AVG(vibe)::numeric, 1) AS vibe_avg,
+            ROUND(AVG(memory)::numeric, 1) AS memory_avg
+          FROM track_rating_details
+          WHERE track_id = t.id AND rating_type = 'user'
+        ) user_detail_stats ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*) AS details_count,
+            ROUND(AVG(rhymes)::numeric, 1) AS rhymes_avg,
+            ROUND(AVG(structure)::numeric, 1) AS structure_avg,
+            ROUND(AVG(style)::numeric, 1) AS style_avg,
+            ROUND(AVG(charisma)::numeric, 1) AS charisma_avg,
+            ROUND(AVG(vibe)::numeric, 1) AS vibe_avg,
+            ROUND(AVG(memory)::numeric, 1) AS memory_avg
+          FROM track_rating_details
+          WHERE track_id = t.id AND rating_type = 'judge'
+        ) judge_detail_stats ON true
       ),
       rating_base AS (
         SELECT *

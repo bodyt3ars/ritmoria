@@ -428,14 +428,14 @@
   top: 0;
   z-index: 10000;
   display: none;
-  width: 268px;
+  width: 250px;
   max-width: calc(100vw - 32px);
-  padding: 10px 12px 11px;
-  border: 1px solid rgba(72,139,255,0.62);
-  border-radius: 9px;
+  padding: 11px 12px 12px;
+  border: 1px solid rgba(240,168,202,0.28);
+  border-radius: 10px;
   background:
-    linear-gradient(180deg, rgba(25,27,35,0.98), rgba(11,11,15,0.98));
-  box-shadow: 0 14px 34px rgba(0,0,0,0.38), 0 0 0 1px rgba(240,168,202,0.06) inset;
+    linear-gradient(180deg, rgba(33,24,34,0.98), rgba(13,11,16,0.98));
+  box-shadow: 0 16px 38px rgba(0,0,0,0.44), 0 0 0 1px rgba(255,255,255,0.04) inset;
   color: #fff;
   opacity: 0;
   transform: translateY(5px) scale(0.99);
@@ -452,9 +452,9 @@
   bottom: -7px;
   width: 12px;
   height: 12px;
-  border-right: 1px solid rgba(72,139,255,0.62);
-  border-bottom: 1px solid rgba(72,139,255,0.62);
-  background: rgba(12,12,17,0.98);
+  border-right: 1px solid rgba(240,168,202,0.28);
+  border-bottom: 1px solid rgba(240,168,202,0.28);
+  background: rgba(13,11,16,0.98);
   transform: translateX(-50%) rotate(45deg);
 }
 
@@ -473,8 +473,8 @@
   bottom: auto;
   border-right: 0;
   border-bottom: 0;
-  border-left: 1px solid rgba(72,139,255,0.62);
-  border-top: 1px solid rgba(72,139,255,0.62);
+  border-left: 1px solid rgba(240,168,202,0.28);
+  border-top: 1px solid rgba(240,168,202,0.28);
 }
 
 .rating-score-tooltip-title {
@@ -486,7 +486,7 @@
 
 .rating-score-tooltip-sub {
   margin-top: 2px;
-  color: rgba(255,255,255,0.54);
+  color: rgba(240,168,202,0.58);
   font-size: 10px;
   font-weight: 800;
 }
@@ -503,14 +503,15 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 6px;
+  padding: 4px 7px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.045);
 }
 
 .rating-score-tooltip-item span {
   display: block;
-  color: rgba(255,255,255,0.56);
+  color: rgba(255,255,255,0.58);
   font-size: 9px;
   font-weight: 800;
   white-space: nowrap;
@@ -518,7 +519,7 @@
 
 .rating-score-tooltip-item strong {
   display: block;
-  color: #7da7ff;
+  color: #f0a8ca;
   font-size: 13px;
   line-height: 1;
   font-weight: 950;
@@ -527,7 +528,7 @@
 .rating-score-tooltip-item:nth-child(4) strong,
 .rating-score-tooltip-item:nth-child(5) strong,
 .rating-score-tooltip-item:nth-child(6) strong {
-  color: #c079ff;
+  color: #d9b1ff;
 }
 
 .rating-score-tooltip-empty {
