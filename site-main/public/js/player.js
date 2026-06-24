@@ -1273,6 +1273,11 @@
                   <span id="gp-remix-label">AI Remix</span>
                 </button>
               </div>
+
+              <button id="gp-beat-rush" class="gp-beat-rush-btn" type="button" title="Beat Rush">
+                <i class="fa-solid fa-gamepad"></i>
+                <span>Beat Rush</span>
+              </button>
             </div>
 
             <div class="gp-progress-row">
@@ -1457,6 +1462,7 @@
     const remixBtn = document.getElementById("gp-remix");
     const remixMenu = document.getElementById("gp-remix-menu");
     const remixOptions = Array.from(document.querySelectorAll("[data-remix-preset]"));
+    const beatRushBtn = document.getElementById("gp-beat-rush");
     const progress = document.getElementById("gp-progress");
     const volume = document.getElementById("gp-volume");
     const volumeToggleBtn = document.getElementById("gp-volume-toggle");
@@ -2250,6 +2256,10 @@
 
     queueBtn?.addEventListener("click", () => {
       toggleQueuePanel("queue");
+    });
+
+    beatRushBtn?.addEventListener("click", () => {
+      window.openBeatRush?.();
     });
 
     remixBtn?.addEventListener("click", (e) => {

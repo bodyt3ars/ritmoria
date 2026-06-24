@@ -827,6 +827,102 @@ function getDayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
+const BEAT_RUSH_DIFFICULTIES = {
+  easy: {
+    label: "Легкая",
+    noteChance: 0.58,
+    maxXp: 20,
+    lanePatternOffset: 1
+  },
+  medium: {
+    label: "Средняя",
+    noteChance: 0.82,
+    maxXp: 40,
+    lanePatternOffset: 2
+  },
+  hard: {
+    label: "Тяжелая",
+    noteChance: 1,
+    maxXp: 70,
+    lanePatternOffset: 3
+  }
+};
+
+function normalizeBeatRushDifficulty(value) {
+  const difficulty = String(value || "medium").trim().toLowerCase();
+  return BEAT_RUSH_DIFFICULTIES[difficulty] ? difficulty : "medium";
+}
+
+function normalizeBeatRushBpm(value) {
+  const bpm = Math.round(Number(value || 0));
+  if (!Number.isFinite(bpm) || bpm < 60 || bpm > 220) return 120;
+  return bpm;
+}
+
+function createBeatRushBeatmap({ trackId, bpm = 120, difficulty = "medium", duration = 120 } = {}) {
+  const safeDifficulty = normalizeBeatRushDifficulty(difficulty);
+  const config = BEAT_RUSH_DIFFICULTIES[safeDifficulty];
+  const safeBpm = normalizeBeatRushBpm(bpm);
+  const beatMs = 60000 / safeBpm;
+  const safeDuration = Math.max(35, Math.min(540, Number(duration || 120)));
+  const endMs = Math.max(18000, (safeDuration * 1000) - 1600);
+  const startMs = 1800;
+  const notes = [];
+  let previousLane = -1;
+
+  for (let time = startMs; time < endMs; time += beatMs) {
+    const beatIndex = notes.length;
+    const wave = Math.sin((beatIndex + Number(trackId || 0)) * 1.618);
+    const chanceGate = ((wave + 1) / 2);
+    const shouldPlace = safeDifficulty === "hard" || chanceGate <= config.noteChance || beatIndex % 4 === 0;
+
+    if (!shouldPlace) continue;
+
+    let lane = Math.abs(
+      Math.floor((beatIndex * config.lanePatternOffset + Number(trackId || 0) + Math.round(wave * 10)) % 4)
+    );
+
+    if (lane === previousLane && beatIndex % 3 !== 0) {
+      lane = (lane + 1 + (beatIndex % 2)) % 4;
+    }
+
+    notes.push({
+      id: notes.length + 1,
+      time: Math.round(time),
+      lane
+    });
+    previousLane = lane;
+
+    if (safeDifficulty === "hard" && beatIndex % 8 === 3 && time + beatMs * 0.5 < endMs) {
+      notes.push({
+        id: notes.length + 1,
+        time: Math.round(time + beatMs * 0.5),
+        lane: (lane + 2) % 4
+      });
+    }
+  }
+
+  return {
+    version: 1,
+    generated: true,
+    bpm: safeBpm,
+    difficulty: safeDifficulty,
+    lanes: 4,
+    keys: ["A", "S", "D", "F"],
+    notes
+  };
+}
+
+function getBeatRushXpAmount(difficulty, score, accuracy) {
+  const safeDifficulty = normalizeBeatRushDifficulty(difficulty);
+  const maxXp = BEAT_RUSH_DIFFICULTIES[safeDifficulty].maxXp;
+  const safeScore = Math.max(0, Number(score || 0));
+  const safeAccuracy = Math.max(0, Math.min(100, Number(accuracy || 0)));
+  const scoreFactor = Math.min(1, safeScore / 60000);
+  const accuracyFactor = safeAccuracy / 100;
+  return Math.max(0, Math.min(maxXp, Math.round(maxXp * (0.35 * scoreFactor + 0.65 * accuracyFactor))));
+}
+
 async function ensureXPSystemSchema() {
   await pool.query(`
     ALTER TABLE users
@@ -2527,6 +2623,140 @@ async function ensureProfileTrackRatingsSchema() {
     CREATE INDEX IF NOT EXISTS idx_profile_track_rating_details_track
       ON profile_track_rating_details(profile_track_id, rating_type);
   `);
+}
+
+async function ensureBeatRushSchema() {
+  await pool.query(`
+    ALTER TABLE user_tracks
+      ADD COLUMN IF NOT EXISTS bpm integer,
+      ADD COLUMN IF NOT EXISTS beatmap jsonb;
+
+    CREATE TABLE IF NOT EXISTS beat_rush_scores (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      track_id INTEGER REFERENCES user_tracks(id) ON DELETE CASCADE,
+      difficulty VARCHAR(20) NOT NULL,
+      score INTEGER NOT NULL DEFAULT 0,
+      accuracy NUMERIC(5,2) NOT NULL DEFAULT 0,
+      combo INTEGER NOT NULL DEFAULT 0,
+      xp_earned INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_beat_rush_scores_track_difficulty
+      ON beat_rush_scores(track_id, difficulty, score DESC, accuracy DESC, combo DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_beat_rush_scores_user_daily
+      ON beat_rush_scores(user_id, track_id, difficulty, created_at DESC);
+  `);
+}
+
+async function resolveBeatRushTrack(rawTrackId) {
+  const trackId = Number(rawTrackId || 0);
+  if (!trackId) return null;
+
+  const profileTrackRes = await pool.query(
+    `
+    SELECT
+      ut.id,
+      ut.user_id,
+      ut.title,
+      ut.artist,
+      ut.cover,
+      ut.audio,
+      ut.soundcloud,
+      ut.bpm,
+      ut.beatmap,
+      ut.created_at
+    FROM user_tracks ut
+    WHERE ut.id = $1
+      AND COALESCE(ut.is_archived, false) = false
+    LIMIT 1
+    `,
+    [trackId]
+  );
+
+  if (profileTrackRes.rows.length) {
+    return profileTrackRes.rows[0];
+  }
+
+  const queueTrackRes = await pool.query(
+    `
+    SELECT
+      ut.id,
+      ut.user_id,
+      ut.title,
+      ut.artist,
+      ut.cover,
+      ut.audio,
+      ut.soundcloud,
+      ut.bpm,
+      ut.beatmap,
+      ut.created_at
+    FROM tracks t
+    JOIN user_tracks ut ON ut.user_id = t.user_id
+      AND COALESCE(ut.is_archived, false) = false
+      AND (
+        (t.audio IS NOT NULL AND ut.audio = t.audio)
+        OR (t.soundcloud IS NOT NULL AND ut.soundcloud = t.soundcloud)
+        OR (
+          LOWER(COALESCE(ut.title, '')) = LOWER(COALESCE(t.title, ''))
+          AND LOWER(COALESCE(ut.artist, '')) = LOWER(COALESCE(t.artist, ''))
+        )
+      )
+    WHERE t.id = $1
+    ORDER BY
+      CASE
+        WHEN t.audio IS NOT NULL AND ut.audio = t.audio THEN 0
+        WHEN t.soundcloud IS NOT NULL AND ut.soundcloud = t.soundcloud THEN 1
+        ELSE 2
+      END,
+      ut.created_at DESC
+    LIMIT 1
+    `,
+    [trackId]
+  );
+
+  return queueTrackRes.rows[0] || null;
+}
+
+function getBeatRushBeatmapForDifficulty(track, difficulty, duration) {
+  const safeDifficulty = normalizeBeatRushDifficulty(difficulty);
+  const storedBeatmap = track?.beatmap && typeof track.beatmap === "object" ? track.beatmap : {};
+  const byDifficulty = storedBeatmap.byDifficulty && typeof storedBeatmap.byDifficulty === "object"
+    ? storedBeatmap.byDifficulty
+    : {};
+
+  const existing = byDifficulty[safeDifficulty];
+  if (existing?.notes?.length) {
+    return {
+      beatmap: {
+        ...existing,
+        bpm: normalizeBeatRushBpm(existing.bpm || track.bpm),
+        difficulty: safeDifficulty
+      },
+      nextStorage: null
+    };
+  }
+
+  const generated = createBeatRushBeatmap({
+    trackId: track?.id,
+    bpm: track?.bpm,
+    difficulty: safeDifficulty,
+    duration
+  });
+
+  return {
+    beatmap: generated,
+    nextStorage: {
+      ...storedBeatmap,
+      version: 1,
+      byDifficulty: {
+        ...byDifficulty,
+        [safeDifficulty]: generated
+      }
+    }
+  };
 }
 
 async function ensureMentionsSchema() {
@@ -4259,6 +4489,176 @@ app.get("/api/public-playlists", async (req, res) => {
   } catch (err) {
     console.error("PUBLIC PLAYLISTS LOAD ERROR:", err);
     res.status(500).json({ error: "public_playlists_load_failed" });
+  }
+});
+
+app.get("/api/beat-rush/beatmap/:trackId", async (req, res) => {
+  try {
+    const difficulty = normalizeBeatRushDifficulty(req.query.difficulty);
+    const duration = Number(req.query.duration || 0);
+    const track = await resolveBeatRushTrack(req.params.trackId);
+
+    if (!track) {
+      return res.status(404).json({ error: "track_not_found" });
+    }
+
+    if (!track.audio) {
+      return res.status(400).json({ error: "audio_track_required" });
+    }
+
+    const safeBpm = normalizeBeatRushBpm(track.bpm);
+    if (!track.bpm || Number(track.bpm) !== safeBpm) {
+      await pool.query(
+        "UPDATE user_tracks SET bpm = $1 WHERE id = $2",
+        [safeBpm, track.id]
+      );
+      track.bpm = safeBpm;
+    }
+
+    const { beatmap, nextStorage } = getBeatRushBeatmapForDifficulty(track, difficulty, duration);
+
+    if (nextStorage) {
+      await pool.query(
+        "UPDATE user_tracks SET beatmap = $1::jsonb WHERE id = $2",
+        [JSON.stringify(nextStorage), track.id]
+      );
+    }
+
+    res.json({
+      track: {
+        id: Number(track.id),
+        title: track.title || "Без названия",
+        artist: track.artist || "Артист",
+        cover: track.cover || "/images/default-cover.jpg",
+        audio: track.audio || "",
+        bpm: safeBpm
+      },
+      difficulty,
+      beatmap
+    });
+  } catch (err) {
+    console.error("BEAT RUSH BEATMAP ERROR:", err);
+    res.status(500).json({ error: "beat_rush_beatmap_failed" });
+  }
+});
+
+app.get("/api/beat-rush/top/:trackId", async (req, res) => {
+  try {
+    const track = await resolveBeatRushTrack(req.params.trackId);
+    if (!track) {
+      return res.json({ track_id: null, scores: { easy: [], medium: [], hard: [] } });
+    }
+
+    const result = await pool.query(
+      `
+      WITH ranked_scores AS (
+        SELECT
+          brs.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY brs.difficulty
+            ORDER BY brs.score DESC, brs.accuracy DESC, brs.combo DESC, brs.created_at ASC
+          ) AS rank_position
+        FROM beat_rush_scores brs
+        WHERE brs.track_id = $1
+          AND brs.difficulty IN ('easy', 'medium', 'hard')
+      )
+      SELECT
+        brs.difficulty,
+        brs.score,
+        brs.accuracy,
+        brs.combo,
+        brs.xp_earned,
+        brs.created_at,
+        u.username,
+        u.username_tag,
+        u.avatar
+      FROM ranked_scores brs
+      JOIN users u ON u.id = brs.user_id
+      WHERE brs.rank_position <= 5
+      ORDER BY brs.difficulty ASC, brs.rank_position ASC
+      `,
+      [track.id]
+    );
+
+    const scores = { easy: [], medium: [], hard: [] };
+    result.rows.forEach((row) => {
+      const difficulty = normalizeBeatRushDifficulty(row.difficulty);
+      if (scores[difficulty].length >= 5) return;
+
+      scores[difficulty].push({
+        score: Number(row.score || 0),
+        accuracy: Number(row.accuracy || 0),
+        combo: Number(row.combo || 0),
+        xp_earned: Number(row.xp_earned || 0),
+        created_at: row.created_at,
+        user: {
+          username: row.username || row.username_tag || "Игрок",
+          username_tag: row.username_tag || "",
+          avatar: row.avatar || ""
+        }
+      });
+    });
+
+    res.json({
+      track_id: Number(track.id),
+      scores
+    });
+  } catch (err) {
+    console.error("BEAT RUSH TOP ERROR:", err);
+    res.status(500).json({ error: "beat_rush_top_failed" });
+  }
+});
+
+app.post("/api/beat-rush/score", authMiddleware, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const track = await resolveBeatRushTrack(req.body?.trackId);
+    const difficulty = normalizeBeatRushDifficulty(req.body?.difficulty);
+    const score = Math.max(0, Math.min(9999999, Math.round(Number(req.body?.score || 0))));
+    const accuracy = Math.max(0, Math.min(100, Number(req.body?.accuracy || 0)));
+    const combo = Math.max(0, Math.min(99999, Math.round(Number(req.body?.combo || 0))));
+
+    if (!track) {
+      return res.status(404).json({ error: "track_not_found" });
+    }
+
+    const plannedXp = getBeatRushXpAmount(difficulty, score, accuracy);
+    const dayKey = getDayKey();
+    const xpState = await awardXP(userId, "beat_rush_score", {
+      amount: plannedXp,
+      eventKey: `beat-rush:${track.id}:${difficulty}:${dayKey}`,
+      meta: {
+        trackId: Number(track.id),
+        difficulty,
+        score,
+        accuracy,
+        combo
+      }
+    });
+    const xpEarned = Number(xpState?.gainedXP || 0);
+
+    await pool.query(
+      `
+      INSERT INTO beat_rush_scores (user_id, track_id, difficulty, score, accuracy, combo, xp_earned)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `,
+      [userId, track.id, difficulty, score, accuracy.toFixed(2), combo, xpEarned]
+    );
+
+    res.json({
+      success: true,
+      track_id: Number(track.id),
+      difficulty,
+      score,
+      accuracy: Number(accuracy.toFixed(2)),
+      combo,
+      xp_earned: xpEarned,
+      xp_already_claimed_today: plannedXp > 0 && xpEarned === 0,
+      ...getXpPayload(xpState)
+    });
+  } catch (err) {
+    console.error("BEAT RUSH SCORE ERROR:", err);
+    res.status(500).json({ error: "beat_rush_score_failed" });
   }
 });
 
@@ -13551,6 +13951,7 @@ await ensureTrackCommentsSchema();
 await ensureTrackActionsSchema();
 await ensureTrackRepostSchema();
 await ensureProfileTrackRatingsSchema();
+await ensureBeatRushSchema();
 await ensureMentionsSchema();
 await ensureHomeNewsSchema();
 await ensureUserBadgeSchema();

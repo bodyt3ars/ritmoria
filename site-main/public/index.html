@@ -85,6 +85,7 @@
   <link rel="stylesheet" href="/styles/base.css">
   <link rel="stylesheet" href="/styles/navbar.css">
   <link rel="stylesheet" href="/styles/themes.css">
+  <link rel="stylesheet" href="/styles/beatRush.css?v=20260625-beat-rush">
   <link rel="stylesheet" href="/styles/mobile-fixes.css?v=20260611-authmenu3">
   <style>
     body.boot-loading #navbar,
@@ -144,7 +145,7 @@
   <script src="https://unpkg.com/wavesurfer.js"></script>
 
   <script type="module">
-    import { renderPage } from "/js/router.js?v=20260622-messages-compact";
+    import { renderPage } from "/js/router.js?v=20260625-beat-rush";
     renderPage(location.pathname + location.search);
   </script>
 
@@ -152,7 +153,8 @@
   <div class="spinner"></div>
 </div>
 
-<script src="/js/player.js?v=20260621-ai-remix-ui"></script>
+<script src="/js/beatRush.js?v=20260625-beat-rush"></script>
+<script src="/js/player.js?v=20260625-beat-rush"></script>
 
 <script>
 window.addEventListener("load", () => {

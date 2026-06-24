@@ -71,6 +71,15 @@ function initTrackPage() {
     return `${m}:${s < 10 ? "0" + s : s}`;
   }
 
+  function escapeTrackHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   function resetPlayerUI() {
     playBtn.classList.remove("playing");
     progress.style.width = "0%";
@@ -360,6 +369,62 @@ function initTrackPage() {
     });
   }
 
+  async function loadBeatRushTop(track) {
+    const container = document.getElementById("beatRushTop");
+    if (!container) return;
+
+    const targetTrackId = Number(track?.comment_track_id || track?.id || trackId || 0);
+    if (!targetTrackId) {
+      container.innerHTML = `<div class="track-page-beat-empty">Результатов пока нет.</div>`;
+      return;
+    }
+
+    container.innerHTML = `<div class="track-page-beat-empty">Загружаем топ игроков...</div>`;
+
+    try {
+      const res = await fetch(`/api/beat-rush/top/${encodeURIComponent(targetTrackId)}`, {
+        cache: "no-store"
+      });
+      if (!res.ok) throw new Error("beat rush top failed");
+
+      const data = await res.json();
+      const groups = [
+        { id: "easy", title: "Легкая", stars: "⭐" },
+        { id: "medium", title: "Средняя", stars: "⭐⭐" },
+        { id: "hard", title: "Тяжелая", stars: "⭐⭐⭐" }
+      ];
+
+      container.innerHTML = groups.map((group) => {
+        const rows = Array.isArray(data?.scores?.[group.id]) ? data.scores[group.id] : [];
+        return `
+          <section class="track-page-beat-card">
+            <div class="track-page-beat-card-head">
+              <span>${group.stars}</span>
+              <strong>${group.title}</strong>
+            </div>
+            ${
+              rows.length
+                ? rows.map((row, index) => `
+                  <div class="track-page-beat-row">
+                    <div class="track-page-beat-rank">#${index + 1}</div>
+                    <div class="track-page-beat-user">
+                      <strong>${escapeTrackHtml(row.user?.username || row.user?.username_tag || "Игрок")}</strong>
+                      <span>${Number(row.accuracy || 0).toFixed(1)}% · combo ${Number(row.combo || 0)}</span>
+                    </div>
+                    <div class="track-page-beat-score">${new Intl.NumberFormat("ru-RU").format(Number(row.score || 0))}</div>
+                  </div>
+                `).join("")
+                : `<div class="track-page-beat-empty small">Пока нет забегов</div>`
+            }
+          </section>
+        `;
+      }).join("");
+    } catch (err) {
+      console.error("Beat Rush top load error:", err);
+      container.innerHTML = `<div class="track-page-beat-empty">Не удалось загрузить топ Beat Rush.</div>`;
+    }
+  }
+
   async function loadTrack() {
     try {
       const res = await fetch(`/api/tracks/${trackId}`, {
@@ -392,6 +457,7 @@ function initTrackPage() {
       playerArtist.textContent = track.artist || "Неизвестный артист";
 
       renderCriteria(track);
+      loadBeatRushTop(track);
       resetPlayerUI();
 
       if (!commentsController && typeof window.createTrackCommentsController === "function") {

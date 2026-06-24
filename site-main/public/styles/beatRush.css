@@ -1,0 +1,555 @@
+body.beat-rush-open {
+  overflow: hidden;
+}
+
+.beat-rush-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000000;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  color: #fff;
+}
+
+.beat-rush-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(216, 124, 190, 0.24), transparent 32%),
+    radial-gradient(circle at 82% 24%, rgba(105, 121, 255, 0.18), transparent 30%),
+    linear-gradient(135deg, rgba(5, 5, 10, 0.88), rgba(17, 9, 19, 0.92));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.beat-rush-modal {
+  position: relative;
+  width: min(1180px, 96vw);
+  height: min(760px, 92vh);
+  border: 1px solid rgba(255, 214, 235, 0.16);
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(22, 20, 28, 0.86), rgba(31, 14, 29, 0.84)),
+    rgba(10, 10, 16, 0.78);
+  box-shadow:
+    0 28px 100px rgba(0, 0, 0, 0.66),
+    0 0 48px rgba(208, 117, 184, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.beat-rush-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 84%);
+  pointer-events: none;
+}
+
+.beat-rush-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 5;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.beat-rush-close:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 159, 211, 0.18);
+  box-shadow: 0 0 22px rgba(220, 122, 190, 0.22);
+}
+
+.beat-rush-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+}
+
+.beat-rush-empty,
+.beat-rush-start,
+.beat-rush-result {
+  min-height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 24px;
+  padding: 56px;
+  text-align: center;
+}
+
+.beat-rush-empty-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  background: linear-gradient(135deg, rgba(218, 128, 205, 0.34), rgba(91, 116, 255, 0.24));
+  box-shadow: 0 0 38px rgba(218, 128, 205, 0.26);
+}
+
+.beat-rush-empty-icon.pulse {
+  animation: beatRushPulse 1.1s ease-in-out infinite;
+}
+
+.beat-rush-empty h2,
+.beat-rush-start h2,
+.beat-rush-result h2 {
+  margin: 0;
+  font-size: clamp(34px, 5vw, 68px);
+  line-height: 0.95;
+  font-family: "Dela Gothic One", "IBM Plex Sans", sans-serif;
+  letter-spacing: 0;
+}
+
+.beat-rush-empty p,
+.beat-rush-start p,
+.beat-rush-note-text {
+  max-width: 560px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 16px;
+}
+
+.beat-rush-kicker {
+  color: #f3a8d1;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+
+.beat-rush-hero {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
+.beat-rush-track-card {
+  width: min(520px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+
+.beat-rush-track-card img,
+.beat-rush-game-track img {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  object-fit: cover;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.36);
+}
+
+.beat-rush-track-card span,
+.beat-rush-game-track span,
+.beat-rush-result-grid span,
+.beat-rush-stats span {
+  display: block;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.beat-rush-track-card strong,
+.beat-rush-game-track strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 18px;
+}
+
+.beat-rush-track-card small,
+.beat-rush-game-track small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.beat-rush-difficulty-grid {
+  width: min(820px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.beat-rush-difficulty {
+  min-height: 154px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.04);
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.beat-rush-difficulty:hover {
+  transform: translateY(-4px);
+  border-color: rgba(247, 153, 213, 0.44);
+  background:
+    linear-gradient(150deg, rgba(214, 122, 202, 0.22), rgba(88, 116, 255, 0.12)),
+    rgba(255, 255, 255, 0.06);
+  box-shadow: 0 18px 50px rgba(211, 112, 191, 0.18);
+}
+
+.beat-rush-difficulty span {
+  font-size: 22px;
+}
+
+.beat-rush-difficulty strong {
+  display: block;
+  margin-top: 18px;
+  font-size: 22px;
+}
+
+.beat-rush-difficulty small {
+  display: block;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.35;
+}
+
+.beat-rush-primary,
+.beat-rush-secondary {
+  min-width: 150px;
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  color: #fff;
+  font-weight: 800;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.beat-rush-primary {
+  background: linear-gradient(135deg, #d777bd, #7d8cff);
+  box-shadow: 0 14px 38px rgba(213, 113, 190, 0.28);
+}
+
+.beat-rush-secondary {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.beat-rush-primary:hover,
+.beat-rush-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 44px rgba(213, 113, 190, 0.2);
+}
+
+.beat-rush-game {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 5px 1fr;
+  gap: 18px;
+  padding: 26px;
+}
+
+.beat-rush-game-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-right: 56px;
+}
+
+.beat-rush-game-track {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.beat-rush-stats,
+.beat-rush-result-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.beat-rush-stats > div,
+.beat-rush-result-grid > div {
+  min-width: 108px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.beat-rush-stats strong,
+.beat-rush-result-grid strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 23px;
+  color: #fff;
+}
+
+.beat-rush-progress {
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.beat-rush-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f08cc9, #8092ff);
+  box-shadow: 0 0 18px rgba(235, 139, 205, 0.5);
+}
+
+.beat-rush-stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 100%, rgba(226, 122, 199, 0.17), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+}
+
+.beat-rush-lanes {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.beat-rush-lane {
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.beat-rush-lane:first-child {
+  border-left: 0;
+}
+
+.beat-rush-lane.pressed {
+  background: linear-gradient(180deg, transparent, rgba(255, 160, 217, 0.11));
+}
+
+.beat-rush-lane-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, transparent, rgba(255, 164, 220, 0.32), transparent);
+}
+
+.beat-rush-key {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 22px;
+  font-weight: 900;
+  box-shadow:
+    0 0 26px rgba(236, 135, 204, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.beat-rush-hitline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 83px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ef92cf, #8d9bff, transparent);
+  box-shadow: 0 0 22px rgba(239, 146, 207, 0.55);
+}
+
+.beat-rush-note {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 24%, #fff, transparent 24%),
+    linear-gradient(135deg, #f190d0, #7e8fff);
+  box-shadow:
+    0 0 24px rgba(240, 144, 208, 0.62),
+    0 12px 28px rgba(0, 0, 0, 0.32);
+  will-change: transform, opacity;
+}
+
+.beat-rush-note.hit {
+  animation: beatRushHit 0.18s ease forwards;
+}
+
+.beat-rush-note.missed {
+  animation: beatRushMiss 0.16s ease forwards;
+}
+
+.beat-rush-feedback {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%) scale(0.9);
+  opacity: 0;
+  font-family: "Dela Gothic One", "IBM Plex Sans", sans-serif;
+  font-size: clamp(34px, 5vw, 64px);
+  letter-spacing: 0;
+  pointer-events: none;
+  text-shadow: 0 0 28px rgba(255, 255, 255, 0.22);
+}
+
+.beat-rush-feedback.show {
+  animation: beatRushFeedback 0.22s ease forwards;
+}
+
+.beat-rush-feedback.perfect {
+  color: #ffb8df;
+}
+
+.beat-rush-feedback.good {
+  color: #95a5ff;
+}
+
+.beat-rush-feedback.miss {
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.beat-rush-result-grid {
+  width: min(760px, 100%);
+  position: relative;
+}
+
+.beat-rush-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+@keyframes beatRushPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.07);
+    opacity: 1;
+  }
+}
+
+@keyframes beatRushHit {
+  to {
+    transform: translate(-50%, 92%) scale(2.1);
+    opacity: 0;
+  }
+}
+
+@keyframes beatRushMiss {
+  to {
+    transform: translate(-50%, 104%) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes beatRushFeedback {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -54%) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .beat-rush-overlay {
+    padding: 14px;
+  }
+
+  .beat-rush-modal {
+    height: 94vh;
+  }
+
+  .beat-rush-difficulty-grid,
+  .beat-rush-stats,
+  .beat-rush-result-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .beat-rush-game-head {
+    align-items: stretch;
+    flex-direction: column;
+    padding-right: 48px;
+  }
+
+  .beat-rush-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .beat-rush-empty,
+  .beat-rush-start,
+  .beat-rush-result {
+    padding: 38px 20px;
+  }
+}
+
+@media (max-width: 620px) {
+  .beat-rush-game {
+    padding: 18px;
+  }
+
+  .beat-rush-key {
+    width: 46px;
+    height: 46px;
+    bottom: 18px;
+    border-radius: 14px;
+    font-size: 18px;
+  }
+
+  .beat-rush-hitline {
+    bottom: 64px;
+  }
+
+  .beat-rush-note {
+    width: 34px;
+    height: 34px;
+  }
+}
