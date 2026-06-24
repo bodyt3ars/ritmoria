@@ -379,6 +379,10 @@
   box-shadow: 0 12px 24px rgba(54,109,219,0.16);
 }
 
+.rating-track-row .rating-score-tooltip {
+  display: none !important;
+}
+
 .rating-score-pill.is-main {
   background: linear-gradient(135deg, #d873a9, #346fdb);
   box-shadow: 0 10px 24px rgba(52, 111, 219, 0.22);
@@ -419,10 +423,10 @@
 }
 
 .rating-score-tooltip {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 10px);
-  z-index: 20;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 10000;
   display: none;
   width: 268px;
   max-width: calc(100vw - 32px);
@@ -435,7 +439,7 @@
   color: #fff;
   opacity: 0;
   transform: translateY(5px) scale(0.99);
-  transform-origin: right bottom;
+  transform-origin: center bottom;
   transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
   visibility: hidden;
   pointer-events: none;
@@ -444,22 +448,33 @@
 .rating-score-tooltip::after {
   content: "";
   position: absolute;
-  right: 24px;
+  left: 50%;
   bottom: -7px;
   width: 12px;
   height: 12px;
   border-right: 1px solid rgba(72,139,255,0.62);
   border-bottom: 1px solid rgba(72,139,255,0.62);
   background: rgba(12,12,17,0.98);
-  transform: rotate(45deg);
+  transform: translateX(-50%) rotate(45deg);
 }
 
-.rating-score-trigger:hover > .rating-score-tooltip,
-.rating-score-trigger:focus-visible > .rating-score-tooltip {
-  display: block !important;
+.rating-score-tooltip.is-visible {
   opacity: 1;
   transform: translateY(0) scale(1);
   visibility: visible;
+}
+
+.rating-score-tooltip.is-below {
+  transform-origin: center top;
+}
+
+.rating-score-tooltip.is-below::after {
+  top: -7px;
+  bottom: auto;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 1px solid rgba(72,139,255,0.62);
+  border-top: 1px solid rgba(72,139,255,0.62);
 }
 
 .rating-score-tooltip-title {
@@ -608,15 +623,8 @@
   }
 
   .rating-score-tooltip {
-    left: 0;
-    right: auto;
     width: min(318px, calc(100vw - 28px));
     transform-origin: left bottom;
-  }
-
-  .rating-score-tooltip::after {
-    left: 24px;
-    right: auto;
   }
 
   .rating-play-btn {

@@ -5,6 +5,7 @@ let ratingSearchTimer = null;
 let ratingLimit = 20;
 let ratingTracksById = new Map();
 let ratingEventsAbortController = null;
+let ratingScoreTooltipEl = null;
 
 const RATING_DETAIL_CRITERIA = [
   { key: "rhymes_avg", label: "Рифмы" },
@@ -39,37 +40,81 @@ function ratingHasDetailScores(track) {
   return RATING_DETAIL_CRITERIA.some((item) => Number(track?.[item.key] || 0) > 0);
 }
 
-function ratingRenderScoreTooltip(track) {
+function ratingBuildScoreTooltipHtml(track) {
   if (!ratingHasDetailScores(track)) {
     return `
-      <div class="rating-score-tooltip" role="tooltip" style="display:none">
-        <div class="rating-score-tooltip-title">Подробные оценки</div>
-        <div class="rating-score-tooltip-empty">Детальных критериев пока нет</div>
-      </div>
+      <div class="rating-score-tooltip-title">Подробные оценки</div>
+      <div class="rating-score-tooltip-empty">Детальных критериев пока нет</div>
     `;
   }
 
   return `
-    <div class="rating-score-tooltip" role="tooltip" style="display:none">
-      <div class="rating-score-tooltip-title">Средние оценки по критериям</div>
-      <div class="rating-score-tooltip-sub">${ratingFormatCount(track.details_count)} рецензий от судей и пользователей</div>
-      <div class="rating-score-tooltip-grid">
-        ${RATING_DETAIL_CRITERIA.map((item) => `
-          <div class="rating-score-tooltip-item">
-            <span>${ratingEscapeHtml(item.label)}</span>
-            <strong>${ratingEscapeHtml(ratingFormatScore(track[item.key]))}</strong>
-          </div>
-        `).join("")}
-      </div>
+    <div class="rating-score-tooltip-title">Средние оценки по критериям</div>
+    <div class="rating-score-tooltip-sub">${ratingFormatCount(track.details_count)} рецензий от судей и пользователей</div>
+    <div class="rating-score-tooltip-grid">
+      ${RATING_DETAIL_CRITERIA.map((item) => `
+        <div class="rating-score-tooltip-item">
+          <span>${ratingEscapeHtml(item.label)}</span>
+          <strong>${ratingEscapeHtml(ratingFormatScore(track[item.key]))}</strong>
+        </div>
+      `).join("")}
     </div>
   `;
 }
 
+function ratingGetScoreTooltipElement() {
+  if (ratingScoreTooltipEl?.isConnected) return ratingScoreTooltipEl;
+
+  ratingScoreTooltipEl = document.createElement("div");
+  ratingScoreTooltipEl.className = "rating-score-tooltip";
+  ratingScoreTooltipEl.setAttribute("role", "tooltip");
+  ratingScoreTooltipEl.style.display = "none";
+  document.body.appendChild(ratingScoreTooltipEl);
+  return ratingScoreTooltipEl;
+}
+
+function ratingPositionScoreTooltip(trigger, tooltip) {
+  const rect = trigger.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const margin = 12;
+  const preferredLeft = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+  const left = Math.max(margin, Math.min(preferredLeft, window.innerWidth - tooltipRect.width - margin));
+  const aboveTop = rect.top - tooltipRect.height - 10;
+  const showBelow = aboveTop < margin;
+  const top = showBelow ? rect.bottom + 10 : aboveTop;
+
+  tooltip.classList.toggle("is-below", showBelow);
+  tooltip.style.left = `${Math.round(left)}px`;
+  tooltip.style.top = `${Math.round(top)}px`;
+}
+
+function ratingShowScoreTooltip(trigger) {
+  const trackId = Number(trigger?.dataset.ratingScoreTrackId || 0);
+  const track = ratingTracksById.get(trackId);
+  if (!track) return;
+
+  const tooltip = ratingGetScoreTooltipElement();
+  tooltip.innerHTML = ratingBuildScoreTooltipHtml(track);
+  tooltip.style.display = "block";
+  tooltip.classList.remove("is-visible");
+
+  requestAnimationFrame(() => {
+    ratingPositionScoreTooltip(trigger, tooltip);
+    tooltip.classList.add("is-visible");
+  });
+}
+
+function ratingHideScoreTooltip() {
+  if (!ratingScoreTooltipEl) return;
+
+  ratingScoreTooltipEl.classList.remove("is-visible");
+  ratingScoreTooltipEl.style.display = "none";
+}
+
 function ratingRenderScoreTrigger(track, { className = "", value, label }) {
   return `
-    <span class="rating-score-trigger" tabindex="0" aria-label="${ratingEscapeHtml(label)}">
+    <span class="rating-score-trigger" tabindex="0" aria-label="${ratingEscapeHtml(label)}" data-rating-score-trigger data-rating-score-track-id="${Number(track.id)}">
       <span class="rating-score-pill ${ratingEscapeHtml(className)}">${ratingEscapeHtml(ratingFormatScore(value))}</span>
-      ${ratingRenderScoreTooltip(track)}
     </span>
   `;
 }
@@ -426,6 +471,29 @@ function bindRatingEvents() {
     }
   }, eventOptions);
 
+  els.tracksList?.addEventListener("mouseover", (event) => {
+    const trigger = event.target.closest("[data-rating-score-trigger]");
+    if (!trigger || trigger.contains(event.relatedTarget)) return;
+    ratingShowScoreTooltip(trigger);
+  }, eventOptions);
+
+  els.tracksList?.addEventListener("mouseout", (event) => {
+    const trigger = event.target.closest("[data-rating-score-trigger]");
+    if (!trigger || trigger.contains(event.relatedTarget)) return;
+    ratingHideScoreTooltip();
+  }, eventOptions);
+
+  els.tracksList?.addEventListener("focusin", (event) => {
+    const trigger = event.target.closest("[data-rating-score-trigger]");
+    if (trigger) ratingShowScoreTooltip(trigger);
+  }, eventOptions);
+
+  els.tracksList?.addEventListener("focusout", (event) => {
+    if (event.target.closest("[data-rating-score-trigger]")) {
+      ratingHideScoreTooltip();
+    }
+  }, eventOptions);
+
   [
     "ritmoria:global-player-track-change",
     "ritmoria:global-player-play",
@@ -459,6 +527,8 @@ window.destroyRatingPage = function () {
   ratingSearchTimer = null;
   ratingEventsAbortController?.abort();
   ratingEventsAbortController = null;
+  ratingScoreTooltipEl?.remove();
+  ratingScoreTooltipEl = null;
   ratingTracksById.clear();
   ratingOffset = 0;
   ratingTotal = 0;
