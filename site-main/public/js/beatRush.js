@@ -24,10 +24,10 @@
   };
 
   const LANES = [
-    { key: "w", label: "W" },
-    { key: "a", label: "A" },
-    { key: "s", label: "S" },
-    { key: "d", label: "D" }
+    { key: "w", code: "KeyW", label: "W" },
+    { key: "a", code: "KeyA", label: "A" },
+    { key: "s", code: "KeyS", label: "S" },
+    { key: "d", code: "KeyD", label: "D" }
   ];
 
   let game = null;
@@ -77,6 +77,8 @@
 
     document.body.appendChild(overlay);
     document.body.classList.add("beat-rush-open");
+    overlay.tabIndex = -1;
+    overlay.focus({ preventScroll: true });
 
     overlay.querySelector(".beat-rush-close")?.addEventListener("click", closeBeatRush);
     overlay.querySelector(".beat-rush-backdrop")?.addEventListener("click", closeBeatRush);
@@ -203,6 +205,74 @@
     `;
   }
 
+  function getLaneIndexFromKeyboardEvent(event) {
+    const code = String(event.code || "");
+    const key = String(event.key || "").toLowerCase();
+    const cyrillicKeyMap = {
+      "ц": "w",
+      "ф": "a",
+      "ы": "s",
+      "в": "d"
+    };
+
+    return LANES.findIndex((lane) =>
+      lane.code === code ||
+      lane.key === key ||
+      lane.key === cyrillicKeyMap[key]
+    );
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
+  function setGlobalPlayback(shouldPlay) {
+    const state = getState();
+    if (!state?.track?.id || state.isPlaying === shouldPlay) return;
+    window.toggleGlobalPlayerPlayback?.();
+  }
+
+  async function runCountdown(content, payload) {
+    const difficulty = DIFFICULTIES[payload.difficulty] || DIFFICULTIES.medium;
+    const track = getState()?.track || payload.track || {};
+
+    content.innerHTML = `
+      <div class="beat-rush-countdown">
+        <div class="beat-rush-track-card">
+          <img src="${escapeHtml(track.cover || payload.track?.cover || "/images/default-cover.jpg")}" alt="">
+          <div>
+            <span>Beat Rush</span>
+            <strong>${escapeHtml(track.title || payload.track?.title || "Без названия")}</strong>
+            <small>${escapeHtml(difficulty.label)} · старт с начала трека</small>
+          </div>
+        </div>
+        <div class="beat-rush-count-number" data-countdown-number>3</div>
+        <p>Приготовь пальцы: W A S D</p>
+      </div>
+    `;
+
+    setGlobalPlayback(false);
+    const numberEl = content.querySelector("[data-countdown-number]");
+    const values = ["3", "2", "1", "GO"];
+
+    for (const value of values) {
+      if (!document.body.classList.contains("beat-rush-open")) return false;
+      if (numberEl) {
+        numberEl.textContent = value;
+        numberEl.classList.remove("pop");
+        void numberEl.offsetWidth;
+        numberEl.classList.add("pop");
+      }
+      await sleep(value === "GO" ? 420 : 760);
+    }
+
+    window.seekGlobalPlayer?.(0, "beat-rush-start");
+    await sleep(80);
+    setGlobalPlayback(true);
+    await sleep(120);
+    return true;
+  }
+
   function calculateXpPreview(difficulty, score, accuracy) {
     const maxXp = difficulty === "easy" ? 20 : difficulty === "hard" ? 70 : 40;
     const scoreFactor = Math.min(1, Math.max(0, score) / 60000);
@@ -243,7 +313,8 @@
       miss: 0,
       running: true,
       raf: 0,
-      keyHandler: null
+      keyHandler: null,
+      keyListenerTarget: document
     };
 
     const showFeedback = (text, type) => {
@@ -350,12 +421,13 @@
     game.keyHandler = (event) => {
       const target = event.target;
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") return;
-      const laneIndex = LANES.findIndex((lane) => lane.key === String(event.key || "").toLowerCase());
+      const laneIndex = getLaneIndexFromKeyboardEvent(event);
       if (laneIndex < 0) return;
       event.preventDefault();
+      event.stopPropagation();
       judgeNote(laneIndex);
     };
-    window.addEventListener("keydown", game.keyHandler);
+    document.addEventListener("keydown", game.keyHandler, true);
 
     const finish = () => finishGame(content);
 
@@ -425,6 +497,8 @@
       `;
 
       const payload = await fetchBeatmap(difficulty);
+      const countdownDone = await runCountdown(content, payload);
+      if (!countdownDone) return;
       renderGame(content, payload);
       startLoop(content, payload);
     } catch (err) {
@@ -525,7 +599,9 @@
     if (!game) return;
     game.running = false;
     if (game.raf) cancelAnimationFrame(game.raf);
-    if (game.keyHandler) window.removeEventListener("keydown", game.keyHandler);
+    if (game.keyHandler) {
+      (game.keyListenerTarget || document).removeEventListener("keydown", game.keyHandler, true);
+    }
     game.notes?.forEach((note) => note.el?.remove?.());
     game = null;
   }

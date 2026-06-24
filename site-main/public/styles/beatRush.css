@@ -80,6 +80,7 @@ body.beat-rush-open {
 
 .beat-rush-empty,
 .beat-rush-start,
+.beat-rush-countdown,
 .beat-rush-result {
   min-height: 100%;
   display: grid;
@@ -113,6 +114,39 @@ body.beat-rush-open {
   line-height: 0.95;
   font-family: "Dela Gothic One", "IBM Plex Sans", sans-serif;
   letter-spacing: 0;
+}
+
+.beat-rush-countdown {
+  gap: 22px;
+}
+
+.beat-rush-count-number {
+  width: min(240px, 42vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 190, 231, 0.26);
+  border-radius: 34px;
+  background:
+    linear-gradient(135deg, rgba(244, 139, 209, 0.24), rgba(127, 146, 255, 0.16)),
+    rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-family: "Dela Gothic One", "IBM Plex Sans", sans-serif;
+  font-size: clamp(58px, 10vw, 118px);
+  line-height: 1;
+  box-shadow:
+    0 0 52px rgba(241, 144, 208, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.beat-rush-count-number.pop {
+  animation: beatRushCountdownPop 0.42s ease;
+}
+
+.beat-rush-countdown p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-weight: 800;
 }
 
 .beat-rush-empty p,
@@ -533,6 +567,21 @@ body.beat-rush-open {
   }
   50% {
     transform: scale(1.07);
+    opacity: 1;
+  }
+}
+
+@keyframes beatRushCountdownPop {
+  0% {
+    transform: scale(0.78);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
     opacity: 1;
   }
 }
