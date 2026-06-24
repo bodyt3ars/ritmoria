@@ -335,10 +335,15 @@
 }
 
 .rating-score-group {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 9px;
+  border-radius: 999px;
+}
+
+.rating-score-trigger {
+  position: relative;
+  display: inline-flex;
   border-radius: 999px;
   outline: none;
 }
@@ -358,18 +363,18 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
-.rating-score-group:hover .rating-score-pill,
-.rating-score-group:focus-visible .rating-score-pill {
+.rating-score-trigger:hover .rating-score-pill,
+.rating-score-trigger:focus-visible .rating-score-pill {
   transform: translateY(-1px);
 }
 
-.rating-score-group:hover .rating-score-pill.is-main,
-.rating-score-group:focus-visible .rating-score-pill.is-main {
+.rating-score-trigger:hover .rating-score-pill.is-main,
+.rating-score-trigger:focus-visible .rating-score-pill.is-main {
   box-shadow: 0 14px 30px rgba(216,115,169,0.28);
 }
 
-.rating-score-group:hover .rating-score-pill.is-judge,
-.rating-score-group:focus-visible .rating-score-pill.is-judge {
+.rating-score-trigger:hover .rating-score-pill.is-judge,
+.rating-score-trigger:focus-visible .rating-score-pill.is-judge {
   background: rgba(54, 109, 219, 0.18);
   box-shadow: 0 12px 24px rgba(54,109,219,0.16);
 }
@@ -449,10 +454,9 @@
   transform: rotate(45deg);
 }
 
-.rating-score-group:hover .rating-score-tooltip,
-.rating-score-group:focus-visible .rating-score-tooltip,
-.rating-score-group:focus-within .rating-score-tooltip {
-  display: block;
+.rating-score-trigger:hover > .rating-score-tooltip,
+.rating-score-trigger:focus-visible > .rating-score-tooltip {
+  display: block !important;
   opacity: 1;
   transform: translateY(0) scale(1);
   visibility: visible;

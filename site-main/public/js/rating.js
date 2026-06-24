@@ -42,7 +42,7 @@ function ratingHasDetailScores(track) {
 function ratingRenderScoreTooltip(track) {
   if (!ratingHasDetailScores(track)) {
     return `
-      <div class="rating-score-tooltip" role="tooltip" hidden>
+      <div class="rating-score-tooltip" role="tooltip" style="display:none">
         <div class="rating-score-tooltip-title">Подробные оценки</div>
         <div class="rating-score-tooltip-empty">Детальных критериев пока нет</div>
       </div>
@@ -50,7 +50,7 @@ function ratingRenderScoreTooltip(track) {
   }
 
   return `
-    <div class="rating-score-tooltip" role="tooltip" hidden>
+    <div class="rating-score-tooltip" role="tooltip" style="display:none">
       <div class="rating-score-tooltip-title">Средние оценки по критериям</div>
       <div class="rating-score-tooltip-sub">${ratingFormatCount(track.details_count)} рецензий от судей и пользователей</div>
       <div class="rating-score-tooltip-grid">
@@ -62,6 +62,15 @@ function ratingRenderScoreTooltip(track) {
         `).join("")}
       </div>
     </div>
+  `;
+}
+
+function ratingRenderScoreTrigger(track, { className = "", value, label }) {
+  return `
+    <span class="rating-score-trigger" tabindex="0" aria-label="${ratingEscapeHtml(label)}">
+      <span class="rating-score-pill ${ratingEscapeHtml(className)}">${ratingEscapeHtml(ratingFormatScore(value))}</span>
+      ${ratingRenderScoreTooltip(track)}
+    </span>
   `;
 }
 
@@ -246,11 +255,21 @@ function ratingRenderTrack(track, index) {
         <div class="rating-track-artist">${ratingEscapeHtml(track.artist || track.username || "Артист")}</div>
       </div>
       <div class="rating-score-stack">
-        <div class="rating-score-group" tabindex="0" aria-label="Подробные оценки">
-          <span class="rating-score-pill is-main" aria-label="Итоговый рейтинг">${ratingEscapeHtml(ratingFormatScore(track.rating_score || track.total_score))}</span>
-          <span class="rating-score-pill is-judge" aria-label="Оценка судей">${ratingEscapeHtml(ratingFormatScore(track.judge_score))}</span>
-          <span class="rating-score-pill" aria-label="Оценка пользователей">${ratingEscapeHtml(ratingFormatScore(track.user_score))}</span>
-          ${ratingRenderScoreTooltip(track)}
+        <div class="rating-score-group" aria-label="Оценки">
+          ${ratingRenderScoreTrigger(track, {
+            className: "is-main",
+            value: track.rating_score || track.total_score,
+            label: "Итоговый рейтинг. Наведите, чтобы увидеть критерии"
+          })}
+          ${ratingRenderScoreTrigger(track, {
+            className: "is-judge",
+            value: track.judge_score,
+            label: "Оценка судей. Наведите, чтобы увидеть критерии"
+          })}
+          ${ratingRenderScoreTrigger(track, {
+            value: track.user_score,
+            label: "Оценка пользователей. Наведите, чтобы увидеть критерии"
+          })}
         </div>
         <button type="button" class="rating-play-btn" title="Слушать" aria-label="Слушать" data-rating-play="${Number(track.id)}">
           <i class="fa-solid fa-play"></i>
