@@ -1163,18 +1163,15 @@ if (type === "archive") {
     </div>
   `;
 
-  // 💣 ВАЖНО: НЕ requestAnimationFrame
   setTimeout(() => {
     const container = document.getElementById("archiveContent");
 
     if (!container) {
-      console.log("❌ archiveContent STILL not found");
       return;
     }
 
     setTimeout(() => {
   if (!window.settingsReady) {
-    console.log("⛔ settings not ready yet");
     return;
   }
 
@@ -1587,7 +1584,6 @@ async function setPassword() {
 }
 
 async function loadArchivePosts() {
-  console.log("🔥 loadArchivePosts called");
   const token = settingsGetToken();
   const container = document.getElementById("archiveContent");
 
@@ -2043,6 +2039,5 @@ window.initSettingsPage = async function () {
     });
   }
   window.settingsReady = true;
-console.log("✅ settingsReady = true");
   
 };

@@ -354,7 +354,6 @@ const renderToken = currentRenderToken;
 
 export async function renderPage(path) {
   const renderToken = ++currentRenderToken;
-  console.log("RENDER PAGE:", path);
 
   if (!window.__firstLoadDone) {
     showLoader();

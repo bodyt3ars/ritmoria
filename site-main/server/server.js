@@ -5634,8 +5634,6 @@ app.put("/update-profile", authMiddleware, async (req, res) => {
       [userId]
     );
 
-    console.log("BODY:", req.body);
-
     if (currentResult.rows.length === 0) {
       return res.status(404).json({ error: "user_not_found" });
     }
@@ -6525,21 +6523,14 @@ return res.status(400).json({error:"delete_reason_required"})
 const mediaUrl = post.media_url
 
 if(mediaUrl){
-
 const cleanPath = mediaUrl.replace(/^\/+/,"")
-
 const filePath = path.join(__dirname,"..","public",cleanPath)
-
-console.log("Deleting:",filePath)
 
 fs.unlink(filePath,(err)=>{
 if(err){
-console.log("Delete error:",err)
-}else{
-console.log("File deleted")
+console.error("Delete media error:", err)
 }
 })
-
 }
 
 await pool.query(

@@ -1,5 +1,3 @@
-console.log("NAVBAR JS LOADED");
-
 let navbarQueueInterval = null;
 let navbarInitialized = false;
 let appConfirmPromiseResolver = null;

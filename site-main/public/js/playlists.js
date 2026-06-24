@@ -14,7 +14,6 @@ window.initPlaylistsPage = async function () {
     "__togglePlaylistTrackPlayback",
     "__playPlaylistFromStart",
     "__togglePlaylistPlayback",
-    "__playlistSecondaryAction",
     "__togglePlaylistVisibility",
     "__togglePlaylistFavorites",
     "__openPlaylistTrack",
@@ -798,14 +797,6 @@ window.initPlaylistsPage = async function () {
             <i class="fa-solid ${isPlaylistPlaying ? "fa-pause" : "fa-play"}"></i>
           </button>
 
-          <button
-            class="playlists-toolbar-icon"
-            type="button"
-            onclick="window.__playlistSecondaryAction('${escapeHtml(playlist.id)}')"
-            title="${playlistsT("Дополнительное действие")}"
-          >
-            <i class="fa-solid fa-plus"></i>
-          </button>
         </div>
 
         <div class="playlists-toolbar-meta">
@@ -1238,10 +1229,6 @@ window.initPlaylistsPage = async function () {
     }
 
     window.__playPlaylistFromStart(playlistId);
-  };
-
-  window.__playlistSecondaryAction = function () {
-    alert("Эту кнопку докрутим следующим шагом.");
   };
 
   window.__togglePlaylistVisibility = function (playlistId) {
