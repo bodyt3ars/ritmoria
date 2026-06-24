@@ -6,6 +6,15 @@ let ratingLimit = 20;
 let ratingTracksById = new Map();
 let ratingEventsAbortController = null;
 
+const RATING_DETAIL_CRITERIA = [
+  { key: "rhymes_avg", label: "Рифмы" },
+  { key: "structure_avg", label: "Структура" },
+  { key: "style_avg", label: "Стиль" },
+  { key: "charisma_avg", label: "Харизма" },
+  { key: "vibe_avg", label: "Вайб" },
+  { key: "memory_avg", label: "Память" }
+];
+
 function ratingEscapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -24,6 +33,36 @@ function ratingFormatScore(value) {
 function ratingFormatCount(value) {
   const number = Math.max(0, Number(value || 0));
   return Number.isFinite(number) ? String(number) : "0";
+}
+
+function ratingHasDetailScores(track) {
+  return RATING_DETAIL_CRITERIA.some((item) => Number(track?.[item.key] || 0) > 0);
+}
+
+function ratingRenderScoreTooltip(track) {
+  if (!ratingHasDetailScores(track)) {
+    return `
+      <div class="rating-score-tooltip" role="tooltip">
+        <div class="rating-score-tooltip-title">Подробные оценки</div>
+        <div class="rating-score-tooltip-empty">Детальных критериев пока нет</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="rating-score-tooltip" role="tooltip">
+      <div class="rating-score-tooltip-title">Средние оценки по критериям</div>
+      <div class="rating-score-tooltip-sub">${ratingFormatCount(track.details_count)} рецензий от судей и пользователей</div>
+      <div class="rating-score-tooltip-grid">
+        ${RATING_DETAIL_CRITERIA.map((item) => `
+          <div class="rating-score-tooltip-item">
+            <span>${ratingEscapeHtml(item.label)}</span>
+            <strong>${ratingEscapeHtml(ratingFormatScore(track[item.key]))}</strong>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function ratingNormalizeMedia(value, fallback = "/images/default-cover.jpg") {
@@ -207,9 +246,12 @@ function ratingRenderTrack(track, index) {
         <div class="rating-track-artist">${ratingEscapeHtml(track.artist || track.username || "Артист")}</div>
       </div>
       <div class="rating-score-stack">
-        <span class="rating-score-pill is-main" title="Итоговый рейтинг">${ratingEscapeHtml(ratingFormatScore(track.rating_score || track.total_score))}</span>
-        <span class="rating-score-pill is-judge" title="Судьи">${ratingEscapeHtml(ratingFormatScore(track.judge_score))}</span>
-        <span class="rating-score-pill" title="Пользователи">${ratingEscapeHtml(ratingFormatScore(track.user_score))}</span>
+        <div class="rating-score-group" tabindex="0" aria-label="Подробные оценки">
+          <span class="rating-score-pill is-main" aria-label="Итоговый рейтинг">${ratingEscapeHtml(ratingFormatScore(track.rating_score || track.total_score))}</span>
+          <span class="rating-score-pill is-judge" aria-label="Оценка судей">${ratingEscapeHtml(ratingFormatScore(track.judge_score))}</span>
+          <span class="rating-score-pill" aria-label="Оценка пользователей">${ratingEscapeHtml(ratingFormatScore(track.user_score))}</span>
+          ${ratingRenderScoreTooltip(track)}
+        </div>
         <button type="button" class="rating-play-btn" title="Слушать" aria-label="Слушать" data-rating-play="${Number(track.id)}">
           <i class="fa-solid fa-play"></i>
         </button>
