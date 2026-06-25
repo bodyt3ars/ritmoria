@@ -3870,39 +3870,69 @@ function clampAdminCounter(value) {
   return Math.max(0, Math.min(9999, Math.floor(numericValue)));
 }
 
+let tracksColumnCache = null;
+
+async function getTracksColumns() {
+  if (tracksColumnCache) return tracksColumnCache;
+
+  const result = await pool.query(
+    `
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'tracks'
+    `
+  );
+
+  tracksColumnCache = new Set(result.rows.map((row) => String(row.column_name || "").toLowerCase()));
+  return tracksColumnCache;
+}
+
 async function createQueueTrack({ artist, title, soundcloud = "", cover = null, audio = null, userId }) {
-  const values = [
-    artist || "",
-    title || "Без названия",
-    soundcloud || "",
-    cover || null,
-    audio || null,
-    userId
-  ];
+  const columns = await getTracksColumns();
+  const insertColumns = [];
+  const placeholders = [];
+  const values = [];
+
+  const addValue = (column, value) => {
+    insertColumns.push(column);
+    values.push(value);
+    placeholders.push(`$${values.length}`);
+  };
+
+  addValue("artist", artist || "");
+  addValue("title", title || "Без названия");
+  addValue("soundcloud", soundcloud || "");
+  addValue("cover", cover || null);
+  addValue("audio", audio || null);
+
+  if (columns.has("createdat")) {
+    insertColumns.push("createdAt");
+    placeholders.push("NOW()");
+  } else if (columns.has("created_at")) {
+    insertColumns.push("created_at");
+    placeholders.push("NOW()");
+  }
+
+  if (columns.has("user_id")) {
+    addValue("user_id", userId);
+  }
+
+  if (columns.has("status")) {
+    addValue("status", "pending");
+  }
+
+  const sql = `
+    INSERT INTO tracks (${insertColumns.join(", ")})
+    VALUES (${placeholders.join(", ")})
+    RETURNING *
+  `;
 
   try {
-    return await pool.query(
-      `
-      INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id, status)
-      VALUES ($1,$2,$3,$4,$5,NOW(),$6,'pending')
-      RETURNING *
-      `,
-      values
-    );
+    return await pool.query(sql, values);
   } catch (err) {
-    if (err?.code !== "42703") {
-      throw err;
-    }
-
-    console.warn("tracks.status column is missing, falling back to legacy queue insert");
-    return pool.query(
-      `
-      INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id)
-      VALUES ($1,$2,$3,$4,$5,NOW(),$6)
-      RETURNING *
-      `,
-      values
-    );
+    tracksColumnCache = null;
+    throw err;
   }
 }
 
@@ -8838,7 +8868,12 @@ const result = await createQueueTrack({
 
   } catch (err) {
     console.error(err);
-    res.status(500).json(buildPublicErrorPayload(err, "track_create_failed", "Не удалось отправить трек."));
+    const payload = buildPublicErrorPayload(err, "track_create_failed", "Не удалось отправить трек.");
+    payload.message = payload.message || "Не удалось отправить трек.";
+    if (process.env.NODE_ENV !== "production") {
+      payload.detail = String(err?.message || err || "");
+    }
+    res.status(500).json(payload);
   }
 });
 
@@ -10359,12 +10394,17 @@ app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), as
       return res.status(400).json({ error: "audio_required" });
     }
 
+    const tracksColumns = await getTracksColumns();
+    const activeStatusCondition = tracksColumns.has("status")
+      ? "AND COALESCE(NULLIF(status, ''), 'pending') IN ('pending', 'new', 'open')"
+      : "";
+
     const duplicateRes = await pool.query(
       `
       SELECT id
       FROM tracks
       WHERE user_id = $1
-        AND COALESCE(NULLIF(status, ''), 'pending') IN ('pending', 'new', 'open')
+        ${activeStatusCondition}
         AND (
           ($2::text <> '' AND audio = $2)
           OR ($3::text <> '' AND soundcloud = $3)
@@ -10403,7 +10443,11 @@ app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), as
     });
   } catch (err) {
     console.error("QUEUE TRACK FROM PROFILE ERROR:", err);
-    res.status(500).json({ error: "queue_track_from_profile_failed" });
+    const payload = buildPublicErrorPayload(err, "queue_track_from_profile_failed", "Не удалось отправить трек из профиля");
+    if (process.env.NODE_ENV !== "production") {
+      payload.detail = String(err?.message || err || "");
+    }
+    res.status(500).json(payload);
   }
 });
 

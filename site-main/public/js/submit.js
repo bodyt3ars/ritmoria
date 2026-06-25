@@ -336,7 +336,8 @@ function initSubmitPage() {
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(window.getApiErrorMessage?.(data, "Не удалось отправить трек из профиля") || "Не удалось отправить трек из профиля");
+          const message = data.detail || window.getApiErrorMessage?.(data, "Не удалось отправить трек из профиля") || "Не удалось отправить трек из профиля";
+          throw new Error(message);
         }
 
         setStatus("Трек из профиля отправлен в очередь", "success");
@@ -409,7 +410,8 @@ function initSubmitPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(window.getApiErrorMessage?.(data, "Не удалось отправить трек") || "Не удалось отправить трек");
+        const message = data.detail || window.getApiErrorMessage?.(data, "Не удалось отправить трек") || "Не удалось отправить трек";
+        throw new Error(message);
       }
 
       setStatus("Трек успешно отправлен", "success");
