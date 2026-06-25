@@ -678,6 +678,60 @@
   filter:brightness(1.08);
 }
 
+.admin-page .place-badge-controls{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  background:rgba(255,255,255,0.035);
+}
+
+.admin-page .place-badge-field{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  height:34px;
+  padding:0 8px;
+  border-radius:10px;
+  background:rgba(0,0,0,0.24);
+  color:#f4d0e3;
+  font-size:12px;
+  font-weight:800;
+}
+
+.admin-page .place-badge-field input{
+  width:44px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#fff;
+  font-weight:800;
+  text-align:center;
+}
+
+.admin-page .place-badge-save{
+  height:34px;
+  padding:0 12px;
+  border:1px solid rgba(216,132,182,0.38);
+  border-radius:10px;
+  background:rgba(216,132,182,0.16);
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.admin-page .place-badge-save:hover:not(:disabled){
+  transform:translateY(-1px);
+  background:rgba(216,132,182,0.24);
+}
+
+.admin-page .place-badge-save:disabled{
+  cursor:wait;
+  opacity:.72;
+}
+
 @media (max-width: 700px) {
   .admin-page .user-actions{
     width:100%;
@@ -692,5 +746,10 @@
   .admin-page .xp-input{
     flex:1;
     width:auto;
+  }
+
+  .admin-page .place-badge-controls{
+    width:100%;
+    flex-wrap:wrap;
   }
 }

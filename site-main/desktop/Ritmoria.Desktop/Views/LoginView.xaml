@@ -1,0 +1,34 @@
+<UserControl
+    x:Class="Ritmoria.Desktop.Views.LoginView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Background="{StaticResource RitmoriaBgBrush}">
+        <Border
+            Width="430"
+            Padding="34"
+            CornerRadius="28"
+            BorderBrush="#3C2A3A"
+            BorderThickness="1"
+            Background="#F014111A"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+            <StackPanel Spacing="16">
+                <TextBlock Text="Ритмория" Foreground="White" FontSize="42" FontWeight="Bold" />
+                <TextBlock Text="Вход в desktop-приложение" Foreground="{StaticResource RitmoriaMutedTextBrush}" FontSize="15" />
+
+                <TextBox x:Name="LoginInput" Header="Email или @username" PlaceholderText="@ritmoria" />
+                <PasswordBox x:Name="PasswordInput" Header="Пароль" />
+
+                <TextBlock x:Name="StatusText" Foreground="#E7A0BE" TextWrapping="Wrap" />
+
+                <Button
+                    Content="Войти"
+                    Height="46"
+                    Background="{StaticResource RitmoriaAccentBrush}"
+                    Click="LoginButton_Click" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
+

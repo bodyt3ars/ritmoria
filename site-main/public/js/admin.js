@@ -124,6 +124,22 @@ function renderUsers(users) {
           <button type="button" class="xp-btn add" data-user-id="${u.id}">+</button>
           <button type="button" class="xp-btn remove" data-user-id="${u.id}">−</button>
         </div>
+
+        <div class="place-badge-controls" aria-label="Медали профиля">
+          <label class="place-badge-field">
+            <span>#1</span>
+            <input type="number" min="0" max="9999" value="${Number(u.first_places || 0)}" data-place-kind="first_places" data-user-id="${u.id}">
+          </label>
+          <label class="place-badge-field">
+            <span>#2</span>
+            <input type="number" min="0" max="9999" value="${Number(u.second_places || 0)}" data-place-kind="second_places" data-user-id="${u.id}">
+          </label>
+          <label class="place-badge-field">
+            <span>#3</span>
+            <input type="number" min="0" max="9999" value="${Number(u.third_places || 0)}" data-place-kind="third_places" data-user-id="${u.id}">
+          </label>
+          <button type="button" class="place-badge-save" data-user-id="${u.id}">Сохранить</button>
+        </div>
       </div>
     </div>
   `).join("");
@@ -133,6 +149,7 @@ function renderUsers(users) {
   bindBanButtons();
   bindProfileLinks();
   bindXPControls();
+  bindPlaceBadgeControls();
 }
 
 function renderAdminStats() {
@@ -668,6 +685,65 @@ if (!amount || amount <= 0) {
       }catch(e){
         console.error(e);
         alert("Ошибка");
+      }
+    });
+  });
+}
+
+function getPlaceBadgeInputValue(userId, kind) {
+  const input = document.querySelector(`.place-badge-field input[data-user-id="${userId}"][data-place-kind="${kind}"]`);
+  return Math.max(0, Math.min(9999, Number(input?.value || 0)));
+}
+
+function bindPlaceBadgeControls() {
+  document.querySelectorAll(".place-badge-save").forEach((button) => {
+    if (button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+
+    button.addEventListener("click", async () => {
+      const userId = Number(button.dataset.userId);
+      if (!userId) return;
+
+      const payload = {
+        first_places: getPlaceBadgeInputValue(userId, "first_places"),
+        second_places: getPlaceBadgeInputValue(userId, "second_places"),
+        third_places: getPlaceBadgeInputValue(userId, "third_places")
+      };
+
+      button.disabled = true;
+
+      try {
+        const res = await fetch(`/api/users/${userId}/place-badges`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + localStorage.getItem("token")
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(data.error || "Не удалось сохранить медали");
+          return;
+        }
+
+        const user = adminAllUsers.find((item) => Number(item.id) === userId);
+        if (user) {
+          user.first_places = Number(data.badges?.first_places || payload.first_places);
+          user.second_places = Number(data.badges?.second_places || payload.second_places);
+          user.third_places = Number(data.badges?.third_places || payload.third_places);
+        }
+
+        button.textContent = "Готово";
+        window.setTimeout(() => {
+          button.textContent = "Сохранить";
+        }, 900);
+      } catch (err) {
+        console.error("save place badges error:", err);
+        alert("Ошибка медалей");
+      } finally {
+        button.disabled = false;
       }
     });
   });

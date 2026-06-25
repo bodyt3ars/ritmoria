@@ -3860,6 +3860,16 @@ async function isAdmin(userId) {
   return result.rows[0]?.role === "admin"
 }
 
+function isAdminRole(role) {
+  return String(role || "").toLowerCase() === "admin";
+}
+
+function clampAdminCounter(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  return Math.max(0, Math.min(9999, Math.floor(numericValue)));
+}
+
 async function getUserFromToken(req) {
   const authResult = getVerifiedRequestAuth(req);
   if (!authResult?.decoded) {
@@ -4185,7 +4195,7 @@ function requireRole(roles = []) {
       return res.status(403).json({ error: "Ты забанен" });
     }
 
-    if (!roles.includes(user.role)) {
+    if (!isAdminRole(user.role) && !roles.includes(user.role)) {
       return res.status(403).json({ error: "Нет доступа" });
     }
 
@@ -7456,6 +7466,9 @@ app.get("/api/users", async (req, res) => {
         role,
         COALESCE(is_verified, false) AS is_verified,
         COALESCE(is_banned, false) AS is_banned,
+        COALESCE(ps.first_places, 0)::int AS first_places,
+        COALESCE(ps.second_places, 0)::int AS second_places,
+        COALESCE(ps.third_places, 0)::int AS third_places,
         created_at,
         last_seen_at,
         CASE
@@ -7464,6 +7477,7 @@ app.get("/api/users", async (req, res) => {
           ELSE false
         END AS is_online
       FROM users
+      LEFT JOIN user_stream_place_stats ps ON ps.user_id = users.id
       ORDER BY created_at DESC NULLS LAST, id DESC
     `);
 
@@ -7487,6 +7501,51 @@ app.get("/api/users", async (req, res) => {
 
   } catch (err) {
     res.status(401).json({ error: "Unauthorized" })
+  }
+});
+
+app.put("/api/users/:id/place-badges", requireRole(["admin"]), async (req, res) => {
+  try {
+    const targetId = Number(req.params.id);
+    const firstPlaces = clampAdminCounter(req.body?.first_places);
+    const secondPlaces = clampAdminCounter(req.body?.second_places);
+    const thirdPlaces = clampAdminCounter(req.body?.third_places);
+
+    if (!targetId) {
+      return res.status(400).json({ error: "Некорректный пользователь" });
+    }
+
+    const userExists = await pool.query("SELECT id FROM users WHERE id = $1", [targetId]);
+    if (!userExists.rows.length) {
+      return res.status(404).json({ error: "Пользователь не найден" });
+    }
+
+    const result = await pool.query(
+      `
+      INSERT INTO user_stream_place_stats (user_id, first_places, second_places, third_places)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        first_places = EXCLUDED.first_places,
+        second_places = EXCLUDED.second_places,
+        third_places = EXCLUDED.third_places,
+        updated_at = now()
+      RETURNING
+        user_id,
+        first_places::int AS first_places,
+        second_places::int AS second_places,
+        third_places::int AS third_places
+      `,
+      [targetId, firstPlaces, secondPlaces, thirdPlaces]
+    );
+
+    res.json({
+      success: true,
+      badges: result.rows[0]
+    });
+  } catch (err) {
+    console.error("ADMIN PLACE BADGES ERROR:", err);
+    res.status(500).json({ error: "Ошибка сервера" });
   }
 });
 
