@@ -24,6 +24,7 @@ const AUTH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 const QUEUE_NEW_TRACK_STATUS = "new";
 const ACTIVE_QUEUE_STATUS_SQL = "COALESCE(NULLIF(status, ''), 'new') IN ('new', 'open', 'pending')";
 const ACTIVE_QUEUE_STATUS_SQL_T = "COALESCE(NULLIF(t.status, ''), 'new') IN ('new', 'open', 'pending')";
+const VISIBLE_QUEUE_STATUS_SQL_T = "COALESCE(NULLIF(t.status, ''), 'new') NOT IN ('rated', 'archived', 'deleted', 'removed')";
 
 console.log(`Google OAuth configured: ${Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET)}`);
 
@@ -8988,7 +8989,7 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_votes_count
 
         FROM tracks t
-        WHERE ${ACTIVE_QUEUE_STATUS_SQL_T}
+        WHERE ${VISIBLE_QUEUE_STATUS_SQL_T}
         ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
       `;
 
@@ -9024,7 +9025,7 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_votes_count
 
         FROM tracks t
-        WHERE ${ACTIVE_QUEUE_STATUS_SQL_T}
+        WHERE ${VISIBLE_QUEUE_STATUS_SQL_T}
         ORDER BY t.createdAt ASC
       `;
     }
@@ -10148,7 +10149,7 @@ app.get("/user-tracks", async (req, res) => {
           SELECT 1
           FROM tracks t
           WHERE t.user_id = user_tracks.user_id
-            AND ${ACTIVE_QUEUE_STATUS_SQL_T}
+            AND ${VISIBLE_QUEUE_STATUS_SQL_T}
             AND (
               (user_tracks.audio IS NOT NULL AND t.audio = user_tracks.audio)
               OR (user_tracks.soundcloud IS NOT NULL AND t.soundcloud = user_tracks.soundcloud)
