@@ -24,6 +24,7 @@ const AUTH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 const QUEUE_NEW_TRACK_STATUS = "new";
 const ACTIVE_QUEUE_STATUS_SQL = "COALESCE(NULLIF(status, ''), 'new') IN ('new', 'open', 'pending')";
 const ACTIVE_QUEUE_STATUS_SQL_T = "COALESCE(NULLIF(t.status, ''), 'new') IN ('new', 'open', 'pending')";
+const VISIBLE_QUEUE_STATUS_SQL = "COALESCE(NULLIF(status, ''), 'new') NOT IN ('rated', 'archived', 'deleted', 'removed')";
 const VISIBLE_QUEUE_STATUS_SQL_T = "COALESCE(NULLIF(t.status, ''), 'new') NOT IN ('rated', 'archived', 'deleted', 'removed')";
 
 console.log(`Google OAuth configured: ${Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET)}`);
@@ -10873,16 +10874,16 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
     const currentState = await getCachedQueueState();
 
     // При новом открытии после завершённого стрима переносим оцененные
-    // треки в рейтинг, а из новой активной очереди чистим только неоцененные.
+    // треки в рейтинг, а из новой активной очереди чистим всю прошлую очередь.
     if (state === "open" && currentState === "closed") {
-      const pendingTrackIdsRes = await pool.query(
-        `SELECT id FROM tracks WHERE ${ACTIVE_QUEUE_STATUS_SQL}`
+      const previousQueueTrackIdsRes = await pool.query(
+        `SELECT id FROM tracks WHERE ${VISIBLE_QUEUE_STATUS_SQL}`
       );
-      const pendingTrackIds = pendingTrackIdsRes.rows
+      const previousQueueTrackIds = previousQueueTrackIdsRes.rows
         .map((row) => Number(row.id || 0))
         .filter(Boolean);
 
-      if (pendingTrackIds.length) {
+      if (previousQueueTrackIds.length) {
         const ratedTrackIdsRes = await pool.query(
           `
           SELECT DISTINCT t.id
@@ -10894,13 +10895,13 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
               WHERE tr.track_id = t.id
             )
           `,
-          [pendingTrackIds]
+          [previousQueueTrackIds]
         );
         const ratedTrackIds = ratedTrackIdsRes.rows
           .map((row) => Number(row.id || 0))
           .filter(Boolean);
         const ratedTrackIdSet = new Set(ratedTrackIds);
-        const unratedTrackIds = pendingTrackIds.filter((id) => !ratedTrackIdSet.has(id));
+        const unratedTrackIds = previousQueueTrackIds.filter((id) => !ratedTrackIdSet.has(id));
 
         if (ratedTrackIds.length) {
           await pool.query(
