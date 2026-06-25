@@ -474,7 +474,12 @@
       });
 
       const lastNoteTime = Math.max(0, ...game.notes.map((note) => Number(note.time || 0)));
-      if (nowMs > lastNoteTime + 1200 || (!state.isPlaying && nowMs > startMs + 1200)) {
+      const naturalFinishMs = durationMs > 2000
+        ? durationMs - 250
+        : lastNoteTime + 1200;
+      const finishMs = Math.max(lastNoteTime + 1200, naturalFinishMs);
+
+      if (nowMs >= finishMs || (!state.isPlaying && nowMs > startMs + 1200)) {
         finish();
         return;
       }

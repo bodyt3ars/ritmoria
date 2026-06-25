@@ -870,13 +870,17 @@ function createBeatRushBeatmap({ trackId, bpm = 120, difficulty = "medium", dura
   const notes = [];
   let previousLane = -1;
 
+  let beatIndex = 0;
+
   for (let time = startMs; time < endMs; time += beatMs) {
-    const beatIndex = notes.length;
     const wave = Math.sin((beatIndex + Number(trackId || 0)) * 1.618);
     const chanceGate = ((wave + 1) / 2);
     const shouldPlace = safeDifficulty === "hard" || chanceGate <= config.noteChance || beatIndex % 4 === 0;
 
-    if (!shouldPlace) continue;
+    if (!shouldPlace) {
+      beatIndex += 1;
+      continue;
+    }
 
     let lane = Math.abs(
       Math.floor((beatIndex * config.lanePatternOffset + Number(trackId || 0) + Math.round(wave * 10)) % 4)
@@ -900,10 +904,12 @@ function createBeatRushBeatmap({ trackId, bpm = 120, difficulty = "medium", dura
         lane: (lane + 2) % 4
       });
     }
+
+    beatIndex += 1;
   }
 
   return {
-    version: 1,
+    version: 2,
     generated: true,
     bpm: safeBpm,
     difficulty: safeDifficulty,
@@ -2728,7 +2734,19 @@ function getBeatRushBeatmapForDifficulty(track, difficulty, duration) {
     : {};
 
   const existing = byDifficulty[safeDifficulty];
-  if (existing?.notes?.length) {
+  const expectedDuration = Math.max(35, Math.min(540, Number(duration || 120)));
+  const expectedLastNoteTime = Math.max(18000, (expectedDuration * 1000) - 2600);
+  const existingNotes = Array.isArray(existing?.notes) ? existing.notes : [];
+  const existingLastNoteTime = existingNotes.reduce((latest, note) => {
+    const noteTime = Number(note?.time || 0);
+    return noteTime > latest ? noteTime : latest;
+  }, 0);
+  const existingIsFresh =
+    Number(existing?.version || 0) >= 2 &&
+    existingNotes.length > 0 &&
+    existingLastNoteTime >= expectedLastNoteTime;
+
+  if (existingIsFresh) {
     return {
       beatmap: {
         ...existing,
