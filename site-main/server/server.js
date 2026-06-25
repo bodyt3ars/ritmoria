@@ -21,6 +21,9 @@ const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
 const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
 const AUTH_COOKIE_NAME = "ritmoria_token";
 const AUTH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+const QUEUE_NEW_TRACK_STATUS = "new";
+const ACTIVE_QUEUE_STATUS_SQL = "COALESCE(NULLIF(status, ''), 'new') IN ('new', 'open', 'pending')";
+const ACTIVE_QUEUE_STATUS_SQL_T = "COALESCE(NULLIF(t.status, ''), 'new') IN ('new', 'open', 'pending')";
 
 console.log(`Google OAuth configured: ${Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET)}`);
 
@@ -1075,13 +1078,13 @@ async function ensureQueueTrackLifecycleSchema() {
     BEGIN
       IF to_regclass('public.tracks') IS NOT NULL THEN
         ALTER TABLE tracks
-          ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'pending';
+          ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'new';
 
         ALTER TABLE tracks
           ADD COLUMN IF NOT EXISTS rated_at timestamp without time zone;
 
         UPDATE tracks
-        SET status = 'pending'
+        SET status = 'new'
         WHERE status IS NULL OR status = '';
 
         CREATE INDEX IF NOT EXISTS idx_tracks_status_createdat
@@ -3893,6 +3896,7 @@ async function createQueueTrack({ artist, title, soundcloud = "", cover = null, 
   const insertColumns = [];
   const placeholders = [];
   const values = [];
+  let statusValueIndex = -1;
 
   const addValue = (column, value) => {
     insertColumns.push(column);
@@ -3919,7 +3923,8 @@ async function createQueueTrack({ artist, title, soundcloud = "", cover = null, 
   }
 
   if (columns.has("status")) {
-    addValue("status", "pending");
+    addValue("status", QUEUE_NEW_TRACK_STATUS);
+    statusValueIndex = values.length - 1;
   }
 
   const sql = `
@@ -3931,6 +3936,32 @@ async function createQueueTrack({ artist, title, soundcloud = "", cover = null, 
   try {
     return await pool.query(sql, values);
   } catch (err) {
+    if (err?.code === "23514" && statusValueIndex >= 0 && /status/i.test(String(err?.message || ""))) {
+      const fallbackColumns = insertColumns.filter((column) => column !== "status");
+      const fallbackValues = values.filter((_, index) => index !== statusValueIndex);
+      const fallbackPlaceholders = [];
+      let valueIndex = 0;
+
+      for (const column of insertColumns) {
+        if (column === "status") continue;
+        if (column === "createdAt" || column === "created_at") {
+          fallbackPlaceholders.push("NOW()");
+          continue;
+        }
+        valueIndex += 1;
+        fallbackPlaceholders.push(`$${valueIndex}`);
+      }
+
+      return pool.query(
+        `
+        INSERT INTO tracks (${fallbackColumns.join(", ")})
+        VALUES (${fallbackPlaceholders.join(", ")})
+        RETURNING *
+        `,
+        fallbackValues
+      );
+    }
+
     tracksColumnCache = null;
     throw err;
   }
@@ -8957,7 +8988,7 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_votes_count
 
         FROM tracks t
-        WHERE COALESCE(NULLIF(t.status, ''), 'pending') IN ('pending', 'new', 'open')
+        WHERE ${ACTIVE_QUEUE_STATUS_SQL_T}
         ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
       `;
 
@@ -8993,7 +9024,7 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_votes_count
 
         FROM tracks t
-        WHERE COALESCE(NULLIF(t.status, ''), 'pending') IN ('pending', 'new', 'open')
+        WHERE ${ACTIVE_QUEUE_STATUS_SQL_T}
         ORDER BY t.createdAt ASC
       `;
     }
@@ -10117,7 +10148,7 @@ app.get("/user-tracks", async (req, res) => {
           SELECT 1
           FROM tracks t
           WHERE t.user_id = user_tracks.user_id
-            AND COALESCE(NULLIF(t.status, ''), 'pending') IN ('pending', 'new', 'open')
+            AND ${ACTIVE_QUEUE_STATUS_SQL_T}
             AND (
               (user_tracks.audio IS NOT NULL AND t.audio = user_tracks.audio)
               OR (user_tracks.soundcloud IS NOT NULL AND t.soundcloud = user_tracks.soundcloud)
@@ -10396,7 +10427,7 @@ app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), as
 
     const tracksColumns = await getTracksColumns();
     const activeStatusCondition = tracksColumns.has("status")
-      ? "AND COALESCE(NULLIF(status, ''), 'pending') IN ('pending', 'new', 'open')"
+      ? `AND ${ACTIVE_QUEUE_STATUS_SQL}`
       : "";
 
     const duplicateRes = await pool.query(
@@ -10844,7 +10875,7 @@ app.post("/api/queue/state", requireRole(["admin"]), async (req, res) => {
     // треки в рейтинг, а из новой активной очереди чистим только неоцененные.
     if (state === "open" && currentState === "closed") {
       const pendingTrackIdsRes = await pool.query(
-        "SELECT id FROM tracks WHERE COALESCE(status, 'pending') = 'pending'"
+        `SELECT id FROM tracks WHERE ${ACTIVE_QUEUE_STATUS_SQL}`
       );
       const pendingTrackIds = pendingTrackIdsRes.rows
         .map((row) => Number(row.id || 0))
