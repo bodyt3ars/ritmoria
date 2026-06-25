@@ -351,6 +351,7 @@ function initSubmitPage() {
         console.error("submit profile track error", err);
         setStatus(err.message || "Не удалось отправить трек из профиля", "error");
       } finally {
+        if (submitBtn) submitBtn.disabled = false;
         await checkQueueState();
       }
 

@@ -3870,6 +3870,42 @@ function clampAdminCounter(value) {
   return Math.max(0, Math.min(9999, Math.floor(numericValue)));
 }
 
+async function createQueueTrack({ artist, title, soundcloud = "", cover = null, audio = null, userId }) {
+  const values = [
+    artist || "",
+    title || "Без названия",
+    soundcloud || "",
+    cover || null,
+    audio || null,
+    userId
+  ];
+
+  try {
+    return await pool.query(
+      `
+      INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id, status)
+      VALUES ($1,$2,$3,$4,$5,NOW(),$6,'pending')
+      RETURNING *
+      `,
+      values
+    );
+  } catch (err) {
+    if (err?.code !== "42703") {
+      throw err;
+    }
+
+    console.warn("tracks.status column is missing, falling back to legacy queue insert");
+    return pool.query(
+      `
+      INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id)
+      VALUES ($1,$2,$3,$4,$5,NOW(),$6)
+      RETURNING *
+      `,
+      values
+    );
+  }
+}
+
 async function getUserFromToken(req) {
   const authResult = getVerifiedRequestAuth(req);
   if (!authResult?.decoded) {
@@ -8789,12 +8825,14 @@ app.post("/api/tracks", requireRole(["user", "judge", "admin"]), trackUploadFiel
 
     const user = req.user;
 
-const result = await pool.query(
-  `INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id, status)
-   VALUES ($1,$2,$3,$4,$5,NOW(),$6,'pending')
-   RETURNING *`,
-  [artist, title, soundcloud, cover, audioPath, user.id]
-);
+const result = await createQueueTrack({
+  artist,
+  title,
+  soundcloud,
+  cover,
+  audio: audioPath,
+  userId: user.id
+});
 
     res.json(result.rows[0]);
 
@@ -10044,6 +10082,7 @@ app.get("/user-tracks", async (req, res) => {
           SELECT 1
           FROM tracks t
           WHERE t.user_id = user_tracks.user_id
+            AND COALESCE(NULLIF(t.status, ''), 'pending') IN ('pending', 'new', 'open')
             AND (
               (user_tracks.audio IS NOT NULL AND t.audio = user_tracks.audio)
               OR (user_tracks.soundcloud IS NOT NULL AND t.soundcloud = user_tracks.soundcloud)
@@ -10325,7 +10364,7 @@ app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), as
       SELECT id
       FROM tracks
       WHERE user_id = $1
-        AND COALESCE(status, 'pending') = 'pending'
+        AND COALESCE(NULLIF(status, ''), 'pending') IN ('pending', 'new', 'open')
         AND (
           ($2::text <> '' AND audio = $2)
           OR ($3::text <> '' AND soundcloud = $3)
@@ -10349,21 +10388,14 @@ app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), as
       return res.status(409).json({ error: "queue_track_exists" });
     }
 
-    const createdRes = await pool.query(
-      `
-      INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id, status)
-      VALUES ($1, $2, $3, $4, $5, NOW(), $6, 'pending')
-      RETURNING *
-      `,
-      [
-        profileTrack.artist || "",
-        profileTrack.title || "Без названия",
-        profileTrack.soundcloud || "",
-        profileTrack.cover || null,
-        profileTrack.audio || null,
-        userId
-      ]
-    );
+    const createdRes = await createQueueTrack({
+      artist: profileTrack.artist || "",
+      title: profileTrack.title || "Без названия",
+      soundcloud: profileTrack.soundcloud || "",
+      cover: profileTrack.cover || null,
+      audio: profileTrack.audio || null,
+      userId
+    });
 
     res.status(201).json({
       success: true,
