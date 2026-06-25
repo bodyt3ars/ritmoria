@@ -22,7 +22,7 @@
       travelMs: 1180
     }
   };
-  const RUN_DURATION_MS = 60000;
+  const RUN_DURATION_MS = 40000;
 
   const LANES = [
     { key: "w", code: "KeyW", label: "W" },
@@ -278,7 +278,7 @@
 
   function calculateXpPreview(difficulty, score, accuracy) {
     const maxXp = difficulty === "easy" ? 20 : difficulty === "hard" ? 70 : 40;
-    const scoreFactor = Math.min(1, Math.max(0, score) / 60000);
+    const scoreFactor = Math.min(1, Math.max(0, score) / RUN_DURATION_MS);
     const accuracyFactor = Math.max(0, Math.min(100, accuracy)) / 100;
     return Math.max(0, Math.min(maxXp, Math.round(maxXp * (0.35 * scoreFactor + 0.65 * accuracyFactor))));
   }
@@ -615,7 +615,7 @@
       <div class="beat-rush-result">
         <div class="beat-rush-kicker">Beat Rush Complete</div>
         <h2>${accuracy >= 90 ? "Чистое попадание" : accuracy >= 70 ? "Хороший забег" : "Разогрев принят"}</h2>
-        <p class="beat-rush-result-subtitle">${escapeHtml(track.title || finishedGame.payload.track?.title || "Трек")} · 60 секунд ритма</p>
+        <p class="beat-rush-result-subtitle">${escapeHtml(track.title || finishedGame.payload.track?.title || "Трек")} · 40 секунд ритма</p>
         <div class="beat-rush-result-grid">
           <div><span>Score</span><strong>${formatScore(finishedGame.score)}</strong></div>
           <div><span>Accuracy</span><strong>${accuracy.toFixed(1)}%</strong></div>
