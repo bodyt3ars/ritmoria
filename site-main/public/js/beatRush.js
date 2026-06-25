@@ -292,11 +292,9 @@
       missed: false,
       el: null
     }));
-    const startState = getState();
-    const startMs = Math.max(0, Number(startState?.currentTime || 0) * 1000);
     const playableNotes = notes.filter((note) => {
       const noteTime = Number(note.time || 0);
-      return noteTime >= startMs - 180 && noteTime <= RUN_DURATION_MS + 300;
+      return noteTime >= -180 && noteTime <= RUN_DURATION_MS + 300;
     });
     const lanes = Array.from(content.querySelectorAll(".beat-rush-lane"));
     const stage = content.querySelector(".beat-rush-stage");
@@ -368,7 +366,7 @@
 
     const judgeNote = (laneIndex) => {
       if (!game?.running) return;
-      const nowMs = Number(getState()?.currentTime || 0) * 1000;
+      const nowMs = Math.min(RUN_DURATION_MS, performance.now() - game.startedAt);
       const candidates = game.notes
         .filter((note) => !note.hit && !note.missed && Number(note.lane) === laneIndex)
         .map((note) => ({ note, delta: Math.abs(Number(note.time || 0) - nowMs) }))
@@ -436,6 +434,7 @@
     document.addEventListener("keydown", game.keyHandler, true);
 
     const finish = () => finishGame(content);
+    game.startedAt = performance.now();
 
     const tick = () => {
       if (!game?.running) return;
@@ -446,12 +445,10 @@
         return;
       }
 
-      const nowMs = Number(state.currentTime || 0) * 1000;
-      const trackDurationMs = Math.max(0, Number(state.duration || state.track?.duration || 0) * 1000);
-      const runDurationMs = trackDurationMs > 0 ? Math.min(RUN_DURATION_MS, trackDurationMs) : RUN_DURATION_MS;
+      const nowMs = Math.min(RUN_DURATION_MS, performance.now() - game.startedAt);
       const travelMs = difficultyConfig.travelMs;
 
-      progressEl.style.width = `${Math.max(0, Math.min(100, (nowMs / runDurationMs) * 100))}%`;
+      progressEl.style.width = `${Math.max(0, Math.min(100, (nowMs / RUN_DURATION_MS) * 100))}%`;
 
       game.notes.forEach((note) => {
         if (note.hit || note.missed) return;
@@ -480,10 +477,7 @@
         }
       });
 
-      const lastNoteTime = Math.max(0, ...game.notes.map((note) => Number(note.time || 0)));
-      const finishMs = Math.max(1000, runDurationMs - 120);
-
-      if (nowMs >= finishMs || (!state.isPlaying && nowMs > startMs + 1200)) {
+      if (nowMs >= RUN_DURATION_MS) {
         finish();
         return;
       }
