@@ -318,20 +318,12 @@ function ratingOpenTrack(trackId) {
 function ratingRenderTrack(track, index) {
   const place = ratingOffset + index + 1;
   const cover = ratingNormalizeMedia(track.cover);
-  const totalVotes = Number(track.total_votes_count || 0);
-  const userVotes = Number(track.user_votes_count || 0);
-  const judgeVotes = Number(track.judge_votes_count || 0);
 
   return `
     <article class="rating-track-row" data-rating-track-id="${Number(track.id)}">
       <div class="rating-place ${place <= 3 ? "is-top" : ""}">${place}</div>
       <img class="rating-cover" src="${ratingEscapeHtml(cover)}" alt="">
       <div class="rating-track-main">
-        <div class="rating-track-stats">
-          <span><i class="fa-regular fa-message"></i> ${ratingFormatCount(totalVotes)}</span>
-          <span>судьи ${ratingFormatCount(judgeVotes)}</span>
-          <span>юзеры ${ratingFormatCount(userVotes)}</span>
-        </div>
         <div class="rating-track-title">${ratingEscapeHtml(track.title || "Без названия")}</div>
         <div class="rating-track-artist">${ratingEscapeHtml(track.artist || track.username || "Артист")}</div>
       </div>

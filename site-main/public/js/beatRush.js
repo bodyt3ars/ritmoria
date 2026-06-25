@@ -22,6 +22,7 @@
       travelMs: 1180
     }
   };
+  const RUN_DURATION_MS = 60000;
 
   const LANES = [
     { key: "w", code: "KeyW", label: "W" },
@@ -146,9 +147,11 @@
 
   async function fetchBeatmap(difficulty) {
     const state = getState();
+    const sourceDuration = Math.max(0, Number(state?.duration || state?.track?.duration || 0));
+    const runDuration = sourceDuration ? Math.min(60, sourceDuration) : 60;
     const params = new URLSearchParams({
       difficulty,
-      duration: String(Math.max(0, Number(state?.duration || state?.track?.duration || 0)) || 120)
+      duration: String(runDuration)
     });
     const res = await fetch(`/api/beat-rush/beatmap/${encodeURIComponent(state.track.id)}?${params.toString()}`, {
       cache: "no-store",
@@ -291,7 +294,10 @@
     }));
     const startState = getState();
     const startMs = Math.max(0, Number(startState?.currentTime || 0) * 1000);
-    const playableNotes = notes.filter((note) => Number(note.time || 0) >= startMs - 180);
+    const playableNotes = notes.filter((note) => {
+      const noteTime = Number(note.time || 0);
+      return noteTime >= startMs - 180 && noteTime <= RUN_DURATION_MS + 300;
+    });
     const lanes = Array.from(content.querySelectorAll(".beat-rush-lane"));
     const stage = content.querySelector(".beat-rush-stage");
     const feedback = content.querySelector("[data-br-feedback]");
@@ -441,10 +447,11 @@
       }
 
       const nowMs = Number(state.currentTime || 0) * 1000;
-      const durationMs = Math.max(1, Number(state.duration || state.track?.duration || 0) * 1000);
+      const trackDurationMs = Math.max(0, Number(state.duration || state.track?.duration || 0) * 1000);
+      const runDurationMs = trackDurationMs > 0 ? Math.min(RUN_DURATION_MS, trackDurationMs) : RUN_DURATION_MS;
       const travelMs = difficultyConfig.travelMs;
 
-      progressEl.style.width = `${Math.max(0, Math.min(100, (nowMs / durationMs) * 100))}%`;
+      progressEl.style.width = `${Math.max(0, Math.min(100, (nowMs / runDurationMs) * 100))}%`;
 
       game.notes.forEach((note) => {
         if (note.hit || note.missed) return;
@@ -474,10 +481,7 @@
       });
 
       const lastNoteTime = Math.max(0, ...game.notes.map((note) => Number(note.time || 0)));
-      const naturalFinishMs = durationMs > 2000
-        ? durationMs - 250
-        : lastNoteTime + 1200;
-      const finishMs = Math.max(lastNoteTime + 1200, naturalFinishMs);
+      const finishMs = Math.max(1000, runDurationMs - 120);
 
       if (nowMs >= finishMs || (!state.isPlaying && nowMs > startMs + 1200)) {
         finish();
@@ -519,6 +523,7 @@
 
     const finishedGame = game;
     cleanupGameOnly();
+    setGlobalPlayback(false);
 
     const judged = finishedGame.perfect + finishedGame.good + finishedGame.miss;
     const weightedHits = finishedGame.perfect + finishedGame.good * 0.62;
@@ -527,6 +532,7 @@
       xp_earned: 0,
       xp_already_claimed_today: false
     };
+    let boards = null;
 
     try {
       const res = await fetch("/api/beat-rush/score", {
@@ -554,15 +560,62 @@
       console.error("Beat Rush score save error", err);
     }
 
-    renderResult(content, finishedGame, accuracy, result);
+    try {
+      const resultTrackId = result.track_id || finishedGame.payload.track?.id || getState()?.track?.id;
+      const params = new URLSearchParams({ difficulty: finishedGame.payload.difficulty });
+      const boardsRes = await fetch(`/api/beat-rush/results/${encodeURIComponent(resultTrackId)}?${params.toString()}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: getAuthHeaders()
+      });
+      if (boardsRes.ok) {
+        boards = await boardsRes.json();
+      }
+    } catch (err) {
+      console.error("Beat Rush results load error", err);
+    }
+
+    renderResult(content, finishedGame, accuracy, result, boards);
   }
 
-  function renderResult(content, finishedGame, accuracy, result) {
+  function formatResultDate(value) {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
+  }
+
+  function renderScoreRows(rows = [], { showUser = false } = {}) {
+    if (!rows.length) {
+      return `<div class="beat-rush-board-empty">Пока нет результатов</div>`;
+    }
+
+    return rows.map((row, index) => `
+      <div class="beat-rush-board-row">
+        <div class="beat-rush-board-place">#${index + 1}</div>
+        <div class="beat-rush-board-main">
+          <strong>${showUser ? escapeHtml(row.user?.username || row.user?.username_tag || "Игрок") : formatScore(row.score)}</strong>
+          <span>${showUser ? formatScore(row.score) : formatResultDate(row.created_at)} · ${Number(row.accuracy || 0).toFixed(1)}% · combo ${Number(row.combo || 0)}</span>
+        </div>
+        <div class="beat-rush-board-xp">+${Number(row.xp_earned || 0)} XP</div>
+      </div>
+    `).join("");
+  }
+
+  function renderResult(content, finishedGame, accuracy, result, boards = null) {
     const track = getState()?.track || finishedGame.payload.track || {};
+    const personalBest = boards?.personal?.best ? [boards.personal.best] : [];
+    const personalRecent = Array.isArray(boards?.personal?.recent) ? boards.personal.recent : [];
+    const personalRows = [
+      ...personalBest.map((row) => ({ ...row, isBest: true })),
+      ...personalRecent.filter((row) => row.created_at !== boards?.personal?.best?.created_at)
+    ].slice(0, 9);
+    const globalRows = Array.isArray(boards?.global) ? boards.global : [];
+
     content.innerHTML = `
       <div class="beat-rush-result">
         <div class="beat-rush-kicker">Beat Rush Complete</div>
         <h2>${accuracy >= 90 ? "Чистое попадание" : accuracy >= 70 ? "Хороший забег" : "Разогрев принят"}</h2>
+        <p class="beat-rush-result-subtitle">${escapeHtml(track.title || finishedGame.payload.track?.title || "Трек")} · 60 секунд ритма</p>
         <div class="beat-rush-result-grid">
           <div><span>Score</span><strong>${formatScore(finishedGame.score)}</strong></div>
           <div><span>Accuracy</span><strong>${accuracy.toFixed(1)}%</strong></div>
@@ -570,6 +623,22 @@
           <div><span>XP earned</span><strong>+${Number(result.xp_earned || 0)}</strong></div>
         </div>
         ${result.xp_already_claimed_today ? `<p class="beat-rush-note-text">XP за этот трек и сложность сегодня уже получен, но результат сохранён.</p>` : ""}
+        <div class="beat-rush-boards">
+          <section class="beat-rush-board">
+            <div class="beat-rush-board-head">
+              <span>Твои забеги</span>
+              <strong>Лучший и последние</strong>
+            </div>
+            ${renderScoreRows(personalRows)}
+          </section>
+          <section class="beat-rush-board">
+            <div class="beat-rush-board-head">
+              <span>Топ трека</span>
+              <strong>Все игроки</strong>
+            </div>
+            ${renderScoreRows(globalRows, { showUser: true })}
+          </section>
+        </div>
         <div class="beat-rush-result-actions">
           <button class="beat-rush-primary" type="button" data-play-again>Играть еще</button>
           <button class="beat-rush-secondary" type="button" data-open-track>Открыть трек</button>

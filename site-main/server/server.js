@@ -4627,6 +4627,93 @@ app.get("/api/beat-rush/top/:trackId", async (req, res) => {
   }
 });
 
+app.get("/api/beat-rush/results/:trackId", authMiddleware, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const difficulty = normalizeBeatRushDifficulty(req.query.difficulty);
+    const track = await resolveBeatRushTrack(req.params.trackId);
+
+    if (!track) {
+      return res.status(404).json({ error: "track_not_found" });
+    }
+
+    const personalBestRes = await pool.query(
+      `
+      SELECT score, accuracy, combo, xp_earned, created_at
+      FROM beat_rush_scores
+      WHERE user_id = $1
+        AND track_id = $2
+        AND difficulty = $3
+      ORDER BY score DESC, accuracy DESC, combo DESC, created_at ASC
+      LIMIT 1
+      `,
+      [userId, track.id, difficulty]
+    );
+
+    const personalRecentRes = await pool.query(
+      `
+      SELECT score, accuracy, combo, xp_earned, created_at
+      FROM beat_rush_scores
+      WHERE user_id = $1
+        AND track_id = $2
+        AND difficulty = $3
+      ORDER BY created_at DESC
+      LIMIT 8
+      `,
+      [userId, track.id, difficulty]
+    );
+
+    const globalTopRes = await pool.query(
+      `
+      SELECT
+        brs.score,
+        brs.accuracy,
+        brs.combo,
+        brs.xp_earned,
+        brs.created_at,
+        u.username,
+        u.username_tag,
+        u.avatar
+      FROM beat_rush_scores brs
+      JOIN users u ON u.id = brs.user_id
+      WHERE brs.track_id = $1
+        AND brs.difficulty = $2
+      ORDER BY brs.score DESC, brs.accuracy DESC, brs.combo DESC, brs.created_at ASC
+      LIMIT 10
+      `,
+      [track.id, difficulty]
+    );
+
+    const normalizeScoreRow = (row) => ({
+      score: Number(row.score || 0),
+      accuracy: Number(row.accuracy || 0),
+      combo: Number(row.combo || 0),
+      xp_earned: Number(row.xp_earned || 0),
+      created_at: row.created_at
+    });
+
+    res.json({
+      track_id: Number(track.id),
+      difficulty,
+      personal: {
+        best: personalBestRes.rows[0] ? normalizeScoreRow(personalBestRes.rows[0]) : null,
+        recent: personalRecentRes.rows.map(normalizeScoreRow)
+      },
+      global: globalTopRes.rows.map((row) => ({
+        ...normalizeScoreRow(row),
+        user: {
+          username: row.username || row.username_tag || "Игрок",
+          username_tag: row.username_tag || "",
+          avatar: row.avatar || ""
+        }
+      }))
+    });
+  } catch (err) {
+    console.error("BEAT RUSH RESULTS ERROR:", err);
+    res.status(500).json({ error: "beat_rush_results_failed" });
+  }
+});
+
 app.post("/api/beat-rush/score", authMiddleware, async (req, res) => {
   try {
     const userId = Number(req.user.id || 0);
