@@ -149,7 +149,11 @@ async function loadQueue() {
 
   try {
     const res = await fetch("/api/tracks/queue");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.message || data.error || "queue_load_failed");
+    }
 
     const state = data.state;
     queueCurrentState = state || "open";
@@ -159,6 +163,15 @@ async function loadQueue() {
     const tracks = sortQueueTracks(Array.isArray(data.tracks) ? data.tracks : [], queueCurrentState);
 
     queueList.innerHTML = "";
+
+    if (!tracks.length) {
+      queueList.innerHTML = `
+        <div class="queue-empty-state">
+          ${escapeQueueHtml(queueT("queue.empty", "В очереди пока нет треков"))}
+        </div>
+      `;
+      return;
+    }
 
     tracks.forEach((track, index) => {
       let placeClass = "";
@@ -304,6 +317,11 @@ async function loadQueue() {
     });
   } catch (err) {
     console.error("Ошибка загрузки очереди", err);
+    queueList.innerHTML = `
+      <div class="queue-empty-state queue-empty-state-error">
+        ${escapeQueueHtml(queueT("queue.loadError", "Не удалось загрузить очередь"))}
+      </div>
+    `;
   }
 }
 

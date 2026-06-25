@@ -8790,8 +8790,8 @@ app.post("/api/tracks", requireRole(["user", "judge", "admin"]), trackUploadFiel
     const user = req.user;
 
 const result = await pool.query(
-  `INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id)
-   VALUES ($1,$2,$3,$4,$5,NOW(),$6)
+  `INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id, status)
+   VALUES ($1,$2,$3,$4,$5,NOW(),$6,'pending')
    RETURNING *`,
   [artist, title, soundcloud, cover, audioPath, user.id]
 );
@@ -8884,7 +8884,7 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_votes_count
 
         FROM tracks t
-        WHERE COALESCE(t.status, 'pending') = 'pending'
+        WHERE COALESCE(NULLIF(t.status, ''), 'pending') IN ('pending', 'new', 'open')
         ORDER BY judge_score DESC, total_score DESC, user_score DESC, t.createdAt DESC
       `;
 
@@ -8920,7 +8920,7 @@ app.get("/api/tracks/queue", async (req, res) => {
           ) as judge_votes_count
 
         FROM tracks t
-        WHERE COALESCE(t.status, 'pending') = 'pending'
+        WHERE COALESCE(NULLIF(t.status, ''), 'pending') IN ('pending', 'new', 'open')
         ORDER BY t.createdAt ASC
       `;
     }
@@ -10351,8 +10351,8 @@ app.post("/api/tracks/from-profile", requireRole(["user", "judge", "admin"]), as
 
     const createdRes = await pool.query(
       `
-      INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id)
-      VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+      INSERT INTO tracks (artist, title, soundcloud, cover, audio, createdAt, user_id, status)
+      VALUES ($1, $2, $3, $4, $5, NOW(), $6, 'pending')
       RETURNING *
       `,
       [
