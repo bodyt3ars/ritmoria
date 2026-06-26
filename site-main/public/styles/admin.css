@@ -321,11 +321,11 @@
 }
 
 .admin-page .user-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
-  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  align-items: center;
+  gap: 14px 18px;
+  padding: 12px 14px;
   border-radius: 14px;
   background: rgba(34, 17, 36, 0.56);
   border: 1px solid rgba(255,255,255,0.05);
@@ -345,9 +345,8 @@
 .admin-page .user-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  flex: 1;
 }
 
 .admin-page .user-name-row {
@@ -399,19 +398,22 @@
 .admin-page .user-tag {
   font-size: 13px;
   color: rgba(255,255,255,0.5);
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-page .user-meta-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px 12px;
   flex-wrap: wrap;
 }
 
 .admin-page .admin-user-meta {
   font-size: 12px;
   color: rgba(255,255,255,0.54);
+  white-space: nowrap;
 }
 
 .admin-page .admin-user-badge {
@@ -443,6 +445,7 @@
   font-weight: 700;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.04);
+  white-space: nowrap;
 }
 
 .admin-page .admin-user-status.is-online {
@@ -568,8 +571,12 @@
   }
 
   .admin-page .user-row {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .admin-page .admin-user-meta {
+    white-space: normal;
   }
 
   .admin-page .role-select {
@@ -622,8 +629,10 @@
 .admin-page .user-actions{
   display:flex;
   align-items:center;
-  gap:12px;
-  margin-left:auto;
+  justify-content:flex-start;
+  gap:8px;
+  margin-left:0;
+  min-width:0;
   flex-wrap:wrap;
 }
 
@@ -686,6 +695,8 @@
   border:1px solid rgba(255,255,255,0.08);
   border-radius:12px;
   background:rgba(255,255,255,0.035);
+  flex:1 1 360px;
+  min-width:320px;
 }
 
 .admin-page .place-badge-field{
@@ -750,6 +761,7 @@
 
   .admin-page .place-badge-controls{
     width:100%;
+    min-width:0;
     flex-wrap:wrap;
   }
 }
