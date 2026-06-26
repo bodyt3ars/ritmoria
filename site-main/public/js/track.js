@@ -49,6 +49,7 @@ function initTrackPage() {
   let currentReaction = null;
   let waveSurfer = null;
   let waveSyncLocked = false;
+  let waveFallbackTimer = null;
 
   const criteria = [
     { key: "rhymes_avg", label: "Рифмы и образы" },
@@ -82,7 +83,7 @@ function initTrackPage() {
 
   function resetPlayerUI() {
     playBtn.classList.remove("playing");
-    progress.style.width = "0%";
+    setTrackProgressPercent(0);
     currentTimeEl.textContent = "0:00";
     durationEl.textContent = "0:00";
     customPlayer?.classList.remove("playing");
@@ -102,9 +103,71 @@ function initTrackPage() {
     if (!waveformEl) return;
     waveformEl.classList.toggle("is-hidden", !enabled);
     progressWrap.classList.toggle("is-hidden", !!enabled);
+    progressWrap.classList.toggle("track-page-progress-wave-fallback", !enabled);
+    if (!enabled) {
+      ensureTrackFallbackWave();
+    }
+  }
+
+  function setTrackProgressPercent(percent) {
+    const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+    progress.style.width = safePercent + "%";
+    progressWrap.style.setProperty("--track-progress", safePercent + "%");
+    waveformEl?.style.setProperty("--track-wave-progress", safePercent + "%");
+  }
+
+  function ensureTrackFallbackWave() {
+    if (!progressWrap || progressWrap.querySelector(".track-page-fallback-wave")) return;
+
+    const seed = String(trackId || "ritmoria");
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash |= 0;
+    }
+
+    const bars = document.createElement("div");
+    bars.className = "track-page-fallback-wave";
+
+    for (let i = 0; i < 64; i += 1) {
+      const phase = Math.sin((i + 1) * 0.62 + hash * 0.013);
+      const pulse = Math.sin((i + 3) * 1.37 + hash * 0.007);
+      const height = 20 + Math.round(Math.abs((phase * 0.7) + (pulse * 0.3)) * 74);
+      const bar = document.createElement("span");
+      bar.style.setProperty("--bar-height", `${Math.max(18, Math.min(94, height))}%`);
+      bars.appendChild(bar);
+    }
+
+    progressWrap.insertBefore(bars, progressWrap.firstChild);
+  }
+
+  function clearWaveformFallbackTimer() {
+    if (!waveFallbackTimer) return;
+    clearTimeout(waveFallbackTimer);
+    waveFallbackTimer = null;
+  }
+
+  function fallbackTrackWaveform() {
+    clearWaveformFallbackTimer();
+
+    if (waveSurfer) {
+      try {
+        waveSurfer.destroy();
+      } catch (e) {}
+      waveSurfer = null;
+    }
+
+    waveSyncLocked = false;
+    if (waveformEl) {
+      waveformEl.onclick = null;
+      waveformEl.innerHTML = "";
+    }
+    setWaveformMode(false);
   }
 
   function destroyTrackWaveform() {
+    clearWaveformFallbackTimer();
+
     if (waveSurfer) {
       try {
         waveSurfer.destroy();
@@ -148,29 +211,53 @@ function initTrackPage() {
 
     setWaveformMode(true);
 
-    waveSurfer = WaveSurfer.create({
-      container: waveformEl,
-      waveColor: "rgba(255,255,255,0.26)",
-      progressColor: "#d99abc",
-      cursorColor: "rgba(255,255,255,0.92)",
-      cursorWidth: 2,
-      height: 58,
-      barWidth: 3,
-      barGap: 2,
-      barRadius: 999,
-      normalize: true,
-      responsive: true,
-      interact: true,
-      dragToSeek: true
-    });
+    try {
+      waveSurfer = WaveSurfer.create({
+        container: waveformEl,
+        waveColor: "rgba(255,255,255,0.26)",
+        progressColor: "#d99abc",
+        cursorColor: "rgba(255,255,255,0.92)",
+        cursorWidth: 2,
+        height: 58,
+        barWidth: 3,
+        barGap: 2,
+        barRadius: 999,
+        normalize: true,
+        responsive: true,
+        interact: true,
+        dragToSeek: true
+      });
+    } catch (e) {
+      fallbackTrackWaveform();
+      return;
+    }
 
-    waveSurfer.load(audioSrc);
+    waveFallbackTimer = setTimeout(() => {
+      fallbackTrackWaveform();
+    }, 8000);
+
+    try {
+      const loadResult = waveSurfer.load(audioSrc);
+      if (loadResult && typeof loadResult.catch === "function") {
+        loadResult.catch(() => {
+          fallbackTrackWaveform();
+        });
+      }
+    } catch (e) {
+      fallbackTrackWaveform();
+      return;
+    }
 
     waveSurfer.on("ready", () => {
+      clearWaveformFallbackTimer();
       const duration = Number(audio.duration || waveSurfer.getDuration() || 0);
       if (duration > 0) {
         durationEl.textContent = formatTime(duration);
       }
+    });
+
+    waveSurfer.on("error", () => {
+      fallbackTrackWaveform();
     });
 
     waveSurfer.on("seek", (progressRatio) => {
@@ -281,7 +368,7 @@ function initTrackPage() {
     trackScWidget.bind(SC.Widget.Events.READY, () => {
       scReady = true;
 
-      progress.style.width = "0%";
+      setTrackProgressPercent(0);
       currentTimeEl.textContent = "0:00";
 
       trackScWidget.setVolume(Math.round(Number(volume.value) * 100));
@@ -302,7 +389,7 @@ function initTrackPage() {
             if (!dur) return;
 
             const percent = (pos / dur) * 100;
-            progress.style.width = percent + "%";
+            setTrackProgressPercent(percent);
             currentTimeEl.textContent = formatTime(pos / 1000);
           });
         });
@@ -327,7 +414,7 @@ function initTrackPage() {
     trackScWidget.bind(SC.Widget.Events.FINISH, () => {
       scIsPlaying = false;
       playBtn.classList.remove("playing");
-      progress.style.width = "0%";
+      setTrackProgressPercent(0);
       currentTimeEl.textContent = "0:00";
       customPlayer?.classList.remove("playing");
       playerCover?.classList.remove("playing");
@@ -616,7 +703,7 @@ function initTrackPage() {
 
   audio.addEventListener("ended", () => {
     playBtn.classList.remove("playing");
-    progress.style.width = "0%";
+    setTrackProgressPercent(0);
     currentTimeEl.textContent = "0:00";
     customPlayer?.classList.remove("playing");
     playerCover?.classList.remove("playing");
@@ -638,7 +725,7 @@ function initTrackPage() {
   audio.addEventListener("timeupdate", () => {
     if (!audio.duration) return;
     const percent = (audio.currentTime / audio.duration) * 100;
-    progress.style.width = percent + "%";
+    setTrackProgressPercent(percent);
     currentTimeEl.textContent = formatTime(audio.currentTime);
 
     if (waveSurfer) {

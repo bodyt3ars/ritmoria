@@ -133,8 +133,45 @@ function destroyProfileTrackWave() {
     waveformEl.onclick = null;
     waveformEl.onpointerdown = null;
     waveformEl.innerHTML = "";
+    waveformEl.classList.remove("has-generated-wave");
+    waveformEl.style.removeProperty("--profile-wave-progress");
   }
   state.waveSyncLocked = false;
+}
+
+function renderProfileTrackGeneratedWave(waveformEl, track) {
+  if (!waveformEl) return;
+
+  const seed = String(track?.id || track?.slug || track?.title || "ritmoria");
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+
+  waveformEl.innerHTML = "";
+  waveformEl.classList.add("has-generated-wave");
+  waveformEl.style.setProperty("--profile-wave-progress", "0%");
+
+  const bars = document.createElement("div");
+  bars.className = "profile-track-generated-wave";
+
+  for (let i = 0; i < 88; i += 1) {
+    const phase = Math.sin((i + 1) * 0.54 + hash * 0.011);
+    const pulse = Math.sin((i + 4) * 1.21 + hash * 0.006);
+    const height = 18 + Math.round(Math.abs((phase * 0.68) + (pulse * 0.32)) * 78);
+    const bar = document.createElement("span");
+    bar.style.setProperty("--bar-height", `${Math.max(16, Math.min(96, height))}%`);
+    bars.appendChild(bar);
+  }
+
+  waveformEl.appendChild(bars);
+}
+
+function setProfileTrackGeneratedWaveProgress(waveformEl, progress) {
+  if (!waveformEl) return;
+  const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0));
+  waveformEl.style.setProperty("--profile-wave-progress", `${safeProgress * 100}%`);
 }
 
 window.loadProfileTrackPage = async function (tag, slug) {
@@ -383,71 +420,132 @@ window.loadProfileTrackPage = async function (tag, slug) {
   const audioSrc = buildProfileTrackAudioSrc(track);
 
   let wavesurfer = null;
+  let profileWaveFallbackTimer = null;
 
-  if (!audioSrc || typeof WaveSurfer === "undefined") {
+  const clearProfileWaveFallbackTimer = () => {
+    if (!profileWaveFallbackTimer) return;
+    clearTimeout(profileWaveFallbackTimer);
+    profileWaveFallbackTimer = null;
+  };
+
+  const seekProfileTrackWave = (progress) => {
+    if (pageState.waveSyncLocked) {
+      pageState.waveSyncLocked = false;
+    }
+
+    const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0));
+    const state = window.getGlobalPlayerState?.();
+    const current = state?.track;
+    const isSameTrack = isSameProfileTrack(track, current);
+
+    if (!isSameTrack || typeof window.seekGlobalPlayer !== "function") {
+      return false;
+    }
+
+    window.seekGlobalPlayer(safeProgress, "profile-track-waveform");
+    return true;
+  };
+
+  const handleWavePointerSeek = (e) => {
+    const rect = waveformEl.getBoundingClientRect();
+    if (!rect.width) return;
+    const progress = (e.clientX - rect.left) / rect.width;
+    seekProfileTrackWave(progress);
+  };
+
+  const useGeneratedProfileWave = () => {
+    clearProfileWaveFallbackTimer();
+
+    if (wavesurfer) {
+      try {
+        wavesurfer.destroy();
+      } catch (e) {}
+      wavesurfer = null;
+    }
+
+    if (window.__profileTrackWaveSurfer) {
+      window.__profileTrackWaveSurfer = null;
+    }
+
+    pageState.waveSyncLocked = false;
+    renderProfileTrackGeneratedWave(waveformEl, track);
+    waveformEl.onclick = handleWavePointerSeek;
+    waveformEl.onpointerdown = handleWavePointerSeek;
+    if (waveformStatusEl) {
+      waveformStatusEl.textContent = "Волна готова";
+    }
+  };
+
+  if (!audioSrc) {
     waveformEl.innerHTML = `<div class="profile-track-empty">Аудио недоступно.</div>`;
     playBtn.disabled = true;
   } else {
     playBtn.disabled = false;
-
-    wavesurfer = WaveSurfer.create({
-      container: waveformEl,
-      waveColor: "rgba(255,255,255,0.28)",
-      progressColor: "#d99abc",
-      cursorColor: "rgba(255,255,255,0.92)",
-      cursorWidth: 2,
-      height: 104,
-      barWidth: 3,
-      barGap: 2,
-      barRadius: 999,
-      responsive: true,
-      normalize: true,
-      interact: true,
-      dragToSeek: true
-    });
-
-    window.__profileTrackWaveSurfer = wavesurfer;
-    wavesurfer.load(audioSrc);
-
-    const seekProfileTrackWave = (progress) => {
-      if (pageState.waveSyncLocked) {
-        pageState.waveSyncLocked = false;
-      }
-
-      const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0));
-      const state = window.getGlobalPlayerState?.();
-      const current = state?.track;
-      const isSameTrack = isSameProfileTrack(track, current);
-
-      if (!isSameTrack || typeof window.seekGlobalPlayer !== "function") {
-        return false;
-      }
-
-      window.seekGlobalPlayer(safeProgress, "profile-track-waveform");
-      return true;
-    };
-
-    wavesurfer.on("ready", () => {
-      pageState.waveSyncLocked = false;
-      durationEl.textContent = formatProfileTrackTime(wavesurfer.getDuration());
-      if (waveformStatusEl) {
-        waveformStatusEl.textContent = "Вэйвформа готова";
-      }
-    });
-
-    wavesurfer.on("seek", (progress) => {
-      seekProfileTrackWave(progress);
-    });
-
-    const handleWavePointerSeek = (e) => {
-      const rect = waveformEl.getBoundingClientRect();
-      if (!rect.width) return;
-      const progress = (e.clientX - rect.left) / rect.width;
-      seekProfileTrackWave(progress);
-    };
-
     waveformEl.onclick = handleWavePointerSeek;
     waveformEl.onpointerdown = handleWavePointerSeek;
+
+    if (typeof WaveSurfer === "undefined") {
+      useGeneratedProfileWave();
+    } else {
+      try {
+        wavesurfer = WaveSurfer.create({
+          container: waveformEl,
+          waveColor: "rgba(255,255,255,0.28)",
+          progressColor: "#d99abc",
+          cursorColor: "rgba(255,255,255,0.92)",
+          cursorWidth: 2,
+          height: 104,
+          barWidth: 3,
+          barGap: 2,
+          barRadius: 999,
+          responsive: true,
+          normalize: true,
+          interact: true,
+          dragToSeek: true
+        });
+      } catch (e) {
+        useGeneratedProfileWave();
+      }
+
+      if (wavesurfer) {
+        window.__profileTrackWaveSurfer = wavesurfer;
+
+        profileWaveFallbackTimer = setTimeout(() => {
+          useGeneratedProfileWave();
+        }, 8000);
+
+        try {
+          const loadResult = wavesurfer.load(audioSrc);
+          if (loadResult && typeof loadResult.catch === "function") {
+            loadResult.catch(() => {
+              useGeneratedProfileWave();
+            });
+          }
+        } catch (e) {
+          useGeneratedProfileWave();
+        }
+
+        if (wavesurfer) {
+          wavesurfer.on("ready", () => {
+            clearProfileWaveFallbackTimer();
+            pageState.waveSyncLocked = false;
+            waveformEl.classList.remove("has-generated-wave");
+            durationEl.textContent = formatProfileTrackTime(wavesurfer.getDuration());
+            if (waveformStatusEl) {
+              waveformStatusEl.textContent = "Волна готова";
+            }
+          });
+
+          wavesurfer.on("error", () => {
+            useGeneratedProfileWave();
+          });
+
+          wavesurfer.on("seek", (progress) => {
+            seekProfileTrackWave(progress);
+          });
+        }
+      }
+    }
 
     playBtn.onclick = () => {
       const state = window.getGlobalPlayerState?.();
@@ -537,6 +635,10 @@ window.loadProfileTrackPage = async function (tag, slug) {
           pageState.waveSyncLocked = false;
         });
       }
+
+      if (!wavesurfer) {
+        setProfileTrackGeneratedWaveProgress(waveformEl, 0);
+      }
       return;
     }
 
@@ -559,6 +661,10 @@ window.loadProfileTrackPage = async function (tag, slug) {
         requestAnimationFrame(() => {
           pageState.waveSyncLocked = false;
         });
+      }
+
+      if (!wavesurfer) {
+        setProfileTrackGeneratedWaveProgress(waveformEl, currentTime / duration);
       }
     }
   }

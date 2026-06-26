@@ -570,6 +570,46 @@
   border-radius: 14px;
 }
 
+.profile-track-page .profile-track-waveform.has-generated-wave {
+  position: relative;
+  min-height: 132px;
+  overflow: hidden;
+}
+
+.profile-track-page .profile-track-generated-wave {
+  position: relative;
+  min-height: 118px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  pointer-events: none;
+}
+
+.profile-track-page .profile-track-generated-wave::before {
+  content: "";
+  position: absolute;
+  inset: 4px 6px;
+  width: var(--profile-wave-progress, 0%);
+  max-width: calc(100% - 12px);
+  border-radius: 18px;
+  background: linear-gradient(90deg, rgba(176, 116, 151, 0.66), rgba(217, 154, 188, 0.64));
+  opacity: 0.7;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.profile-track-page .profile-track-generated-wave span {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 2px;
+  height: var(--bar-height, 46%);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 0 14px rgba(217, 154, 188, 0.08);
+}
+
 .profile-track-page .profile-track-time-row {
   margin-top: 14px;
   padding-top: 14px;
